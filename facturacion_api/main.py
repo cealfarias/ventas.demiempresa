@@ -9,15 +9,17 @@ import uvicorn
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="API de Facturación e Inventario - SaaS",
-    description="Microservicio de facturación integrado al ecosistema.",
-    version="1.0.0"
+    title="Facturación SaaS Multi-Tenant"
 )
 
-# CORS
+# Habilitar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # En prod apuntar al dominio de Render
+    allow_origins=[
+        "http://localhost:5173", 
+        "https://ventas.demiempresa.online",
+        "https://ventas-demiempresa.vercel.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
