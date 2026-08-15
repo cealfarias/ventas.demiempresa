@@ -10,6 +10,33 @@ TIMEZONE = pytz.timezone("America/El_Salvador")
 # MODELOS BASE SAAS (MULTIEMPRESA)
 # ==========================================
 
+class Empresa(Base):
+    __tablename__ = "empresas"
+    
+    id_empresa = Column(Integer, primary_key=True, autoincrement=True)
+    nombre = Column(String(200), nullable=False)
+    nit = Column(String(50))
+    activo = Column(Boolean, default=True)
+    fecha_registro = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
+
+class Usuario(Base):
+    __tablename__ = "usuarios"
+    
+    id_usuario = Column(Integer, primary_key=True, autoincrement=True)
+    empresa_id = Column(Integer, ForeignKey("empresas.id_empresa"), nullable=False)
+    
+    username = Column(String(100), unique=True, index=True, nullable=False)
+    email = Column(String(150), unique=True, index=True, nullable=False)
+    hashed_password = Column(String(200), nullable=False)
+    rol = Column(String(50), default="admin") # admin, cajera, auditor
+    
+    # 2FA
+    is_2fa_enabled = Column(Boolean, default=False)
+    secret_2fa = Column(String(100), nullable=True)
+    
+    activo = Column(Boolean, default=True)
+    fecha_registro = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
+
 class Cliente(Base):
     __tablename__ = "clientes"
     

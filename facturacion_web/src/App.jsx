@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { LayoutDashboard, Receipt, Package, Users, Settings, LogOut, Menu } from 'lucide-react';
 import Productos from './pages/Productos';
+import Login from './pages/Login';
+import Registro from './pages/Registro';
 
 // Paginas Placeholder
 const Dashboard = () => <div className="p-8"><h1 className="text-2xl font-bold text-slate-800">Panel de Control</h1></div>;
@@ -24,8 +26,24 @@ const SidebarLink = ({ to, icon: Icon, label, expanded }) => {
   );
 };
 
+const PrivateRoute = ({ children }) => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+};
+
 const Layout = ({ children }) => {
   const [expanded, setExpanded] = useState(true);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('rol');
+    localStorage.removeItem('empresa_id');
+    navigate('/login');
+  };
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans">
@@ -54,7 +72,7 @@ const Layout = ({ children }) => {
         
         <div className="p-3 border-t border-slate-200">
           <SidebarLink to="/configuracion" icon={Settings} label="Configuración" expanded={expanded} />
-          <button className="w-full flex items-center px-4 py-3 mt-1 rounded-xl text-red-500 hover:bg-red-50 transition-colors">
+          <button onClick={handleLogout} className="w-full flex items-center px-4 py-3 mt-1 rounded-xl text-red-500 hover:bg-red-50 transition-colors">
             <LogOut className="w-5 h-5 flex-shrink-0" />
             <span className={`ml-3 font-medium whitespace-nowrap transition-all duration-300 ${expanded ? 'opacity-100' : 'opacity-0 hidden'}`}>
               Cerrar Sesión
@@ -69,11 +87,11 @@ const Layout = ({ children }) => {
           <h2 className="text-sm font-semibold text-slate-500 tracking-wider uppercase">Ambiente Seguro SaaS</h2>
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-bold text-slate-800">Empresa Demo S.A.</p>
-              <p className="text-xs text-slate-500">Administrador</p>
+              <p className="text-sm font-bold text-slate-800">Mi Empresa</p>
+              <p className="text-xs text-slate-500 uppercase">{localStorage.getItem('rol') || 'Usuario'}</p>
             </div>
-            <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center border border-indigo-200">
-              AD
+            <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center border border-indigo-200 uppercase">
+              {localStorage.getItem('rol') ? localStorage.getItem('rol').substring(0,2) : 'US'}
             </div>
           </div>
         </header>
@@ -88,14 +106,23 @@ const Layout = ({ children }) => {
 function App() {
   return (
     <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/facturas" element={<Facturas />} />
-          <Route path="/productos" element={<Productos />} />
-          <Route path="/clientes" element={<Clientes />} />
-        </Routes>
-      </Layout>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/registro" element={<Registro />} />
+        
+        <Route path="/*" element={
+          <PrivateRoute>
+            <Layout>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/facturas" element={<Facturas />} />
+                <Route path="/productos" element={<Productos />} />
+                <Route path="/clientes" element={<Clientes />} />
+              </Routes>
+            </Layout>
+          </PrivateRoute>
+        } />
+      </Routes>
     </Router>
   );
 }

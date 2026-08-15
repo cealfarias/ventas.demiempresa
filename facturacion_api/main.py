@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine
 from models import Base
-from routers import productos, clientes, facturas
+from routers import productos, clientes, facturas, auth
 import uvicorn
 
 # Inicializar Tablas (Render / Local)
@@ -23,6 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router, prefix="/api/v1/auth")
 app.include_router(productos.router, prefix="/api/v1/facturacion")
 app.include_router(clientes.router, prefix="/api/v1/facturacion")
 app.include_router(facturas.router, prefix="/api/v1/facturacion")
