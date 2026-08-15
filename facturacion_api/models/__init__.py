@@ -7,24 +7,29 @@ from database import Base
 TIMEZONE = pytz.timezone("America/El_Salvador")
 
 # ==========================================
-# MODELOS BASE SAAS (MULTIEMPRESA)
+# MODELOS BASE SAAS (MULTIEMPRESA) - ALINEADOS CON DB GLOBAL
 # ==========================================
 
 class Empresa(Base):
     __tablename__ = "empresas"
     
-    id_empresa = Column(Integer, primary_key=True, autoincrement=True)
-    nombre = Column(String(200), nullable=False)
+    id = Column(String, primary_key=True)
+    razon_social = Column(String(200), nullable=False)
+    nombre_comercial = Column(String(200))
     nit = Column(String(50))
-    activo = Column(Boolean, default=True)
-    fecha_registro = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
+    nrc = Column(String(50))
+    giro = Column(String(200))
+    normativa = Column(String(100))
+    usuario_creacion = Column(String(100))
+    fecha_creacion = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
+    usuario_modificacion = Column(String(100))
+    fecha_modificacion = Column(DateTime(timezone=True))
+    terminal_ip = Column(String(50))
 
 class Usuario(Base):
     __tablename__ = "usuarios"
     
-    id_usuario = Column(Integer, primary_key=True, autoincrement=True)
-    empresa_id = Column(Integer, ForeignKey("empresas.id_empresa"), nullable=False)
-    
+    id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String(100), unique=True, index=True, nullable=False)
     email = Column(String(150), unique=True, index=True, nullable=False)
     hashed_password = Column(String(200), nullable=False)
@@ -32,16 +37,21 @@ class Usuario(Base):
     
     # 2FA
     is_2fa_enabled = Column(Boolean, default=False)
-    secret_2fa = Column(String(100), nullable=True)
+    two_factor_secret = Column(String(100), nullable=True)
     
-    activo = Column(Boolean, default=True)
-    fecha_registro = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
+    is_active = Column(Boolean, default=True)
+    usuario_creacion = Column(String(100))
+    fecha_creacion = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
+    usuario_modificacion = Column(String(100))
+    fecha_modificacion = Column(DateTime(timezone=True))
+    terminal_ip = Column(String(50))
+
 
 class Cliente(Base):
     __tablename__ = "clientes"
     
     id_cliente = Column(Integer, primary_key=True, autoincrement=True)
-    empresa_id = Column(Integer, index=True, nullable=False) # SaaS Multi-Tenant
+    empresa_id = Column(String, index=True, nullable=False) # SaaS Multi-Tenant (UUID)
     
     codigo = Column(String(50))
     nombre = Column(String(200), nullable=False)
@@ -63,7 +73,7 @@ class Producto(Base):
     __tablename__ = "productos"
 
     id_producto = Column(Integer, primary_key=True, autoincrement=True)
-    empresa_id = Column(Integer, index=True, nullable=False) # SaaS Multi-Tenant
+    empresa_id = Column(String, index=True, nullable=False) # SaaS Multi-Tenant (UUID)
     
     codigo = Column(String(50), nullable=False)
     nombre = Column(String(200), nullable=False)
@@ -82,7 +92,7 @@ class Factura(Base):
     __tablename__ = "facturas"
     
     id = Column(Integer, primary_key=True, index=True)
-    empresa_id = Column(Integer, index=True, nullable=False) # SaaS Multi-Tenant
+    empresa_id = Column(String, index=True, nullable=False) # SaaS Multi-Tenant (UUID)
     usuario_id = Column(Integer, nullable=False) # Auditora
     
     numero = Column(String(30), nullable=False)
@@ -119,7 +129,7 @@ class Inventario(Base):
     __tablename__ = "inventarios"
     
     id_inventario = Column(Integer, primary_key=True, autoincrement=True)
-    empresa_id = Column(Integer, index=True, nullable=False) # SaaS Multi-Tenant
+    empresa_id = Column(String, index=True, nullable=False) # SaaS Multi-Tenant (UUID)
     
     producto_id = Column(Integer, ForeignKey("productos.id_producto"), nullable=False)
     tipo_movimiento = Column(String(20)) # entrada, salida, ajuste

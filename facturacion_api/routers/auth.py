@@ -5,6 +5,7 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 import jwt
 import pyotp
+import uuid
 from pydantic import BaseModel
 from database import get_db
 from models import Empresa, Usuario
@@ -30,7 +31,7 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str
     rol: str
-    empresa_id: int
+    empresa_id: str
     require_2fa: bool = False
 
 # ================= UTILIDADES =================
@@ -49,13 +50,13 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
-        empresa_id: int = payload.get("emp")
+        empresa_id: str = payload.get("emp")
         if username is None or empresa_id is None:
             raise credentials_exception
     except jwt.PyJWTError:
         raise credentials_exception
         
-    user = db.query(Usuario).filter(Usuario.username == username, Usuario.empresa_id == empresa_id).first()
+    user = db.query(Usuario).filter(Usuario.username == username).first()
     if user is None:
         raise credentials_exception
     return user
@@ -68,21 +69,25 @@ def registrar_empresa(data: RegistroSchema, db: Session = Depends(get_db)):
     if db.query(Usuario).filter((Usuario.username == data.admin_username) | (Usuario.email == data.admin_email)).first():
         raise HTTPException(status_code=400, detail="El usuario o email ya está en uso")
         
-    # 2. Crear Empresa
-    nueva_empresa = Empresa(nombre=data.empresa_nombre, nit=data.empresa_nit)
+    # 2. Crear Empresa (Alineado con DB ecosystem)
+    empresa_uuid = str(uuid.uuid4())
+    nueva_empresa = Empresa(
+        id=empresa_uuid,
+        razon_social=data.empresa_nombre, 
+        nit=data.empresa_nit,
+        usuario_creacion=data.admin_username
+    )
     db.add(nueva_empresa)
-    db.flush() # Para obtener el ID de la empresa
     
-    # 3. Crear Usuario Admin
+    # 3. Crear Usuario Admin (Alineado con DB ecosystem)
     hashed_pw = pwd_context.hash(data.admin_password)
     nuevo_usuario = Usuario(
-        empresa_id=nueva_empresa.id_empresa,
         username=data.admin_username,
         email=data.admin_email,
         hashed_password=hashed_pw,
         rol="admin",
-        # Generar secreto 2FA por defecto, aunque no esté activado
-        secret_2fa=pyotp.random_base32() 
+        two_factor_secret=pyotp.random_base32(),
+        usuario_creacion=data.admin_username
     )
     db.add(nuevo_usuario)
     db.commit()
@@ -96,23 +101,25 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     if not user or not pwd_context.verify(form_data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
         
-    if not user.activo:
+    if not user.is_active:
         raise HTTPException(status_code=400, detail="Usuario inactivo")
         
+    # Buscar la empresa asociada a este usuario (por usuario_creacion en este MVP)
+    empresa = db.query(Empresa).filter(Empresa.usuario_creacion == user.username).first()
+    empresa_id = empresa.id if empresa else ""
+        
     if user.is_2fa_enabled:
-        # En vez de devolver el token final, podríamos devolver un token temporal o un flag
-        # Para simplificar en este boilerplate: indicamos al frontend que pida el 2FA
         return {
             "access_token": "REQUIRES_2FA_" + user.username, 
             "token_type": "bearer",
             "rol": user.rol,
-            "empresa_id": user.empresa_id,
+            "empresa_id": empresa_id,
             "require_2fa": True
         }
         
     # Flujo normal sin 2FA
     access_token = create_access_token(
-        data={"sub": user.username, "emp": user.empresa_id, "rol": user.rol},
+        data={"sub": user.username, "emp": empresa_id, "rol": user.rol},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     
@@ -120,7 +127,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         "access_token": access_token, 
         "token_type": "bearer",
         "rol": user.rol,
-        "empresa_id": user.empresa_id,
+        "empresa_id": empresa_id,
         "require_2fa": False
     }
 
@@ -130,17 +137,20 @@ def verify_2fa(username: str, token: str, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
         
-    totp = pyotp.TOTP(user.secret_2fa)
+    totp = pyotp.TOTP(user.two_factor_secret)
     if totp.verify(token):
+        empresa = db.query(Empresa).filter(Empresa.usuario_creacion == user.username).first()
+        empresa_id = empresa.id if empresa else ""
+        
         access_token = create_access_token(
-            data={"sub": user.username, "emp": user.empresa_id, "rol": user.rol},
+            data={"sub": user.username, "emp": empresa_id, "rol": user.rol},
             expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         )
         return {
             "access_token": access_token, 
             "token_type": "bearer",
             "rol": user.rol,
-            "empresa_id": user.empresa_id
+            "empresa_id": empresa_id
         }
     else:
         raise HTTPException(status_code=401, detail="Código 2FA inválido")
