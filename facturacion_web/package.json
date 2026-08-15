@@ -1,0 +1,21 @@
+{
+  "name": "facturacion_web",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "autoprefixer": "^10.5.4",
+    "axios": "^1.19.0",
+    "lucide-react": "^1.31.0",
+    "postcss": "^8.5.26",
+    "react-router-dom": "^7.18.2",
+    "tailwindcss": "^4.3.3",
+    "vue": "^3.0.4"
+  },
+  "devDependencies": {
+    "@vue/compiler-sfc": "^3.0.4",
+    "vite": "^1.0.0-rc.13"
+  }
+}
