@@ -4,6 +4,7 @@ import { LayoutDashboard, Receipt, Package, Users, Settings, LogOut, Menu } from
 import Productos from './pages/Productos';
 import Login from './pages/Login';
 import Registro from './pages/Registro';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 // Paginas Placeholder
 const Dashboard = () => <div className="p-8"><h1 className="text-2xl font-bold text-slate-800">Panel de Control</h1></div>;
@@ -104,26 +105,30 @@ const Layout = ({ children }) => {
 };
 
 function App() {
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "564147336188-a3jci35rfq609v8d7sbopsd3aeuec93c.apps.googleusercontent.com";
+
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/registro" element={<Registro />} />
-        
-        <Route path="/*" element={
-          <PrivateRoute>
-            <Layout>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/facturas" element={<Facturas />} />
-                <Route path="/productos" element={<Productos />} />
-                <Route path="/clientes" element={<Clientes />} />
-              </Routes>
-            </Layout>
-          </PrivateRoute>
-        } />
-      </Routes>
-    </Router>
+    <GoogleOAuthProvider clientId={clientId}>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/registro" element={<Registro />} />
+          
+          <Route path="/*" element={
+            <PrivateRoute>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/facturas" element={<Facturas />} />
+                  <Route path="/productos" element={<Productos />} />
+                  <Route path="/clientes" element={<Clientes />} />
+                </Routes>
+              </Layout>
+            </PrivateRoute>
+          } />
+        </Routes>
+      </Router>
+    </GoogleOAuthProvider>
   );
 }
 
