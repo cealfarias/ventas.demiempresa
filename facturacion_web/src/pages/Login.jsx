@@ -112,22 +112,22 @@ export default function Login() {
         {/* Lado izquierdo */}
         <div className="login-left">
           <div className="login-left-content">
-            <h1>Bienvenido de<br />nuevo</h1>
+            <h1>El Control Total<br />de tu Empresa</h1>
             <p style={{ fontSize: '1.25rem', opacity: 0.9, lineHeight: 1.5 }}>
-              Inicia sesión en tu espacio de facturación para gestionar tus ventas e inventario.
+              Accede a tu plataforma y unifica la administración de todas tus áreas y sucursales.
             </p>
             <ul className="login-benefits" style={{ marginTop: '3rem' }}>
               <li className="benefit-item">
-                <div className="benefit-icon">💳</div>
-                <span>Facturas, Créditos Fiscales y Consumidor Final</span>
+                <div className="benefit-icon">🤝</div>
+                <span>Conecta Ventas, Inventario y Contabilidad</span>
               </li>
               <li className="benefit-item">
                 <div className="benefit-icon">📦</div>
-                <span>Kardex en tiempo real</span>
+                <span>Kardex Sincronizado en Tiempo Real</span>
               </li>
               <li className="benefit-item">
                 <div className="benefit-icon">📊</div>
-                <span>Estadísticas de ventas al instante</span>
+                <span>Toma de Decisiones Basada en Datos Reales</span>
               </li>
             </ul>
           </div>

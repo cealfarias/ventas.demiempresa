@@ -102,22 +102,22 @@ export default function Registro() {
         {/* Lado izquierdo */}
         <div className="login-left">
           <div className="login-left-content">
-            <h1>Facturación de<br />Próxima Generación</h1>
+            <h1>El Motor de Tu<br />Crecimiento Empresarial</h1>
             <p style={{ fontSize: '1.25rem', opacity: 0.9, lineHeight: 1.5 }}>
-              Crea tu espacio de trabajo y transforma la gestión de tus ventas e inventarios en minutos.
+              Digitaliza, integra y toma el control absoluto de todas las áreas operativas de tu negocio.
             </p>
             <ul className="login-benefits" style={{ marginTop: '3rem' }}>
               <li className="benefit-item">
                 <div className="benefit-icon">🏢</div>
-                <span>Espacios Multi-Tenant Criptográficamente Aislados</span>
+                <span>Gestión Integral de Áreas y Sucursales</span>
               </li>
               <li className="benefit-item">
-                <div className="benefit-icon">🔒</div>
-                <span>Tus datos seguros con autenticación JWT y 2FA</span>
+                <div className="benefit-icon">📦</div>
+                <span>Inventario Preciso y Trazabilidad Total</span>
               </li>
               <li className="benefit-item">
                 <div className="benefit-icon">📈</div>
-                <span>Control total de ventas e inventarios</span>
+                <span>Facturación Electrónica al Instante (DTE)</span>
               </li>
             </ul>
           </div>
