@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import { Share2 } from 'lucide-react';
 import TerminosFacturacion from '../components/TerminosFacturacion';
 import { GoogleLogin } from '@react-oauth/google';
+import { jwtDecode } from 'jwt-decode';
 import './Login.css';
 
 export default function Registro() {
@@ -199,13 +200,20 @@ export default function Registro() {
                   <div style={{ display: 'flex', justifyContent: 'center' }}>
                     <GoogleLogin
                       onSuccess={(credentialResponse) => {
-                        setGoogleToken(credentialResponse.credential);
+                        const token = credentialResponse.credential;
+                        const decoded = jwtDecode(token);
+                        
+                        setGoogleToken(token);
                         setError(null);
+                        
+                        // Generar un username basado en el email para que sea único
+                        const uniqueUsername = decoded.email.split('@')[0] + Math.floor(Math.random() * 1000);
+                        
                         setFormData(prev => ({
                           ...prev,
-                          admin_username: 'google_sso_user',
-                          admin_email: 'google@sso.com',
-                          admin_password: 'GOOGLE_SSO_NO_PASSWORD'
+                          admin_username: uniqueUsername,
+                          admin_email: decoded.email,
+                          admin_password: 'GOOGLE_SSO_NO_PASSWORD_' + Math.random().toString(36).substring(7)
                         }));
                       }}
                       onError={() => setError('Fallo la autenticación con Google')}
