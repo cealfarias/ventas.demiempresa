@@ -2,11 +2,11 @@
   min-height: 100vh;
   display: flex;
   align-items: center;
-  justify-content: center;
-  background-image: linear-gradient(rgba(15, 23, 42, 0.65), rgba(15, 23, 42, 0.85)), url('/assets/background-ventas.jpg');
+  justify-content: flex-start; /* Move card to the left */
+  background-image: linear-gradient(rgba(15, 23, 42, 0.2), rgba(15, 23, 42, 0.4)), url('/assets/background-ventas.jpg'); /* Lighter overlay */
   background-size: cover;
   background-position: center;
-  padding: 1rem;
+  padding: 2rem 5%; /* Add some padding so it's not strictly on the edge */
 }
 
 .login-wrapper {
@@ -16,10 +16,10 @@
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 1.5rem;
   overflow: hidden;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
 }
 
 .login-left {
