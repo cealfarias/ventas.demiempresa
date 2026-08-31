@@ -29,23 +29,32 @@ export const AssistantProvider = ({ children }) => {
       utterance.rate = 1.0;
       utterance.pitch = 1.1;
       
-      const voices = window.speechSynthesis.getVoices();
-      const svVoice = voices.find(v => v.lang === 'es-SV' || v.lang === 'es_SV' || v.name.includes('Salvador'));
-      
-      if (svVoice) utterance.voice = svVoice;
-      else {
-        const esVoice = voices.find(v => v.lang.startsWith('es-') && v.name.includes('Google'));
-        if (esVoice) utterance.voice = esVoice;
+      const setVoiceAndSpeak = () => {
+        const voices = window.speechSynthesis.getVoices();
+        const svVoice = voices.find(v => v.lang === 'es-SV' || v.lang === 'es_SV' || v.name.includes('Salvador'));
+        
+        if (svVoice) utterance.voice = svVoice;
         else {
-          const anyEs = voices.find(v => v.lang.startsWith('es-'));
-          if (anyEs) utterance.voice = anyEs;
+          const esVoice = voices.find(v => v.lang.startsWith('es-') && (v.name.includes('Google') || v.name.includes('Microsoft')));
+          if (esVoice) utterance.voice = esVoice;
+          else {
+            const anyEs = voices.find(v => v.lang.startsWith('es-'));
+            if (anyEs) utterance.voice = anyEs;
+          }
         }
-      }
-      
-      try {
-        window.speechSynthesis.speak(utterance);
-      } catch (e) {
-        console.warn('Speech API failed', e);
+        try {
+          window.speechSynthesis.speak(utterance);
+        } catch (e) {
+          console.warn('Speech API failed', e);
+        }
+      };
+
+      if (window.speechSynthesis.getVoices().length === 0) {
+        window.speechSynthesis.addEventListener('voiceschanged', setVoiceAndSpeak, { once: true });
+        // Fallback in case the event doesn't fire but we still want to speak
+        setTimeout(setVoiceAndSpeak, 1000);
+      } else {
+        setVoiceAndSpeak();
       }
     }
   }, []);
