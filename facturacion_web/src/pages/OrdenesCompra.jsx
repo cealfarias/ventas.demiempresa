@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ShoppingCart, Plus, Search, FileText, CheckCircle2, AlertCircle, XCircle, FileJson, Clock } from 'lucide-react';
+import { ShoppingCart, Plus, Search, FileText, CheckCircle2, AlertCircle, XCircle, FileJson, Clock, UploadCloud } from 'lucide-react';
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
@@ -317,21 +317,41 @@ export default function OrdenesCompra() {
   };
 
   if (vista === 'importar') {
+    const handleFileUpload = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setDteJson(ev.target.result);
+      };
+      reader.readAsText(file);
+    };
+
     return (
       <div className="p-8 max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold text-slate-800 mb-2 flex items-center gap-2">
           <FileJson className="w-6 h-6 text-emerald-600" /> Importación Inteligente de DTE
         </h1>
-        <p className="text-slate-500 mb-6">Pega aquí el JSON del Comprobante de Crédito Fiscal que te envió tu proveedor. El sistema creará automáticamente la orden, el proveedor y los productos si no existen.</p>
+        <p className="text-slate-500 mb-6">Sube el archivo JSON del Comprobante de Crédito Fiscal que te envió tu proveedor. El sistema creará automáticamente la orden, el proveedor y los productos si no existen.</p>
         
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
-          <textarea 
-            placeholder='{"identificacion": {"version": 3, "ambiente": "01"...'
-            value={dteJson} 
-            onChange={e => setDteJson(e.target.value)} 
-            rows={15} 
-            className="w-full px-4 py-3 border rounded-xl bg-slate-50 text-xs font-mono resize-none focus:ring-2 focus:ring-emerald-500 outline-none" 
+        <div className="bg-white p-12 rounded-2xl shadow-sm border-2 border-dashed border-slate-300 hover:border-emerald-500 hover:bg-emerald-50 transition-colors mb-6 flex flex-col items-center justify-center cursor-pointer relative group">
+          <input 
+            type="file" 
+            accept=".json,application/json" 
+            onChange={handleFileUpload}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           />
+          <div className="bg-emerald-100 p-4 rounded-full text-emerald-600 mb-4 group-hover:scale-110 transition-transform">
+            <UploadCloud className="w-8 h-8" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-700">Selecciona o arrastra el archivo JSON</h3>
+          <p className="text-slate-500 mt-2 text-sm text-center">
+            {dteJson ? (
+              <span className="text-emerald-600 font-semibold flex items-center gap-1 justify-center"><CheckCircle2 className="w-4 h-4"/> ¡Archivo cargado con éxito! Listo para procesar.</span>
+            ) : (
+              'Solo archivos .json generados por el Ministerio de Hacienda'
+            )}
+          </p>
         </div>
 
         <div className="flex gap-4">
