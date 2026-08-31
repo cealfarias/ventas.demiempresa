@@ -65,9 +65,25 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 @router.post("/registro")
 def registrar_empresa(data: RegistroSchema, db: Session = Depends(get_db)):
-    # 1. Verificar si el usuario ya existe
-    if db.query(Usuario).filter((Usuario.username == data.admin_username) | (Usuario.email == data.admin_email)).first():
-        raise HTTPException(status_code=400, detail="El usuario o email ya está en uso")
+    # 1. Verificar si el usuario ya existe por email o username
+    user = db.query(Usuario).filter((Usuario.username == data.admin_username) | (Usuario.email == data.admin_email)).first()
+    
+    if user:
+        username_asociado = user.username
+        mensaje = "Usuario ya registrado, creando empresa..."
+    else:
+        username_asociado = data.admin_username
+        hashed_pw = pwd_context.hash(data.admin_password)
+        nuevo_usuario = Usuario(
+            username=data.admin_username,
+            email=data.admin_email,
+            hashed_password=hashed_pw,
+            rol="admin",
+            two_factor_secret=pyotp.random_base32(),
+            usuario_creacion=data.admin_username
+        )
+        db.add(nuevo_usuario)
+        mensaje = "Empresa y administrador creados exitosamente"
         
     # 2. Crear Empresa (Alineado con DB ecosystem)
     empresa_uuid = str(uuid.uuid4())
@@ -75,24 +91,12 @@ def registrar_empresa(data: RegistroSchema, db: Session = Depends(get_db)):
         id=empresa_uuid,
         razon_social=data.empresa_nombre, 
         nit=data.empresa_nit,
-        usuario_creacion=data.admin_username
+        usuario_creacion=username_asociado
     )
     db.add(nueva_empresa)
-    
-    # 3. Crear Usuario Admin (Alineado con DB ecosystem)
-    hashed_pw = pwd_context.hash(data.admin_password)
-    nuevo_usuario = Usuario(
-        username=data.admin_username,
-        email=data.admin_email,
-        hashed_password=hashed_pw,
-        rol="admin",
-        two_factor_secret=pyotp.random_base32(),
-        usuario_creacion=data.admin_username
-    )
-    db.add(nuevo_usuario)
     db.commit()
     
-    return {"message": "Empresa y administrador creados exitosamente"}
+    return {"message": mensaje, "empresa_id": empresa_uuid, "username": username_asociado}
 
 @router.post("/login", response_model=TokenResponse)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
