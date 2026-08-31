@@ -70,3 +70,39 @@ def obtener_kpis(empresa_id: str, periodo: str = "dia", db: Session = Depends(ge
         "proveedores_activos": proveedores_activos,
         "productos_bajo_stock": productos_bajo_stock
     }
+
+@router.get("/grafico-ventas", response_model=list[Dict[str, Any]])
+def obtener_grafico_ventas(empresa_id: str, anio: int = None, db: Session = Depends(get_db)):
+    if not anio:
+        anio = datetime.now(TIMEZONE).year
+        
+    inicio_anio = datetime(anio, 1, 1, 0, 0, 0, tzinfo=TIMEZONE)
+    if anio == datetime.now(TIMEZONE).year:
+        fin_anio = datetime.now(TIMEZONE)
+    else:
+        fin_anio = datetime(anio, 12, 31, 23, 59, 59, tzinfo=TIMEZONE)
+        
+    # Obtener todas las facturas del año
+    facturas_del_anio = db.query(Factura.fecha_emision, Factura.total).filter(
+        Factura.empresa_id == empresa_id,
+        Factura.estado != "anulada",
+        Factura.fecha_emision >= inicio_anio,
+        Factura.fecha_emision <= fin_anio
+    ).all()
+    
+    # Inicializar meses
+    meses_nombres = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+    ventas_por_mes = {i: 0 for i in range(1, 13)}
+    
+    for f_fecha, f_total in facturas_del_anio:
+        mes = f_fecha.month
+        ventas_por_mes[mes] += f_total
+        
+    resultado = []
+    for i in range(1, 13):
+        resultado.append({
+            "mes": meses_nombres[i-1],
+            "ventas": ventas_por_mes[i]
+        })
+        
+    return resultado

@@ -1,21 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, TrendingUp, Users, AlertTriangle, Truck, CreditCard, ShoppingCart } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Users, AlertTriangle, Truck, CreditCard, ShoppingCart, Calendar } from 'lucide-react';
 import { api } from '../services/api';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
 const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
 
 export default function Dashboard() {
   const [kpis, setKpis] = useState(null);
+  const [chartData, setChartData] = useState([]);
   const [cargando, setCargando] = useState(true);
-  const [periodo, setPeriodo] = useState('dia'); // dia, mes, historico
+  const [periodo, setPeriodo] = useState('dia'); // dia, mes
+  const [anioSeleccionado, setAnioSeleccionado] = useState(new Date().getFullYear());
 
   useEffect(() => {
     const cargar = async () => {
       setCargando(true);
       try {
-        const res = await api.get(`/api/v1/dashboard/kpis?empresa_id=${empresaId()}&periodo=${periodo}`);
-        setKpis(res.data);
+        const [resKpis, resChart] = await Promise.all([
+          api.get(`/api/v1/dashboard/kpis?empresa_id=${empresaId()}&periodo=${periodo}`),
+          api.get(`/api/v1/dashboard/grafico-ventas?empresa_id=${empresaId()}&anio=${anioSeleccionado}`)
+        ]);
+        setKpis(resKpis.data);
+        setChartData(resChart.data.map(d => ({ ...d, ventas: d.ventas / 100 }))); // convertir a dólares para el gráfico
       } catch (e) {
         console.error("Error al cargar KPIs", e);
       } finally {
@@ -23,7 +30,7 @@ export default function Dashboard() {
       }
     };
     cargar();
-  }, [periodo]);
+  }, [periodo, anioSeleccionado]);
 
   const KpiCard = ({ title, value, icon: Icon, color, subValue, subLabel }) => (
     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
@@ -70,19 +77,13 @@ export default function Dashboard() {
           >
             Mes Actual
           </button>
-          <button 
-            onClick={() => setPeriodo('historico')}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${periodo === 'historico' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            Histórico
-          </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <div className={cargando ? 'opacity-50 pointer-events-none' : 'transition-opacity'}>
           <KpiCard 
-            title={`Ventas Totales (${periodo === 'dia' ? 'Hoy' : periodo === 'mes' ? 'Mes' : 'Histórico'})`} 
+            title={`Ventas Totales (${periodo === 'dia' ? 'Hoy' : 'Mes'})`} 
             value={fmt(kpis.ventas_totales)} 
             icon={TrendingUp} 
             color="text-emerald-600" 
@@ -103,6 +104,46 @@ export default function Dashboard() {
           color="text-amber-600" 
           subValue={kpis.proveedores_activos} subLabel="Proveedores activos"
         />
+      </div>
+
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-8">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h3 className="text-lg font-bold text-slate-800">Historial de Ventas</h3>
+            <p className="text-sm text-slate-500">Facturación aprobada mes a mes</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-slate-400" />
+            <select 
+              value={anioSeleccionado}
+              onChange={(e) => setAnioSeleccionado(parseInt(e.target.value))}
+              className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 outline-none"
+            >
+              {[new Date().getFullYear(), new Date().getFullYear() - 1, new Date().getFullYear() - 2].map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="h-72 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+              <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
+              <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} tickFormatter={(val) => `$${val}`} />
+              <Tooltip 
+                cursor={{fill: '#f1f5f9'}}
+                formatter={(value) => [`$${value.toFixed(2)}`, 'Ventas']}
+                contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+              />
+              <Bar dataKey="ventas" radius={[4, 4, 0, 0]}>
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.ventas > 0 ? '#4f46e5' : '#e2e8f0'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
