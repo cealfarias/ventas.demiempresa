@@ -170,43 +170,43 @@ function App() {
   return (
     <GoogleOAuthProvider clientId={clientId}>
       <Router>
+        <AssistantProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={<Registro />} />
 
           <Route path="/*" element={
-            <AssistantProvider>
-              <PrivateRoute>
-                <Layout>
-                  <AvatarTrigger />
-                  <Routes>
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    {/* Fase 1 — Almacén */}
-                    <Route path="/bodegas" element={<Bodegas />} />
-                    <Route path="/existencias" element={<Existencias />} />
-                    <Route path="/kardex" element={<Kardex />} />
-                    <Route path="/productos" element={<Productos />} />
-                    {/* Fase 2 — Compras */}
-                    <Route path="/proveedores" element={<Proveedores />} />
-                    <Route path="/ordenes-compra" element={<OrdenesCompra />} />
-                    <Route path="/cuentas-pagar" element={<CuentasPagar />} />
-                    {/* Fase 3 — Ventas */}
-                    <Route path="/clientes" element={<Clientes />} />
-                    <Route path="/facturas" element={<Facturas />} />
-                    <Route path="/cuentas-cobrar" element={<CuentasCobrar />} />
-                    {/* Fase 4 — DTE */}
-                    <Route path="/configuracion-dte" element={<ConfiguracionDTE />} />
-                    {/* Fase 5 — Logística */}
-                    <Route path="/despachos" element={<Despachos />} />
-                  </Routes>
-                  <Avatar />
-                </Layout>
-              </PrivateRoute>
-            </AssistantProvider>
+            <PrivateRoute>
+              <Layout>
+                <AvatarTrigger />
+                <Routes>
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  {/* Fase 1 — Almacén */}
+                  <Route path="/bodegas" element={<Bodegas />} />
+                  <Route path="/existencias" element={<Existencias />} />
+                  <Route path="/kardex" element={<Kardex />} />
+                  <Route path="/productos" element={<Productos />} />
+                  {/* Fase 2 — Compras */}
+                  <Route path="/proveedores" element={<Proveedores />} />
+                  <Route path="/ordenes-compra" element={<OrdenesCompra />} />
+                  <Route path="/cuentas-pagar" element={<CuentasPagar />} />
+                  {/* Fase 3 — Ventas */}
+                  <Route path="/clientes" element={<Clientes />} />
+                  <Route path="/facturas" element={<Facturas />} />
+                  <Route path="/cuentas-cobrar" element={<CuentasCobrar />} />
+                  {/* Fase 4 — DTE */}
+                  <Route path="/configuracion-dte" element={<ConfiguracionDTE />} />
+                  {/* Fase 5 — Logística */}
+                  <Route path="/despachos" element={<Despachos />} />
+                </Routes>
+              </Layout>
+            </PrivateRoute>
           } />
         </Routes>
-      </Router>
+        <Avatar />
+      </AssistantProvider>
+    </Router>
     </GoogleOAuthProvider>
   );
 }

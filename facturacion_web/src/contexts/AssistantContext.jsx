@@ -128,6 +128,21 @@ export const AssistantProvider = ({ children }) => {
     }, 15000);
   }, [say, dismiss]);
 
+  const startRegistroGreeting = useCallback(() => {
+    const isFirstTime = localStorage.getItem('avatar_registro_greeted') !== 'true';
+    if (isFirstTime) {
+      localStorage.setItem('avatar_registro_greeted', 'true');
+      say('¡Hola! Estás a un paso de crear tu empresa en nuestro ecosistema. Si iniciaste sesión con Google, solo debes colocar el nombre de tu empresa para terminar.');
+      
+      setTimeout(() => {
+        if (window.location.pathname !== '/registro') return;
+        say('No olvides aceptar los Términos de Referencia antes de dar clic en Registrar Empresa.', null, [
+          { label: '¡Entendido!', action: dismiss }
+        ]);
+      }, 9000);
+    }
+  }, [say, dismiss]);
+
   return (
     <AssistantContext.Provider value={{
       isActive,
@@ -136,7 +151,8 @@ export const AssistantProvider = ({ children }) => {
       say,
       dismiss,
       startFacturacionGreeting,
-      startFacturasOnboarding
+      startFacturasOnboarding,
+      startRegistroGreeting
     }}>
       {children}
     </AssistantContext.Provider>

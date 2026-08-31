@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { Share2 } from 'lucide-react';
@@ -6,9 +6,15 @@ import TerminosFacturacion from '../components/TerminosFacturacion';
 import { GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import './Login.css';
+import { useAssistant } from '../contexts/AssistantContext';
 
 export default function Registro() {
   const navigate = useNavigate();
+  const { startRegistroGreeting } = useAssistant();
+
+  useEffect(() => {
+    startRegistroGreeting();
+  }, [startRegistroGreeting]);
   const [googleToken, setGoogleToken] = useState(null);
   const [formData, setFormData] = useState({
     empresa_nombre: '',
