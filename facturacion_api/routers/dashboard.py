@@ -7,13 +7,29 @@ from typing import Dict, Any
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
+from datetime import datetime
+import pytz
+
+TIMEZONE = pytz.timezone("America/El_Salvador")
+
 @router.get("/kpis", response_model=Dict[str, Any])
-def obtener_kpis(empresa_id: str, db: Session = Depends(get_db)):
+def obtener_kpis(empresa_id: str, periodo: str = "dia", db: Session = Depends(get_db)):
+    hoy = datetime.now(TIMEZONE)
+    
     # Total de Ventas (Facturas no anuladas)
-    ventas = db.query(func.sum(Factura.total)).filter(
+    query_ventas = db.query(func.sum(Factura.total)).filter(
         Factura.empresa_id == empresa_id,
         Factura.estado != "anulada"
-    ).scalar() or 0
+    )
+    
+    if periodo == "dia":
+        inicio = hoy.replace(hour=0, minute=0, second=0, microsecond=0)
+        query_ventas = query_ventas.filter(Factura.fecha_emision >= inicio)
+    elif periodo == "mes":
+        inicio = hoy.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        query_ventas = query_ventas.filter(Factura.fecha_emision >= inicio)
+        
+    ventas = query_ventas.scalar() or 0
 
     # Cuentas por Cobrar Pendientes
     cxc = db.query(func.sum(CuentaPorCobrar.monto_pendiente)).filter(
