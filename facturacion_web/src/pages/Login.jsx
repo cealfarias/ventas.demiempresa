@@ -185,13 +185,27 @@ export default function Login() {
 
               <div style={{ display: 'flex', justifyContent: 'center' }}>
                 <GoogleLogin
-                  onSuccess={(credentialResponse) => {
-                    // Aquí puedes implementar el Login con Google SSO después
-                    console.log(credentialResponse);
+                  onSuccess={async (credentialResponse) => {
+                    try {
+                      setLoading(true);
+                      const token = credentialResponse.credential;
+                      const base64Url = token.split('.')[1];
+                      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                      const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                      const decoded = JSON.parse(jsonPayload);
+                      
+                      const res = await api.post('/api/v1/auth/google-login', { email: decoded.email });
+                      localStorage.setItem('token', res.data.access_token);
+                      localStorage.setItem('rol', res.data.rol);
+                      localStorage.setItem('empresa_id', res.data.empresa_id);
+                      navigate('/');
+                    } catch (err) {
+                      setError(err.response?.data?.detail || 'Error al autenticar con Google. ¿Ya creaste tu empresa?');
+                    } finally {
+                      setLoading(false);
+                    }
                   }}
-                  onError={() => {
-                    console.log('Login Failed');
-                  }}
+                  onError={() => setError('Fallo al conectar con Google')}
                   theme="outline"
                   size="large"
                   width="100%"

@@ -154,3 +154,28 @@ def verify_2fa(username: str, token: str, db: Session = Depends(get_db)):
         }
     else:
         raise HTTPException(status_code=401, detail="Código 2FA inválido")
+
+class GoogleLoginSchema(BaseModel):
+    email: str
+
+@router.post("/google-login", response_model=TokenResponse)
+def google_login(data: GoogleLoginSchema, db: Session = Depends(get_db)):
+    user = db.query(Usuario).filter(Usuario.email == data.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Correo no registrado. Por favor, crea tu empresa primero.")
+        
+    empresa = db.query(Empresa).filter(Empresa.usuario_creacion == user.username).first()
+    empresa_id = empresa.id if empresa else ""
+        
+    access_token = create_access_token(
+        data={"sub": user.username, "emp": empresa_id, "rol": user.rol},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "rol": user.rol,
+        "empresa_id": empresa_id,
+        "require_2fa": False
+    }
