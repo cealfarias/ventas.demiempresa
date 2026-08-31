@@ -1,17 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import { Receipt, Plus, Search, FileText, CheckCircle2, DollarSign, XCircle, FileOutput } from 'lucide-react';
 import { api } from '../services/api';
-import { useAssistant } from '../contexts/AssistantContext';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
 const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
 
 export default function Facturas() {
-  const { startFacturasOnboarding } = useAssistant();
   
   useEffect(() => {
-    startFacturasOnboarding();
-  }, [startFacturasOnboarding]);
+    const isFirstTime = localStorage.getItem('avatar_facturas_done') !== 'true';
+    if (isFirstTime) {
+      localStorage.setItem('avatar_facturas_done', 'true');
+      
+      window.dispatchEvent(new CustomEvent('avatar:say', {
+        detail: {
+          text: '¡Estás en la pantalla de Facturas! Aquí se registrarán todas tus ventas.',
+          highlightId: 'table-facturas',
+          options: []
+        }
+      }));
+      
+      setTimeout(() => {
+        if (window.location.pathname !== '/facturas') return;
+        window.dispatchEvent(new CustomEvent('avatar:say', {
+          detail: {
+            text: 'Para generar una nueva factura o comprobante de crédito fiscal, debes hacer clic en el botón "Emitir Factura".',
+            highlightId: 'btn-emitir-factura',
+            options: []
+          }
+        }));
+      }, 7000);
+      
+      setTimeout(() => {
+        if (window.location.pathname !== '/facturas') return;
+        window.dispatchEvent(new CustomEvent('avatar:say', {
+          detail: {
+            text: 'Una vez emitida, podrás presionar "Transmitir MH" para enviarla inmediatamente al Ministerio de Hacienda, y el PDF se habilitará cuando sea aprobada.',
+            highlightId: null,
+            options: [{ label: '¡Entendido!', action: null }]
+          }
+        }));
+      }, 15000);
+    }
+  }, []);
 
   const [facturas, setFacturas] = useState([]);
   const [cargando, setCargando] = useState(true);

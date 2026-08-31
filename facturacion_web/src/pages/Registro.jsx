@@ -6,15 +6,39 @@ import TerminosFacturacion from '../components/TerminosFacturacion';
 import { GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import './Login.css';
-import { useAssistant } from '../contexts/AssistantContext';
 
 export default function Registro() {
   const navigate = useNavigate();
-  const { startRegistroGreeting } = useAssistant();
 
   useEffect(() => {
-    startRegistroGreeting();
-  }, [startRegistroGreeting]);
+    const isFirstTime = localStorage.getItem('avatar_registro_greeted') !== 'true';
+    if (isFirstTime) {
+      localStorage.setItem('avatar_registro_greeted', 'true');
+      
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('avatar:say', {
+          detail: {
+            text: '¡Hola! Estás a un paso de crear tu empresa en nuestro ecosistema. Si iniciaste sesión con Google, solo debes colocar el nombre de tu empresa para terminar.',
+            highlightId: null,
+            options: []
+          }
+        }));
+      }, 1000);
+      
+      setTimeout(() => {
+        if (window.location.pathname !== '/registro') return;
+        window.dispatchEvent(new CustomEvent('avatar:say', {
+          detail: {
+            text: 'No olvides aceptar los Términos de Referencia antes de dar clic en Registrar Empresa.',
+            highlightId: null,
+            options: [
+              { label: '¡Entendido!', action: null }
+            ]
+          }
+        }));
+      }, 9000);
+    }
+  }, []);
   const [googleToken, setGoogleToken] = useState(null);
   const [formData, setFormData] = useState({
     empresa_nombre: '',
