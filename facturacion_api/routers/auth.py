@@ -91,7 +91,10 @@ def registrar_empresa(data: RegistroSchema, db: Session = Depends(get_db)):
         id=empresa_uuid,
         razon_social=data.empresa_nombre, 
         nit=data.empresa_nit,
-        usuario_creacion=username_asociado
+        giro="Actividad no especificada",
+        normativa="NIIF para Pymes",
+        usuario_creacion=username_asociado,
+        terminal_ip="127.0.0.1"
     )
     db.add(nueva_empresa)
     db.commit()
