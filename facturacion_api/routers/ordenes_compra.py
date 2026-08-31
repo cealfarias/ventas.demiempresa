@@ -274,6 +274,109 @@ def recibir_mercancia(oc_id: int, recepcion: RecepcionRequest, db: Session = Dep
     return _build_response(oc)
 
 
+@router.post("/desde-dte", response_model=OrdenCompraResponse, status_code=status.HTTP_201_CREATED)
+def crear_desde_dte(empresa_id: str, payload: ImportarDTERequest, usuario_id: int = 1, db: Session = Depends(get_db)):
+    try:
+        dte = json.loads(payload.json_dte)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="El JSON proporcionado no es válido")
+
+    emisor = dte.get("emisor", {})
+    nit_emisor = emisor.get("nit", "")
+    nombre_emisor = emisor.get("nombre", "")
+
+    if not nit_emisor or not nombre_emisor:
+        raise HTTPException(status_code=400, detail="El DTE no tiene información válida del emisor")
+
+    # Buscar o crear proveedor
+    proveedor = db.query(Proveedor).filter(
+        Proveedor.empresa_id == empresa_id,
+        Proveedor.nit == nit_emisor
+    ).first()
+
+    if not proveedor:
+        proveedor = Proveedor(
+            empresa_id=empresa_id,
+            nombre=nombre_emisor,
+            nombre_comercial=emisor.get("nombreComercial", ""),
+            nit=nit_emisor,
+            nrc=emisor.get("nrc", ""),
+            telefono=emisor.get("telefono", ""),
+            email=emisor.get("correo", "")
+        )
+        db.add(proveedor)
+        db.flush()
+
+    # Crear Orden
+    numero = _generar_numero_oc(db, empresa_id)
+    oc = OrdenCompra(
+        empresa_id=empresa_id,
+        numero=numero,
+        proveedor_id=proveedor.id,
+        tipo_doc="CCF",
+        json_dte_proveedor=payload.json_dte,
+        codigo_generacion_proveedor=dte.get("identificacion", {}).get("codigoGeneracion", ""),
+        sello_recepcion_proveedor=dte.get("selloRecibido", ""),
+        estado="borrador",
+        usuario_id=usuario_id,
+        notas=f"Generado automáticamente desde DTE {dte.get('identificacion', {}).get('numeroControl', '')}"
+    )
+    db.add(oc)
+    db.flush()
+
+    cuerpo_documento = dte.get("cuerpoDocumento", [])
+    subtotal = 0
+    
+    for item in cuerpo_documento:
+        descripcion = item.get("descripcion", "")
+        if not descripcion: continue
+        
+        # Buscar producto por nombre (o código) o crearlo si no existe
+        producto = db.query(Producto).filter(
+            Producto.empresa_id == empresa_id,
+            Producto.nombre == descripcion
+        ).first()
+        
+        precio_unitario = int(float(item.get("precioUni", 0)) * 100)
+        cantidad = float(item.get("cantidad", 0))
+        
+        if not producto:
+            producto = Producto(
+                empresa_id=empresa_id,
+                codigo=item.get("codigo", f"P-{str(len(descripcion))}-{int(precio_unitario)}"),
+                nombre=descripcion,
+                precio_venta=precio_unitario, # Por defecto al mismo precio, el usuario luego lo ajusta
+                costo_promedio=precio_unitario,
+                stock=0.0
+            )
+            db.add(producto)
+            db.flush()
+            
+        item_subtotal = int(float(item.get("ventaGravada", 0)) * 100)
+        detalle = DetalleOrdenCompra(
+            orden_compra_id=oc.id,
+            producto_id=producto.id_producto,
+            cantidad_pedida=cantidad,
+            cantidad_recibida=0.0,
+            precio_unitario=precio_unitario,
+            subtotal=item_subtotal
+        )
+        db.add(detalle)
+        subtotal += item_subtotal
+
+    resumen = dte.get("resumen", {})
+    subtotal_dte = int(float(resumen.get("totalGravada", subtotal/100)) * 100)
+    iva_dte = int(float(resumen.get("totalIva", (subtotal/100)*0.13)) * 100)
+    total_dte = int(float(resumen.get("montoTotalOperacion", (subtotal_dte+iva_dte)/100)) * 100)
+
+    oc.subtotal = subtotal_dte
+    oc.iva = iva_dte
+    oc.total = total_dte
+
+    db.commit()
+    db.refresh(oc)
+    return _build_response(oc)
+
 @router.post("/{oc_id}/importar-dte", response_model=OrdenCompraResponse)
 def importar_dte_proveedor(oc_id: int, empresa_id: str, payload: ImportarDTERequest, db: Session = Depends(get_db)):
     oc = db.query(OrdenCompra).filter(OrdenCompra.id == oc_id, OrdenCompra.empresa_id == empresa_id).first()

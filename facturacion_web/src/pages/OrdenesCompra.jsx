@@ -303,6 +303,47 @@ export default function OrdenesCompra() {
     );
   }
 
+  const importarDteAutomatico = async () => {
+    setGuardando(true);
+    try {
+      await api.post(`/api/v1/compras/ordenes-compra/desde-dte?empresa_id=${empresaId()}`, { json_dte: dteJson });
+      setVista('lista');
+      cargarDatos();
+    } catch (e) {
+      alert(e.response?.data?.detail || 'Error al procesar el JSON del DTE');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  if (vista === 'importar') {
+    return (
+      <div className="p-8 max-w-4xl mx-auto">
+        <h1 className="text-2xl font-bold text-slate-800 mb-2 flex items-center gap-2">
+          <FileJson className="w-6 h-6 text-emerald-600" /> Importación Inteligente de DTE
+        </h1>
+        <p className="text-slate-500 mb-6">Pega aquí el JSON del Comprobante de Crédito Fiscal que te envió tu proveedor. El sistema creará automáticamente la orden, el proveedor y los productos si no existen.</p>
+        
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+          <textarea 
+            placeholder='{"identificacion": {"version": 3, "ambiente": "01"...'
+            value={dteJson} 
+            onChange={e => setDteJson(e.target.value)} 
+            rows={15} 
+            className="w-full px-4 py-3 border rounded-xl bg-slate-50 text-xs font-mono resize-none focus:ring-2 focus:ring-emerald-500 outline-none" 
+          />
+        </div>
+
+        <div className="flex gap-4">
+          <button onClick={() => setVista('lista')} className="px-6 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium">Cancelar</button>
+          <button onClick={importarDteAutomatico} disabled={guardando || !dteJson} className="px-6 py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 font-medium disabled:opacity-50 flex-1 flex items-center justify-center gap-2">
+            {guardando ? 'Analizando JSON y Creando Orden...' : <><CheckCircle2 className="w-5 h-5"/> Procesar e Importar DTE</>}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Vista lista (default)
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -313,9 +354,14 @@ export default function OrdenesCompra() {
           </h1>
           <p className="text-sm text-slate-500 mt-1">Gestión de abastecimiento e ingreso de inventario</p>
         </div>
-        <button onClick={() => { setFormOC({ proveedor_id: '', tipo_doc: 'CCF', bodega_destino_id: '', fecha_esperada_entrega: '', notas: '', detalles: [] }); setDteJson(''); setMostrarDte(false); setVista('nueva'); }} className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 shadow-lg shadow-indigo-500/30">
-          <Plus className="w-4 h-4" /> Nueva Orden
-        </button>
+        <div className="flex gap-3">
+          <button onClick={() => { setDteJson(''); setVista('importar'); }} className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 shadow-lg shadow-emerald-500/30">
+            <FileJson className="w-4 h-4" /> Importar DTE
+          </button>
+          <button onClick={() => { setFormOC({ proveedor_id: '', tipo_doc: 'CCF', bodega_destino_id: '', fecha_esperada_entrega: '', notas: '', detalles: [] }); setDteJson(''); setMostrarDte(false); setVista('nueva'); }} className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 shadow-lg shadow-indigo-500/30">
+            <Plus className="w-4 h-4" /> Nueva Orden
+          </button>
+        </div>
       </div>
 
       {cargando ? (
