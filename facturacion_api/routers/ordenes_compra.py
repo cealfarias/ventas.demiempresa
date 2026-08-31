@@ -1,0 +1,320 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from database import get_db
+from models import OrdenCompra, DetalleOrdenCompra, Proveedor, Producto, CuentaPorPagar, Bodega
+from routers.kardex import registrar_movimiento
+from pydantic import BaseModel
+from typing import List, Optional
+from datetime import datetime, timedelta
+import json
+import pytz
+
+TIMEZONE = pytz.timezone("America/El_Salvador")
+router = APIRouter(prefix="/ordenes-compra", tags=["Órdenes de Compra"])
+
+
+class DetalleOCBase(BaseModel):
+    producto_id: int
+    cantidad_pedida: float
+    precio_unitario: int   # centavos
+
+class OrdenCompraCreate(BaseModel):
+    proveedor_id: int
+    tipo_doc: str = "CCF"
+    bodega_destino_id: Optional[int] = None
+    fecha_esperada_entrega: Optional[datetime] = None
+    notas: Optional[str] = None
+    detalles: List[DetalleOCBase]
+
+class RecepcionDetalleRequest(BaseModel):
+    detalle_id: int
+    cantidad_recibida: float
+
+class RecepcionRequest(BaseModel):
+    empresa_id: str
+    bodega_destino_id: int
+    usuario_id: Optional[int] = None
+    detalles: List[RecepcionDetalleRequest]
+    crear_cuenta_pagar: bool = False
+    dias_credito: int = 30
+
+class ImportarDTERequest(BaseModel):
+    json_dte: str
+
+class DetalleOCResponse(BaseModel):
+    id: int
+    producto_id: int
+    producto_codigo: str
+    producto_nombre: str
+    cantidad_pedida: float
+    cantidad_recibida: float
+    precio_unitario: int
+    subtotal: int
+    pendiente: float
+
+    class Config:
+        from_attributes = True
+
+class OrdenCompraResponse(BaseModel):
+    id: int
+    empresa_id: str
+    numero: str
+    proveedor_id: int
+    proveedor_nombre: str
+    tipo_doc: str
+    subtotal: int
+    iva: int
+    total: int
+    estado: str
+    fecha_emision: datetime
+    fecha_esperada_entrega: Optional[datetime]
+    notas: Optional[str]
+    detalles: List[DetalleOCResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+def _generar_numero_oc(db: Session, empresa_id: str) -> str:
+    anio = datetime.now().year
+    count = db.query(OrdenCompra).filter(OrdenCompra.empresa_id == empresa_id).count()
+    return f"OC-{anio}-{str(count + 1).zfill(5)}"
+
+def _build_response(oc: OrdenCompra) -> OrdenCompraResponse:
+    detalles = []
+    for d in oc.detalles:
+        detalles.append(DetalleOCResponse(
+            id=d.id,
+            producto_id=d.producto_id,
+            producto_codigo=d.producto.codigo if d.producto else "",
+            producto_nombre=d.producto.nombre if d.producto else "",
+            cantidad_pedida=d.cantidad_pedida,
+            cantidad_recibida=d.cantidad_recibida,
+            precio_unitario=d.precio_unitario,
+            subtotal=d.subtotal,
+            pendiente=max(0, d.cantidad_pedida - d.cantidad_recibida)
+        ))
+    return OrdenCompraResponse(
+        id=oc.id,
+        empresa_id=oc.empresa_id,
+        numero=oc.numero,
+        proveedor_id=oc.proveedor_id,
+        proveedor_nombre=oc.proveedor.nombre if oc.proveedor else "",
+        tipo_doc=oc.tipo_doc,
+        subtotal=oc.subtotal,
+        iva=oc.iva,
+        total=oc.total,
+        estado=oc.estado,
+        fecha_emision=oc.fecha_emision,
+        fecha_esperada_entrega=oc.fecha_esperada_entrega,
+        notas=oc.notas,
+        detalles=detalles
+    )
+
+
+@router.get("/", response_model=List[OrdenCompraResponse])
+def listar_ordenes(empresa_id: str, estado: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(OrdenCompra).filter(OrdenCompra.empresa_id == empresa_id)
+    if estado:
+        query = query.filter(OrdenCompra.estado == estado)
+    ordenes = query.order_by(OrdenCompra.fecha_creacion.desc()).all()
+    return [_build_response(o) for o in ordenes]
+
+
+@router.get("/{oc_id}", response_model=OrdenCompraResponse)
+def obtener_orden(oc_id: int, empresa_id: str, db: Session = Depends(get_db)):
+    oc = db.query(OrdenCompra).filter(OrdenCompra.id == oc_id, OrdenCompra.empresa_id == empresa_id).first()
+    if not oc:
+        raise HTTPException(status_code=404, detail="Orden de compra no encontrada")
+    return _build_response(oc)
+
+
+@router.post("/", response_model=OrdenCompraResponse, status_code=status.HTTP_201_CREATED)
+def crear_orden(empresa_id: str, usuario_id: int, data: OrdenCompraCreate, db: Session = Depends(get_db)):
+    proveedor = db.query(Proveedor).filter(
+        Proveedor.id == data.proveedor_id,
+        Proveedor.empresa_id == empresa_id
+    ).first()
+    if not proveedor:
+        raise HTTPException(status_code=404, detail="Proveedor no encontrado")
+
+    numero = _generar_numero_oc(db, empresa_id)
+
+    oc = OrdenCompra(
+        empresa_id=empresa_id,
+        numero=numero,
+        proveedor_id=data.proveedor_id,
+        tipo_doc=data.tipo_doc,
+        bodega_destino_id=data.bodega_destino_id,
+        fecha_esperada_entrega=data.fecha_esperada_entrega,
+        notas=data.notas,
+        estado="borrador",
+        usuario_id=usuario_id
+    )
+    db.add(oc)
+    db.flush()
+
+    subtotal = 0
+    for item in data.detalles:
+        producto = db.query(Producto).filter(Producto.id_producto == item.producto_id).first()
+        if not producto:
+            raise HTTPException(status_code=404, detail=f"Producto {item.producto_id} no encontrado")
+        
+        item_subtotal = int(item.cantidad_pedida * item.precio_unitario)
+        detalle = DetalleOrdenCompra(
+            orden_compra_id=oc.id,
+            producto_id=item.producto_id,
+            cantidad_pedida=item.cantidad_pedida,
+            cantidad_recibida=0.0,
+            precio_unitario=item.precio_unitario,
+            subtotal=item_subtotal
+        )
+        db.add(detalle)
+        subtotal += item_subtotal
+
+    iva = int(subtotal * 0.13)
+    oc.subtotal = subtotal
+    oc.iva = iva
+    oc.total = subtotal + iva
+
+    db.commit()
+    db.refresh(oc)
+    return _build_response(oc)
+
+
+@router.post("/{oc_id}/recibir", response_model=OrdenCompraResponse)
+def recibir_mercancia(oc_id: int, recepcion: RecepcionRequest, db: Session = Depends(get_db)):
+    oc = db.query(OrdenCompra).filter(
+        OrdenCompra.id == oc_id,
+        OrdenCompra.empresa_id == recepcion.empresa_id
+    ).first()
+    
+    if not oc:
+        raise HTTPException(status_code=404, detail="Orden de compra no encontrada")
+    if oc.estado in ("recibida", "anulada"):
+        raise HTTPException(status_code=400, detail=f"La OC está en estado '{oc.estado}' y no puede recibirse")
+
+    bodega = db.query(Bodega).filter(
+        Bodega.id == recepcion.bodega_destino_id,
+        Bodega.empresa_id == recepcion.empresa_id,
+        Bodega.activa == True
+    ).first()
+    
+    if not bodega:
+        raise HTTPException(status_code=404, detail="Bodega de destino no encontrada o inactiva")
+
+    total_recibido_valor = 0
+
+    for item_recepcion in recepcion.detalles:
+        detalle = db.query(DetalleOrdenCompra).filter(
+            DetalleOrdenCompra.id == item_recepcion.detalle_id,
+            DetalleOrdenCompra.orden_compra_id == oc_id
+        ).first()
+        if not detalle:
+            continue
+
+        cantidad_a_recibir = item_recepcion.cantidad_recibida
+        if cantidad_a_recibir <= 0:
+            continue
+
+        disponible = detalle.cantidad_pedida - detalle.cantidad_recibida
+        if cantidad_a_recibir > disponible:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Producto {detalle.producto_id}: cantidad a recibir ({cantidad_a_recibir}) supera lo pendiente ({disponible})"
+            )
+
+        registrar_movimiento(
+            db=db,
+            empresa_id=recepcion.empresa_id,
+            bodega_id=recepcion.bodega_destino_id,
+            producto_id=detalle.producto_id,
+            tipo_movimiento="ENTRADA_COMPRA",
+            cantidad=cantidad_a_recibir,
+            costo_unitario=detalle.precio_unitario,
+            referencia_tipo="orden_compra",
+            referencia_id=oc_id,
+            usuario_id=recepcion.usuario_id,
+            notas=f"Recepción OC {oc.numero}"
+        )
+
+        detalle.cantidad_recibida += cantidad_a_recibir
+        total_recibido_valor += int(cantidad_a_recibir * detalle.precio_unitario)
+
+    todos_los_detalles = db.query(DetalleOrdenCompra).filter(
+        DetalleOrdenCompra.orden_compra_id == oc_id
+    ).all()
+    
+    total_pedido = sum(d.cantidad_pedida for d in todos_los_detalles)
+    total_recibido = sum(d.cantidad_recibida for d in todos_los_detalles)
+
+    if total_recibido >= total_pedido:
+        oc.estado = "recibida"
+    elif total_recibido > 0:
+        oc.estado = "recibida_parcial"
+
+    oc.bodega_destino_id = recepcion.bodega_destino_id
+
+    if recepcion.crear_cuenta_pagar and total_recibido_valor > 0:
+        vencimiento = datetime.now(TIMEZONE) + timedelta(days=recepcion.dias_credito)
+        cxp = CuentaPorPagar(
+            empresa_id=recepcion.empresa_id,
+            proveedor_id=oc.proveedor_id,
+            orden_compra_id=oc_id,
+            monto_original=total_recibido_valor,
+            monto_pendiente=total_recibido_valor,
+            fecha_vencimiento=vencimiento,
+            estado="pendiente"
+        )
+        db.add(cxp)
+        oc.proveedor.saldo_pendiente = (oc.proveedor.saldo_pendiente or 0) + total_recibido_valor
+
+    db.commit()
+    db.refresh(oc)
+    return _build_response(oc)
+
+
+@router.post("/{oc_id}/importar-dte", response_model=OrdenCompraResponse)
+def importar_dte_proveedor(oc_id: int, empresa_id: str, payload: ImportarDTERequest, db: Session = Depends(get_db)):
+    oc = db.query(OrdenCompra).filter(OrdenCompra.id == oc_id, OrdenCompra.empresa_id == empresa_id).first()
+    if not oc:
+        raise HTTPException(status_code=404, detail="Orden de compra no encontrada")
+    if oc.estado not in ("borrador", "enviada"):
+        raise HTTPException(status_code=400, detail="Solo se puede importar DTE en órdenes en borrador o enviadas")
+
+    try:
+        dte = json.loads(payload.json_dte)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="El JSON proporcionado no es válido")
+
+    oc.json_dte_proveedor = payload.json_dte
+    oc.codigo_generacion_proveedor = dte.get("identificacion", {}).get("codigoGeneracion", "")
+    oc.sello_recepcion_proveedor = dte.get("selloRecibido", "")
+
+    resumen = dte.get("resumen", {})
+    subtotal_dte = int(float(resumen.get("totalGravada", 0)) * 100)
+    iva_dte = int(float(resumen.get("totalIva", 0)) * 100)
+    total_dte = int(float(resumen.get("montoTotalOperacion", 0)) * 100)
+
+    if total_dte > 0:
+        oc.subtotal = subtotal_dte
+        oc.iva = iva_dte
+        oc.total = total_dte
+
+    db.commit()
+    db.refresh(oc)
+    return _build_response(oc)
+
+
+@router.put("/{oc_id}/anular", response_model=OrdenCompraResponse)
+def anular_orden(oc_id: int, empresa_id: str, db: Session = Depends(get_db)):
+    oc = db.query(OrdenCompra).filter(OrdenCompra.id == oc_id, OrdenCompra.empresa_id == empresa_id).first()
+    if not oc:
+        raise HTTPException(status_code=404, detail="Orden de compra no encontrada")
+    if oc.estado == "recibida":
+        raise HTTPException(status_code=400, detail="No se puede anular una OC ya recibida completamente")
+    
+    oc.estado = "anulada"
+    db.commit()
+    db.refresh(oc)
+    return _build_response(oc)
