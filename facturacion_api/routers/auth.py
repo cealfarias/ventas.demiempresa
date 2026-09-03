@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from passlib.context import CryptContext
+import bcrypt
 from datetime import datetime, timedelta, timezone
 import jwt
 import pyotp
@@ -15,7 +15,13 @@ SECRET_KEY = "FACTURACION_LLAVE_MAESTRA_PARA_JWT"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 120
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+class PwdContext:
+    def hash(self, password: str) -> str:
+        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    def verify(self, plain: str, hashed: str) -> bool:
+        return bcrypt.checkpw(plain.encode('utf-8'), hashed.encode('utf-8'))
+
+pwd_context = PwdContext()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 router = APIRouter(tags=["Autenticacion"])
 

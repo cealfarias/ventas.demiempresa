@@ -20,18 +20,18 @@ class ProductoCreate(ProductoBase):
 
 class ProductoResponse(ProductoBase):
     id_producto: int
-    empresa_id: int
+    empresa_id: str
     activo: bool
 
     class Config:
         from_attributes = True
 
 @router.get("/", response_model=List[ProductoResponse])
-def listar_productos(empresa_id: int, db: Session = Depends(get_db)):
+def listar_productos(empresa_id: str, db: Session = Depends(get_db)):
     return db.query(Producto).filter(Producto.empresa_id == empresa_id, Producto.activo == True).all()
 
 @router.post("/", response_model=ProductoResponse, status_code=status.HTTP_201_CREATED)
-def crear_producto(empresa_id: int, producto: ProductoCreate, db: Session = Depends(get_db)):
+def crear_producto(empresa_id: str, producto: ProductoCreate, db: Session = Depends(get_db)):
     db_producto = Producto(**producto.dict(), empresa_id=empresa_id)
     db.add(db_producto)
     db.commit()
