@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ShoppingCart, Plus, Search, FileText, CheckCircle2, AlertCircle, XCircle, FileJson, Clock, UploadCloud } from 'lucide-react';
+import { ShoppingCart, Plus, Search, FileText, CheckCircle2, AlertCircle, XCircle, FileJson, Clock, UploadCloud, Eye } from 'lucide-react';
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
@@ -135,6 +135,14 @@ export default function OrdenesCompra() {
     }
   };
 
+  const abrirDetalle = (oc) => {
+    setOcActiva(oc);
+    api.get(`/api/v1/compras/ordenes-compra/${oc.id}?empresa_id=${empresaId()}`)
+      .then(res => {
+        setOcActiva(res.data);
+        setVista('detalle');
+      });
+  };
 
   if (vista === 'nueva') {
     const subtotal = formOC.detalles.reduce((acc, d) => acc + (d.cantidad_pedida * (parseFloat(d.precio_unitario) || 0)), 0);
@@ -364,6 +372,68 @@ export default function OrdenesCompra() {
     );
   }
 
+  if (vista === 'detalle' && ocActiva) {
+    return (
+      <div className="p-8 max-w-5xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <FileText className="w-6 h-6 text-indigo-600" /> Detalle de Orden {ocActiva.numero}
+          </h1>
+          <button onClick={() => setVista('lista')} className="text-slate-500 hover:text-slate-700 font-medium">Volver</button>
+        </div>
+        
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase">Proveedor</p>
+              <p className="font-medium">{ocActiva.proveedor_nombre}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase">Estado</p>
+              <p className="font-medium">{badgeEstado(ocActiva.estado)}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase">Código de Generación DTE</p>
+              <p className="font-medium text-sm text-slate-600">{ocActiva.codigo_generacion_proveedor || 'N/A'}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase">Fecha Emisión</p>
+              <p className="font-medium">{ocActiva.fecha_emision || 'N/A'}</p>
+            </div>
+          </div>
+
+          <h3 className="font-semibold mb-3 border-b pb-2">Productos</h3>
+          <table className="w-full text-left text-sm mb-4">
+            <thead>
+              <tr className="text-slate-500 border-b">
+                <th className="pb-2">Producto</th>
+                <th className="pb-2 text-right">Cant.</th>
+                <th className="pb-2 text-right">Precio Unit.</th>
+                <th className="pb-2 text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {ocActiva.detalles?.map(d => (
+                <tr key={d.id} className="hover:bg-slate-50">
+                  <td className="py-2">{d.producto_nombre}</td>
+                  <td className="py-2 text-right">{d.cantidad_pedida}</td>
+                  <td className="py-2 text-right">{fmt(d.precio_unitario)}</td>
+                  <td className="py-2 text-right font-medium">{fmt(d.cantidad_pedida * d.precio_unitario)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan="3" className="text-right pt-4 font-semibold text-slate-600">Total Orden:</td>
+                <td className="text-right pt-4 font-bold text-indigo-700">{fmt(ocActiva.total)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
   // Vista lista (default)
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -411,6 +481,9 @@ export default function OrdenesCompra() {
                   <td className="px-5 py-4 text-right font-bold text-indigo-700">{fmt(oc.total)}</td>
                   <td className="px-5 py-4 text-center">{badgeEstado(oc.estado)}</td>
                   <td className="px-5 py-4 flex gap-2 justify-end">
+                    <button onClick={() => abrirDetalle(oc)} className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-medium transition-colors flex items-center gap-1">
+                      <Eye className="w-3.5 h-3.5" /> Detalle
+                    </button>
                     {['borrador', 'enviada', 'recibida_parcial'].includes(oc.estado) && (
                       <button onClick={() => abrirRecepcion(oc)} className="text-xs bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-100 font-medium transition-colors">
                         Recibir

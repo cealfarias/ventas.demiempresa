@@ -281,6 +281,15 @@ def crear_desde_dte(empresa_id: str, payload: ImportarDTERequest, usuario_id: in
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="El JSON proporcionado no es válido")
 
+    codigo_gen = dte.get("identificacion", {}).get("codigoGeneracion", "")
+    if codigo_gen:
+        existente = db.query(OrdenCompra).filter(
+            OrdenCompra.empresa_id == empresa_id,
+            OrdenCompra.codigo_generacion_proveedor == codigo_gen
+        ).first()
+        if existente:
+            raise HTTPException(status_code=400, detail=f"Este DTE ({codigo_gen}) ya fue importado en la orden {existente.numero}.")
+
     emisor = dte.get("emisor", {})
     nit_emisor = emisor.get("nit", "")
     nombre_emisor = emisor.get("nombre", "")
