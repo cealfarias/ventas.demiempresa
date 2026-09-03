@@ -69,6 +69,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 # ================= ENDPOINTS =================
 
+from sqlalchemy.exc import IntegrityError
+
 @router.post("/registro")
 def registrar_empresa(data: RegistroSchema, db: Session = Depends(get_db)):
     # 1. Verificar si el usuario ya existe por email o username
@@ -93,17 +95,32 @@ def registrar_empresa(data: RegistroSchema, db: Session = Depends(get_db)):
         
     # 2. Crear Empresa (Alineado con DB ecosystem)
     empresa_uuid = str(uuid.uuid4())
+    
+    # Manejar nit vacío como None para no romper el UniqueConstraint
+    nit_val = data.empresa_nit if data.empresa_nit and data.empresa_nit.strip() != "" else None
+    
     nueva_empresa = Empresa(
         id=empresa_uuid,
         razon_social=data.empresa_nombre, 
-        nit=data.empresa_nit,
+        nit=nit_val,
         giro="Actividad no especificada",
         normativa="NIIF para Pymes",
         usuario_creacion=username_asociado,
         terminal_ip="127.0.0.1"
     )
     db.add(nueva_empresa)
-    db.commit()
+    
+    try:
+        db.commit()
+    except IntegrityError as e:
+        db.rollback()
+        error_msg = str(e.orig)
+        if "empresas_nit_key" in error_msg:
+            raise HTTPException(status_code=400, detail="Ya existe una empresa registrada con ese NIT.")
+        elif "usuarios_username_key" in error_msg or "usuarios_email_key" in error_msg:
+            raise HTTPException(status_code=400, detail="El correo o usuario de administrador ya está en uso.")
+        else:
+            raise HTTPException(status_code=400, detail="Error de datos duplicados. Por favor verifica la información.")
     
     return {"message": mensaje, "empresa_id": empresa_uuid, "username": username_asociado}
 
