@@ -114,13 +114,10 @@ def registrar_empresa(data: RegistroSchema, db: Session = Depends(get_db)):
         db.commit()
     except IntegrityError as e:
         db.rollback()
-        error_msg = str(e.orig)
-        if "empresas_nit_key" in error_msg:
-            raise HTTPException(status_code=400, detail="Ya existe una empresa registrada con ese NIT.")
-        elif "usuarios_username_key" in error_msg or "usuarios_email_key" in error_msg:
-            raise HTTPException(status_code=400, detail="El correo o usuario de administrador ya está en uso.")
-        else:
-            raise HTTPException(status_code=400, detail="Error de datos duplicados. Por favor verifica la información.")
+        raise HTTPException(
+            status_code=400, 
+            detail="Tu usuario o empresa ya se encuentran registrados en el ecosistema. Por favor, ve a la pantalla de Iniciar Sesión para continuar."
+        )
     
     return {"message": mensaje, "empresa_id": empresa_uuid, "username": username_asociado}
 
