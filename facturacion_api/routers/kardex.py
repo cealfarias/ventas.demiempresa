@@ -24,6 +24,7 @@ class AjusteManualRequest(BaseModel):
 class KardexResponse(BaseModel):
     id: int
     bodega_nombre: str
+    producto_id: int
     producto_codigo: str
     producto_nombre: str
     tipo_movimiento: str
@@ -172,6 +173,7 @@ def listar_movimientos(
         KardexResponse(
             id=m.id,
             bodega_nombre=m.bodega.nombre if m.bodega else "—",
+            producto_id=m.producto_id,
             producto_codigo=m.producto.codigo if m.producto else "—",
             producto_nombre=m.producto.nombre if m.producto else "—",
             tipo_movimiento=m.tipo_movimiento,

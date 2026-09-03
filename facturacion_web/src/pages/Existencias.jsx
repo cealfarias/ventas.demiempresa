@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { BarChart3, Search, Filter, RefreshCw, TrendingUp, TrendingDown, Warehouse, Package, AlertTriangle } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -6,6 +7,7 @@ const empresaId = () => localStorage.getItem('empresa_id') || '';
 const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
 
 export default function Existencias() {
+  const navigate = useNavigate();
   const [stock, setStock] = useState([]);
   const [bodegas, setBodegas] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -156,7 +158,12 @@ export default function Existencias() {
                   const stockCritico = s.stock_actual <= 0;
                   const stockBajo = s.stock_actual > 0 && s.stock_actual <= 5;
                   return (
-                    <tr key={i} className="hover:bg-slate-50/80 transition-colors">
+                    <tr 
+                      key={i} 
+                      onClick={() => navigate('/kardex', { state: { producto_id: s.producto_id } })}
+                      className="hover:bg-indigo-50/80 transition-colors cursor-pointer"
+                      title="Haz clic para ver el Kardex de este producto"
+                    >
                       <td className="px-5 py-3.5">
                         <span className="text-xs font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
                           {s.producto_codigo}

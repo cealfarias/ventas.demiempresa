@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { BookOpen, Search, ArrowRightLeft, TrendingUp, TrendingDown, RefreshCcw } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -6,11 +7,12 @@ const empresaId = () => localStorage.getItem('empresa_id') || '';
 const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
 
 export default function Kardex() {
+  const location = useLocation();
   const [movimientos, setMovimientos] = useState([]);
   const [productos, setProductos] = useState([]);
   const [cargando, setCargando] = useState(true);
   
-  const [filtroProd, setFiltroProd] = useState('');
+  const [filtroProd, setFiltroProd] = useState(location.state?.producto_id?.toString() || '');
 
   useEffect(() => {
     const cargar = async () => {
