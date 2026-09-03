@@ -317,14 +317,22 @@ def crear_desde_dte(empresa_id: str, payload: ImportarDTERequest, usuario_id: in
         db.flush()
 
     # Crear Orden
-    numero = _generar_numero_oc(db, empresa_id)
+    fec_emi_str = dte.get("identificacion", {}).get("fecEmi", "")
+    fecha_emision_doc = datetime.now(TIMEZONE)
+    if fec_emi_str:
+        try:
+            fecha_emision_doc = datetime.strptime(fec_emi_str, "%Y-%m-%d").replace(tzinfo=TIMEZONE)
+        except:
+            pass
+
     oc = OrdenCompra(
         empresa_id=empresa_id,
-        numero=numero,
+        numero=_generar_numero_oc(db, empresa_id),
         proveedor_id=proveedor.id,
         tipo_doc="CCF",
         json_dte_proveedor=payload.json_dte,
         codigo_generacion_proveedor=dte.get("identificacion", {}).get("codigoGeneracion", ""),
+        fecha_emision=fecha_emision_doc,
         sello_recepcion_proveedor=dte.get("selloRecibido", ""),
         estado="borrador",
         usuario_id=usuario_id,
@@ -402,6 +410,13 @@ def importar_dte_proveedor(oc_id: int, empresa_id: str, payload: ImportarDTERequ
     oc.json_dte_proveedor = payload.json_dte
     oc.codigo_generacion_proveedor = dte.get("identificacion", {}).get("codigoGeneracion", "")
     oc.sello_recepcion_proveedor = dte.get("selloRecibido", "")
+    
+    fec_emi_str = dte.get("identificacion", {}).get("fecEmi", "")
+    if fec_emi_str:
+        try:
+            oc.fecha_emision = datetime.strptime(fec_emi_str, "%Y-%m-%d").replace(tzinfo=TIMEZONE)
+        except:
+            pass
 
     resumen = dte.get("resumen", {})
     subtotal_dte = int(float(resumen.get("totalGravada", 0)) * 100)
