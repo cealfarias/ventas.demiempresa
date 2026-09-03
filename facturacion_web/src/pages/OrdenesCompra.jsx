@@ -434,8 +434,18 @@ export default function OrdenesCompra() {
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan="3" className="text-right pt-4 font-semibold text-slate-600">Total Orden:</td>
-                <td className="text-right pt-4 font-bold text-indigo-700">{fmt(ocActiva.total)}</td>
+                <td colSpan="3" className="text-right pt-4 text-slate-500 text-xs uppercase font-medium">Subtotal sin IVA:</td>
+                <td className="text-right pt-4">{fmt(ocActiva.subtotal || 0)}</td>
+              </tr>
+              <tr>
+                <td colSpan="3" className="text-right py-1 text-slate-500 text-xs uppercase font-medium">IVA (13%):</td>
+                <td className="text-right py-1 text-slate-600">
+                  {ocActiva.iva > 0 ? fmt(ocActiva.iva) : '0.00 (Incluido o Exento)'}
+                </td>
+              </tr>
+              <tr className="border-t border-slate-100">
+                <td colSpan="3" className="text-right pt-2 font-semibold text-slate-700">TOTAL ORDEN:</td>
+                <td className="text-right pt-2 font-bold text-indigo-700">{fmt(ocActiva.total || 0)}</td>
               </tr>
             </tfoot>
           </table>
