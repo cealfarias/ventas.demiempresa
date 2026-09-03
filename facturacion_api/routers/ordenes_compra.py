@@ -430,3 +430,15 @@ def anular_orden(oc_id: int, empresa_id: str, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(oc)
     return _build_response(oc)
+
+@router.delete("/{orden_id}", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar_orden(orden_id: int, empresa_id: str, db: Session = Depends(get_db)):
+    oc = db.query(OrdenCompra).filter(OrdenCompra.id == orden_id, OrdenCompra.empresa_id == empresa_id).first()
+    if not oc:
+        raise HTTPException(status_code=404, detail="Orden no encontrada")
+    if oc.estado != "borrador":
+        raise HTTPException(status_code=400, detail="Solo se pueden eliminar órdenes en estado borrador")
+    
+    db.query(DetalleOrdenCompra).filter(DetalleOrdenCompra.orden_compra_id == orden_id).delete()
+    db.delete(oc)
+    db.commit()

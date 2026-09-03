@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ShoppingCart, Plus, Search, FileText, CheckCircle2, AlertCircle, XCircle, FileJson, Clock, UploadCloud, Eye } from 'lucide-react';
+import { ShoppingCart, Plus, Search, FileText, CheckCircle2, AlertCircle, XCircle, FileJson, Clock, UploadCloud, Eye, Trash2 } from 'lucide-react';
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
@@ -142,6 +142,16 @@ export default function OrdenesCompra() {
         setOcActiva(res.data);
         setVista('detalle');
       });
+  };
+
+  const eliminarOrden = async (oc) => {
+    if (!window.confirm(`¿Estás seguro de que deseas eliminar la orden ${oc.numero}?`)) return;
+    try {
+      await api.delete(`/api/v1/compras/ordenes-compra/${oc.id}?empresa_id=${empresaId()}`);
+      cargarDatos();
+    } catch (e) {
+      alert(e.response?.data?.detail || 'Error al eliminar la orden');
+    }
   };
 
   if (vista === 'nueva') {
@@ -484,6 +494,11 @@ export default function OrdenesCompra() {
                     <button onClick={() => abrirDetalle(oc)} className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-medium transition-colors flex items-center gap-1">
                       <Eye className="w-3.5 h-3.5" /> Detalle
                     </button>
+                    {oc.estado === 'borrador' && (
+                      <button onClick={() => eliminarOrden(oc)} className="text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 font-medium transition-colors flex items-center">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     {['borrador', 'enviada', 'recibida_parcial'].includes(oc.estado) && (
                       <button onClick={() => abrirRecepcion(oc)} className="text-xs bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-100 font-medium transition-colors">
                         Recibir
