@@ -22,6 +22,7 @@ import ConfiguracionDTE from './pages/ConfiguracionDTE';
 import Dashboard from './pages/Dashboard';
 import Despachos from './pages/Despachos';
 import Kardex from './pages/Kardex';
+import { api } from './services/api';
 
 const AvatarTrigger = () => {
   const navigate = useNavigate();
@@ -63,6 +64,22 @@ const AvatarTrigger = () => {
     return () => window.removeEventListener('navigate:config-dte', handleNav);
   }, [navigate]);
   return null;
+};
+
+const NombreEmpresa = () => {
+  const [nombre, setNombre] = useState(localStorage.getItem('empresa_nombre') || 'Mi Empresa');
+  useEffect(() => {
+    const eid = localStorage.getItem('empresa_id');
+    if (eid) {
+      api.get(`/api/v1/auth/empresa/${eid}`).then(res => {
+        if (res.data?.nombre) {
+          setNombre(res.data.nombre);
+          localStorage.setItem('empresa_nombre', res.data.nombre);
+        }
+      }).catch(() => {});
+    }
+  }, []);
+  return <p className="text-sm font-bold text-slate-800">{nombre}</p>;
 };
 
 // ── Componentes del Sidebar ───────────────────────────────────────────────────
@@ -178,7 +195,7 @@ const Layout = ({ children }) => {
           <h2 className="text-xs font-semibold text-slate-400 tracking-wider uppercase">Ambiente Seguro SaaS</h2>
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-bold text-slate-800">Mi Empresa</p>
+              <NombreEmpresa />
               <p className="text-xs text-slate-500 uppercase">{localStorage.getItem('rol') || 'Usuario'}</p>
             </div>
             <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center border border-indigo-200 text-sm uppercase">

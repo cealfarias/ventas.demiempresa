@@ -204,5 +204,13 @@ def google_login(data: GoogleLoginSchema, db: Session = Depends(get_db)):
         "token_type": "bearer",
         "rol": user.rol,
         "empresa_id": empresa_id,
+        "empresa_nombre": empresa.razon_social if empresa else "Mi Empresa",
         "require_2fa": False
     }
+
+@router.get("/empresa/{empresa_id}")
+def get_empresa_nombre(empresa_id: str, db: Session = Depends(get_db)):
+    empresa = db.query(Empresa).filter(Empresa.id == empresa_id).first()
+    if not empresa:
+        return {"nombre": "Mi Empresa"}
+    return {"nombre": empresa.razon_social}
