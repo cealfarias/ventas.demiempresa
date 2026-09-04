@@ -28,6 +28,9 @@ class FacturaCreate(BaseModel):
     condicion_operacion: str = "CONTADO" # CONTADO | CREDITO
     dias_credito: int = 30 # Usado si es CREDITO
     
+    fecha_emision: Optional[str] = None # YYYY-MM-DD
+    entrega_domicilio: bool = False
+    
     subtotal: int
     iva: int
     total: int
@@ -127,6 +130,10 @@ def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Ses
         iva=data.iva,
         total=data.total
     )
+    if data.fecha_emision:
+        from datetime import datetime
+        f.fecha_emision = datetime.strptime(data.fecha_emision, "%Y-%m-%d")
+    
     db.add(f)
     db.flush()
 
@@ -160,18 +167,47 @@ def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Ses
                 raise HTTPException(status_code=400, detail=str(e))
 
     # 3. Generar Cuenta por Cobrar si es al crédito
-    if data.condicion_operacion == "CREDITO" and data.total > 0:
-        vencimiento = datetime.now(TIMEZONE) + timedelta(days=data.dias_credito)
-        db.add(CuentaPorCobrar(
+    if data.condicion_operacion == "CREDITO":
+        cxc = CuentaPorCobrar(
             empresa_id=empresa_id,
             cliente_id=data.cliente_id,
             factura_id=f.id,
+            fecha_vencimiento=datetime.now(TIMEZONE) + timedelta(days=data.dias_credito),
             monto_original=data.total,
-            monto_pendiente=data.total,
-            fecha_vencimiento=vencimiento,
+            saldo_pendiente=data.total,
             estado="pendiente"
-        ))
+        )
+        db.add(cxc)
+        db.flush()
         cliente.saldo_pendiente = (cliente.saldo_pendiente or 0) + data.total
+
+    if data.entrega_domicilio:
+        from models import Despacho, DetalleDespacho
+        # Buscar o generar numero de despacho
+        ultimo_despacho = db.query(Despacho).filter(Despacho.empresa_id == empresa_id).order_by(Despacho.id.desc()).first()
+        if ultimo_despacho and ultimo_despacho.numero.startswith("DESP-2026-"):
+            num = int(ultimo_despacho.numero.split("-")[-1]) + 1
+            num_despacho = f"DESP-2026-{num:04d}"
+        else:
+            num_despacho = "DESP-2026-0001"
+            
+        desp = Despacho(
+            empresa_id=empresa_id,
+            numero=num_despacho,
+            usuario_id=usuario_id,
+            estado="programado"
+        )
+        db.add(desp)
+        db.flush()
+        
+        det_desp = DetalleDespacho(
+            despacho_id=desp.id,
+            factura_id=f.id,
+            direccion_entrega=cliente.direccion or "",
+            estado="pendiente"
+        )
+        db.add(det_desp)
+        db.flush()
 
     db.commit()
     db.refresh(f)
