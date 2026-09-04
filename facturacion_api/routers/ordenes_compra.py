@@ -479,8 +479,8 @@ def eliminar_orden(orden_id: int, empresa_id: str, db: Session = Depends(get_db)
                     StockBodega.producto_id == det.producto_id
                 ).first()
                 if stock:
-                    stock.cantidad -= det.cantidad_recibida
-                    if stock.cantidad <= 0:
+                    stock.stock_actual -= det.cantidad_recibida
+                    if stock.stock_actual <= 0:
                         db.delete(stock)
     
     db.query(DetalleOrdenCompra).filter(DetalleOrdenCompra.orden_compra_id == orden_id).delete()
