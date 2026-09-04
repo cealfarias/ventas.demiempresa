@@ -1,12 +1,28 @@
-import React, { useState } from 'react';
-import { Plus, Search, Filter, Edit2, Trash2, Package, UploadCloud, Image as ImageIcon } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Search, Filter, Edit2, Trash2, Package, UploadCloud, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { api } from '../services/api';
+
+const empresaId = () => localStorage.getItem('empresa_id') || '';
 
 export default function Productos() {
-  const [productos] = useState([
-    { id: 1, codigo: 'PROD-001', nombre: 'Laptop Dell XPS 15', stock: 12, precio_venta: 150000, costo_promedio: 120000, activo: true, imagen_url: null },
-    { id: 2, codigo: 'PROD-002', nombre: 'Mouse Inalámbrico Logitech', stock: 45, precio_venta: 2500, costo_promedio: 1500, activo: true, imagen_url: null },
-    { id: 3, codigo: 'PROD-003', nombre: 'Monitor LG 27"', stock: 5, precio_venta: 30000, costo_promedio: 25000, activo: true, imagen_url: null },
-  ]);
+  const [productos, setProductos] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const cargarProductos = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get(`/api/v1/facturacion/productos/?empresa_id=${empresaId()}`);
+      setProductos(res.data);
+    } catch (error) {
+      console.error("Error cargando productos", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarProductos();
+  }, []);
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
