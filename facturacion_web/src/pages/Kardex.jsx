@@ -27,7 +27,7 @@ export default function Kardex() {
       setCargando(true);
       try {
         const [resM, resP, resB] = await Promise.all([
-          api.get(`/api/v1/kardex/movimientos?empresa_id=${empresaId()}`),
+          api.get(`/api/v1/almacen/kardex/movimientos?empresa_id=${empresaId()}`),
           api.get(`/api/v1/facturacion/productos/?empresa_id=${empresaId()}`),
           api.get(`/api/v1/almacen/bodegas/?empresa_id=${empresaId()}`)
         ]);
