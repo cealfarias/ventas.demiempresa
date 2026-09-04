@@ -128,6 +128,19 @@ const Layout = ({ children }) => {
     navigate('/login');
   };
 
+  const userRole = (localStorage.getItem('rol') || '').toLowerCase();
+  const isAdmin = userRole.includes('admin') || userRole === ''; // Si no hay rol, asumimos admin por ahora
+  const isBodeguero = userRole.includes('bodeguero');
+  const isCajera = userRole.includes('cajer') || userRole.includes('venta');
+  const isAuditor = userRole.includes('auditor');
+  const isSecretaria = userRole.includes('secretaria');
+
+  const canSeeVentas = isAdmin || isCajera || isAuditor;
+  const canSeeCompras = isAdmin || isBodeguero || isAuditor;
+  const canSeeAlmacen = isAdmin || isBodeguero || isAuditor;
+  const canSeeLogistica = isAdmin || isBodeguero || isAuditor;
+  const canSeeConfiguracion = isAdmin;
+
   return (
     <div className="flex h-screen bg-slate-50 font-sans">
       {/* Sidebar */}
@@ -149,32 +162,42 @@ const Layout = ({ children }) => {
         <nav className="flex-1 overflow-y-auto p-2">
           <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" expanded={expanded} />
 
-          <SidebarSection label="Ventas" expanded={expanded}>
-            <SidebarLink to="/clientes" icon={Users} label="Clientes" expanded={expanded} />
-            <SidebarLink to="/facturas" icon={Receipt} label="Facturación DTE" expanded={expanded} />
-            <SidebarLink to="/cuentas-cobrar" icon={CreditCard} label="Cuentas por Cobrar" expanded={expanded} />
-          </SidebarSection>
+          {canSeeVentas && (
+            <SidebarSection label="Ventas" expanded={expanded}>
+              <SidebarLink to="/clientes" icon={Users} label="Clientes" expanded={expanded} />
+              <SidebarLink to="/facturas" icon={Receipt} label="Facturación DTE" expanded={expanded} />
+              <SidebarLink to="/cuentas-cobrar" icon={CreditCard} label="Cuentas por Cobrar" expanded={expanded} />
+            </SidebarSection>
+          )}
 
-          <SidebarSection label="Compras" expanded={expanded}>
-            <SidebarLink to="/proveedores" icon={Truck} label="Proveedores" expanded={expanded} />
-            <SidebarLink to="/ordenes-compra" icon={ShoppingCart} label="Órdenes de Compra" expanded={expanded} />
-            <SidebarLink to="/cuentas-pagar" icon={CreditCard} label="Cuentas por Pagar" expanded={expanded} />
-          </SidebarSection>
+          {canSeeCompras && (
+            <SidebarSection label="Compras" expanded={expanded}>
+              <SidebarLink to="/proveedores" icon={Truck} label="Proveedores" expanded={expanded} />
+              <SidebarLink to="/ordenes-compra" icon={ShoppingCart} label="Órdenes de Compra" expanded={expanded} />
+              <SidebarLink to="/cuentas-pagar" icon={CreditCard} label="Cuentas por Pagar" expanded={expanded} />
+            </SidebarSection>
+          )}
 
-          <SidebarSection label="Almacén" expanded={expanded}>
-            <SidebarLink to="/bodegas" icon={Warehouse} label="Bodegas" expanded={expanded} />
-            <SidebarLink to="/existencias" icon={BarChart3} label="Existencias" expanded={expanded} />
-            <SidebarLink to="/kardex" icon={BookOpen} label="Libro Kardex" expanded={expanded} />
-            <SidebarLink to="/productos" icon={Package} label="Productos" expanded={expanded} />
-          </SidebarSection>
+          {canSeeAlmacen && (
+            <SidebarSection label="Almacén" expanded={expanded}>
+              <SidebarLink to="/bodegas" icon={Warehouse} label="Bodegas" expanded={expanded} />
+              <SidebarLink to="/existencias" icon={BarChart3} label="Existencias" expanded={expanded} />
+              <SidebarLink to="/kardex" icon={BookOpen} label="Libro Kardex" expanded={expanded} />
+              <SidebarLink to="/productos" icon={Package} label="Productos" expanded={expanded} />
+            </SidebarSection>
+          )}
           
-          <SidebarSection label="Logística" expanded={expanded}>
-            <SidebarLink to="/despachos" icon={Truck} label="Rutas y Entregas" expanded={expanded} />
-          </SidebarSection>
+          {canSeeLogistica && (
+            <SidebarSection label="Logística" expanded={expanded}>
+              <SidebarLink to="/despachos" icon={Truck} label="Rutas y Entregas" expanded={expanded} />
+            </SidebarSection>
+          )}
 
-          <SidebarSection label="Configuración" expanded={expanded}>
-            <SidebarLink to="/configuracion-dte" icon={Settings} label="Configuración DTE" expanded={expanded} />
-          </SidebarSection>
+          {canSeeConfiguracion && (
+            <SidebarSection label="Configuración" expanded={expanded}>
+              <SidebarLink to="/configuracion-dte" icon={Settings} label="Configuración DTE" expanded={expanded} />
+            </SidebarSection>
+          )}
         </nav>
 
         {/* Footer */}
