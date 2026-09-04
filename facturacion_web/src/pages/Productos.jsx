@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, Edit2, Trash2, Package } from 'lucide-react';
+import { Plus, Search, Filter, Edit2, Trash2, Package, UploadCloud, Image as ImageIcon } from 'lucide-react';
 
 export default function Productos() {
   const [productos] = useState([
-    { id: 1, codigo: 'PROD-001', nombre: 'Laptop Dell XPS 15', stock: 12, precio_venta: 150000, costo_promedio: 120000, activo: true },
-    { id: 2, codigo: 'PROD-002', nombre: 'Mouse Inalámbrico Logitech', stock: 45, precio_venta: 2500, costo_promedio: 1500, activo: true },
-    { id: 3, codigo: 'PROD-003', nombre: 'Monitor LG 27"', stock: 5, precio_venta: 30000, costo_promedio: 25000, activo: true },
+    { id: 1, codigo: 'PROD-001', nombre: 'Laptop Dell XPS 15', stock: 12, precio_venta: 150000, costo_promedio: 120000, activo: true, imagen_url: null },
+    { id: 2, codigo: 'PROD-002', nombre: 'Mouse Inalámbrico Logitech', stock: 45, precio_venta: 2500, costo_promedio: 1500, activo: true, imagen_url: null },
+    { id: 3, codigo: 'PROD-003', nombre: 'Monitor LG 27"', stock: 5, precio_venta: 30000, costo_promedio: 25000, activo: true, imagen_url: null },
   ]);
 
   return (
@@ -20,10 +20,16 @@ export default function Productos() {
           <p className="text-sm text-slate-500 mt-1">Administra tu inventario y precios de venta</p>
         </div>
         
-        <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all shadow-lg shadow-indigo-500/30 flex items-center gap-2 transform hover:-translate-y-0.5">
-          <Plus className="w-4 h-4" />
-          Nuevo Producto
-        </button>
+        <div className="flex gap-3">
+          <button className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 shadow-sm">
+            <UploadCloud className="w-4 h-4 text-slate-500" />
+            Importar
+          </button>
+          <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all shadow-lg shadow-indigo-500/30 flex items-center gap-2 transform hover:-translate-y-0.5">
+            <Plus className="w-4 h-4" />
+            Nuevo Producto
+          </button>
+        </div>
       </div>
 
       {/* Toolbar */}
@@ -48,6 +54,7 @@ export default function Productos() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold">
+                <th className="px-6 py-4 w-16">Foto</th>
                 <th className="px-6 py-4">Código</th>
                 <th className="px-6 py-4">Producto</th>
                 <th className="px-6 py-4 text-right">Stock</th>
@@ -59,6 +66,15 @@ export default function Productos() {
             <tbody className="divide-y divide-slate-100">
               {productos.map((prod) => (
                 <tr key={prod.id} className="hover:bg-slate-50/80 transition-colors group">
+                  <td className="px-6 py-4">
+                    <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden">
+                      {prod.imagen_url ? (
+                        <img src={prod.imagen_url} alt={prod.nombre} className="w-full h-full object-cover" />
+                      ) : (
+                        <ImageIcon className="w-5 h-5 text-slate-400" />
+                      )}
+                    </div>
+                  </td>
                   <td className="px-6 py-4">
                     <span className="text-sm font-medium text-slate-700 bg-slate-100 px-2 py-1 rounded-md">{prod.codigo}</span>
                   </td>

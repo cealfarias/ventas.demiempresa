@@ -11,6 +11,7 @@ class ProductoBase(BaseModel):
     codigo: str
     nombre: str
     descripcion: Optional[str] = None
+    imagen_url: Optional[str] = None
     precio_venta: int
     costo_promedio: int = 0
     stock: float = 0.0

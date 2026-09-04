@@ -86,6 +86,7 @@ class Producto(Base):
     codigo = Column(String(50), nullable=False)
     nombre = Column(String(200), nullable=False)
     descripcion = Column(Text)
+    imagen_url = Column(String(500), nullable=True)
     
     precio_venta = Column(Integer, default=0) # Centavos o 4 decimales
     costo_promedio = Column(Integer, default=0)
