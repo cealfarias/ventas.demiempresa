@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { BookOpen, Search, ArrowRightLeft, TrendingUp, TrendingDown, RefreshCcw, Eye, Filter, Loader2, X } from 'lucide-react';
+import { BookOpen, Search, ArrowRightLeft, TrendingUp, TrendingDown, RefreshCcw, Eye, Filter, Loader2, X, Package } from 'lucide-react';
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
