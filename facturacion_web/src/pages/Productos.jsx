@@ -7,6 +7,9 @@ const empresaId = () => localStorage.getItem('empresa_id') || '';
 export default function Productos() {
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
 
   const cargarProductos = async () => {
     try {
@@ -23,6 +26,23 @@ export default function Productos() {
   useEffect(() => {
     cargarProductos();
   }, []);
+
+  // Búsqueda inteligente
+  const filteredProductos = productos.filter(p => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      (p.codigo && p.codigo.toLowerCase().includes(term)) ||
+      (p.nombre && p.nombre.toLowerCase().includes(term))
+    );
+  });
+
+  // Paginación
+  const totalPages = Math.ceil(filteredProductos.length / itemsPerPage);
+  const paginatedProductos = filteredProductos.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -55,6 +75,11 @@ export default function Productos() {
           <input 
             type="text" 
             placeholder="Buscar por código o nombre..." 
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1); // Reiniciar a la página 1 al buscar
+            }}
             className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
           />
         </div>
@@ -80,61 +105,90 @@ export default function Productos() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {productos.map((prod) => (
-                <tr key={prod.id} className="hover:bg-slate-50/80 transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden">
-                      {prod.imagen_url ? (
-                        <img src={prod.imagen_url} alt={prod.nombre} className="w-full h-full object-cover" />
-                      ) : (
-                        <ImageIcon className="w-5 h-5 text-slate-400" />
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm font-medium text-slate-700 bg-slate-100 px-2 py-1 rounded-md">{prod.codigo}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm font-bold text-slate-800">{prod.nombre}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Costo: ${(prod.costo_promedio / 100).toFixed(2)}</p>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="inline-flex items-center gap-1.5">
-                      <div className={`w-2 h-2 rounded-full ${prod.stock > 10 ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`}></div>
-                      <span className="text-sm font-medium text-slate-700">{prod.stock}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <span className="text-sm font-bold text-emerald-600">${(prod.precio_venta / 100).toFixed(2)}</span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-200">
-                      Activo
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+              {loading ? (
+                <tr>
+                  <td colSpan="7" className="px-6 py-8 text-center text-slate-500">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-500" />
+                    Cargando productos...
                   </td>
                 </tr>
-              ))}
+              ) : paginatedProductos.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="px-6 py-8 text-center text-slate-500">
+                    No se encontraron productos que coincidan con la búsqueda.
+                  </td>
+                </tr>
+              ) : (
+                paginatedProductos.map((prod) => (
+                  <tr key={prod.id_producto || prod.codigo} className="hover:bg-slate-50/80 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden">
+                        {prod.imagen_url ? (
+                          <img src={prod.imagen_url} alt={prod.nombre} className="w-full h-full object-cover" />
+                        ) : (
+                          <ImageIcon className="w-5 h-5 text-slate-400" />
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-medium text-slate-700 bg-slate-100 px-2 py-1 rounded-md">{prod.codigo}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm font-bold text-slate-800">{prod.nombre}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Costo: ${(prod.costo_promedio / 100).toFixed(2)}</p>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="inline-flex items-center gap-1.5">
+                        <div className={`w-2 h-2 rounded-full ${prod.stock > 10 ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`}></div>
+                        <span className="text-sm font-medium text-slate-700">{prod.stock}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className="text-sm font-bold text-emerald-600">${(prod.precio_venta / 100).toFixed(2)}</span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium border ${prod.activo ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
+                        {prod.activo ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
         
         {/* Footer paginación */}
         <div className="p-4 border-t border-slate-200 flex items-center justify-between text-sm text-slate-500">
-          <span>Mostrando {productos.length} productos</span>
-          <div className="flex gap-1">
-            <button className="px-3 py-1 rounded-md hover:bg-slate-100 transition-colors">Anterior</button>
-            <button className="px-3 py-1 rounded-md bg-indigo-50 text-indigo-600 font-medium">1</button>
-            <button className="px-3 py-1 rounded-md hover:bg-slate-100 transition-colors">Siguiente</button>
+          <span>Mostrando {paginatedProductos.length} de {filteredProductos.length} productos</span>
+          <div className="flex gap-1 items-center">
+            <button 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 rounded-md hover:bg-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Anterior
+            </button>
+            <span className="px-3 py-1 rounded-md bg-indigo-50 text-indigo-600 font-medium">
+              {currentPage} / {totalPages || 1}
+            </span>
+            <button 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages || totalPages === 0}
+              className="px-3 py-1 rounded-md hover:bg-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Siguiente
+            </button>
           </div>
         </div>
       </div>
