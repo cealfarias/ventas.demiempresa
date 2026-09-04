@@ -451,8 +451,36 @@ def eliminar_orden(orden_id: int, empresa_id: str, db: Session = Depends(get_db)
     oc = db.query(OrdenCompra).filter(OrdenCompra.id == orden_id, OrdenCompra.empresa_id == empresa_id).first()
     if not oc:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
-    if oc.estado != "borrador":
-        raise HTTPException(status_code=400, detail="Solo se pueden eliminar órdenes en estado borrador")
+        
+    # Revertir Stock y Eliminar Kardex si fue recibida (solo para fines de pruebas / limpieza)
+    if oc.estado in ("recibida", "recibida_parcial"):
+        from models import StockBodega, Kardex, CuentaPorPagar
+        
+        # Eliminar CxP asociada
+        db.query(CuentaPorPagar).filter(CuentaPorPagar.orden_compra_id == orden_id).delete()
+        
+        # Eliminar Kardex y Revertir Stock
+        for det in oc.detalles:
+            if det.cantidad_recibida > 0:
+                # Buscar y eliminar Kardex
+                kardexs = db.query(Kardex).filter(
+                    Kardex.empresa_id == empresa_id,
+                    Kardex.producto_id == det.producto_id,
+                    Kardex.referencia == oc.numero
+                ).all()
+                for k in kardexs:
+                    db.delete(k)
+                
+                # Revertir Stock
+                stock = db.query(StockBodega).filter(
+                    StockBodega.empresa_id == empresa_id,
+                    StockBodega.bodega_id == oc.bodega_destino_id,
+                    StockBodega.producto_id == det.producto_id
+                ).first()
+                if stock:
+                    stock.cantidad -= det.cantidad_recibida
+                    if stock.cantidad <= 0:
+                        db.delete(stock)
     
     db.query(DetalleOrdenCompra).filter(DetalleOrdenCompra.orden_compra_id == orden_id).delete()
     db.delete(oc)

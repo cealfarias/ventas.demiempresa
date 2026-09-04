@@ -504,11 +504,9 @@ export default function OrdenesCompra() {
                     <button onClick={() => abrirDetalle(oc)} className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-medium transition-colors flex items-center gap-1">
                       <Eye className="w-3.5 h-3.5" /> Detalle
                     </button>
-                    {oc.estado === 'borrador' && (
-                      <button onClick={() => eliminarOrden(oc)} className="text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 font-medium transition-colors flex items-center">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+                    <button onClick={() => eliminarOrden(oc)} className="text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 font-medium transition-colors flex items-center">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                     {['borrador', 'enviada', 'recibida_parcial'].includes(oc.estado) && (
                       <button onClick={() => abrirRecepcion(oc)} className="text-xs bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-100 font-medium transition-colors">
                         Recibir
