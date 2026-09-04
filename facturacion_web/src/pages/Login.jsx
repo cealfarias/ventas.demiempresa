@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 import { GoogleLogin } from '@react-oauth/google';
 import './Login.css';
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isExpired = new URLSearchParams(location.search).get('expired');
+
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -143,6 +146,11 @@ export default function Login() {
             </div>
 
             <form onSubmit={handleLoginSubmit}>
+              {isExpired && (
+                <div style={{ backgroundColor: '#fffbeb', color: '#b45309', padding: '0.75rem', marginBottom: '1rem', borderRadius: '0.5rem', border: '1px solid #fde68a', fontSize: '0.875rem' }}>
+                  Tu sesión ha expirado por inactividad. Por favor, inicia sesión nuevamente.
+                </div>
+              )}
               {error && <div className="login-error">{error}</div>}
 
               <div className="form-group">

@@ -14,3 +14,19 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Interceptor para manejar expiracion de sesion (401)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/registro') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('rol');
+        localStorage.removeItem('empresa_id');
+        window.location.href = '/login?expired=true';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
