@@ -19,7 +19,7 @@ export default function Dashboard() {
       try {
         const [resKpis, resChart] = await Promise.all([
           api.get(`/api/v1/dashboard/kpis?empresa_id=${empresaId()}&periodo=${periodo}`),
-          api.get(`/api/v1/dashboard/grafico-ventas?empresa_id=${empresaId()}&anio=${anioSeleccionado}`)
+          api.get(`/api/v1/dashboard/grafico-ventas?empresa_id=${empresaId()}&periodo=${periodo}&anio=${anioSeleccionado}`)
         ]);
         setKpis(resKpis.data);
         setChartData(resChart.data.map(d => ({ ...d, ventas: d.ventas / 100 }))); // convertir a dólares para el gráfico
@@ -72,6 +72,12 @@ export default function Dashboard() {
             Hoy
           </button>
           <button 
+            onClick={() => setPeriodo('semana')}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${periodo === 'semana' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Esta Semana
+          </button>
+          <button 
             onClick={() => setPeriodo('mes')}
             className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${periodo === 'mes' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-500 hover:text-slate-700'}`}
           >
@@ -83,7 +89,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <div className={cargando ? 'opacity-50 pointer-events-none' : 'transition-opacity'}>
           <KpiCard 
-            title={`Ventas Totales (${periodo === 'dia' ? 'Hoy' : 'Mes'})`} 
+            title={`Ventas Totales (${periodo === 'dia' ? 'Hoy' : periodo === 'semana' ? 'Semana' : 'Mes'})`} 
             value={fmt(kpis.ventas_totales)} 
             icon={TrendingUp} 
             color="text-emerald-600" 
