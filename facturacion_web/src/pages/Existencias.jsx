@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, Search, Filter, RefreshCw, TrendingUp, TrendingDown, Warehouse, Package, AlertTriangle } from 'lucide-react';
+import { BarChart3, Search, Filter, RefreshCw, TrendingUp, TrendingDown, Warehouse, Package, AlertTriangle, Plus, X } from 'lucide-react';
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
@@ -15,28 +15,69 @@ export default function Existencias() {
   const [busqueda, setBusqueda] = useState('');
   const [filtroBodega, setFiltroBodega] = useState('');
   const [soloConStock, setSoloConStock] = useState(false);
-  const [vista, setVista] = useState('tabla'); // tabla | tarjetas
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [productos, setProductos] = useState([]);
+  const [form, setForm] = useState({
+    producto_id: '',
+    bodega_id: '',
+    tipo_movimiento: 'AJUSTE_POSITIVO',
+    cantidad: '',
+    costo_unitario: '',
+    notas: 'Inventario Físico Inicial'
+  });
 
   const cargar = async () => {
     setCargando(true);
-    setError('');
+    setError(null);
     try {
-      const [resStock, resBodegas] = await Promise.all([
+      const [resS, resB, resP] = await Promise.all([
         api.get(`/api/v1/almacen/kardex/existencias?empresa_id=${empresaId()}`),
-        api.get(`/api/v1/almacen/bodegas/?empresa_id=${empresaId()}`)
+        api.get(`/api/v1/almacen/bodegas/?empresa_id=${empresaId()}`),
+        api.get(`/api/v1/facturacion/productos/?empresa_id=${empresaId()}`)
       ]);
-      setStock(resStock.data);
-      setBodegas(resBodegas.data);
-    } catch {
-      setError('No se pudieron cargar las existencias.');
+      setStock(resS.data);
+      setBodegas(resB.data);
+      setProductos(resP.data);
+    } catch (e) {
+      setError(e.response?.data?.detail || 'Error al cargar existencias');
     } finally {
       setCargando(false);
     }
   };
 
+  const guardarAjuste = async () => {
+    if (!form.producto_id || !form.bodega_id || !form.cantidad || form.cantidad <= 0) {
+      return alert('Complete producto, bodega y una cantidad mayor a cero');
+    }
+    setGuardando(true);
+    try {
+      const payload = {
+        empresa_id: empresaId(),
+        bodega_id: parseInt(form.bodega_id),
+        producto_id: parseInt(form.producto_id),
+        tipo_movimiento: form.tipo_movimiento,
+        cantidad: parseFloat(form.cantidad),
+        costo_unitario: form.costo_unitario ? Math.round(parseFloat(form.costo_unitario) * 100) : 0,
+        usuario_id: 1,
+        notas: form.notas
+      };
+      await api.post('/api/v1/almacen/kardex/ajuste', payload);
+      setModalAbierto(false);
+      setForm({
+        producto_id: '', bodega_id: '', tipo_movimiento: 'AJUSTE_POSITIVO',
+        cantidad: '', costo_unitario: '', notas: 'Inventario Físico Inicial'
+      });
+      cargar(); 
+    } catch (e) {
+      alert(e.response?.data?.detail || 'Error al guardar el ajuste');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
   useEffect(() => { cargar(); }, []);
 
-  // Filtrado local
   const datosFiltrados = useMemo(() => {
     return stock.filter(s => {
       const matchBusqueda = !busqueda ||
@@ -48,7 +89,6 @@ export default function Existencias() {
     });
   }, [stock, busqueda, filtroBodega, soloConStock]);
 
-  // KPIs
   const kpis = useMemo(() => {
     const totalProductos = new Set(stock.map(s => s.producto_id)).size;
     const totalBodegas = new Set(stock.map(s => s.bodega_id)).size;
@@ -67,9 +107,14 @@ export default function Existencias() {
           </h1>
           <p className="text-sm text-slate-500 mt-1">Stock actual por producto y bodega con valorización al costo promedio</p>
         </div>
-        <button onClick={cargar} className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50 transition-colors">
-          <RefreshCw className={`w-4 h-4 ${cargando ? 'animate-spin' : ''}`} /> Actualizar
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setModalAbierto(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm text-white transition-colors">
+            <Plus className="w-4 h-4" /> Ajuste Manual
+          </button>
+          <button onClick={cargar} className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50 transition-colors">
+            <RefreshCw className={`w-4 h-4 ${cargando ? 'animate-spin' : ''}`} /> Actualizar
+          </button>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -128,7 +173,6 @@ export default function Existencias() {
           Solo con existencias
         </label>
       </div>
-
       {/* Tabla de existencias */}
       {cargando ? (
         <div className="text-center py-20 text-slate-400">Cargando existencias...</div>
@@ -219,6 +263,104 @@ export default function Existencias() {
           </div>
         </div>
       )}
+
+      {/* Modal Ajuste */}
+      {modalAbierto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <Package className="w-5 h-5 text-indigo-600" />
+                Ajuste Manual de Inventario
+              </h3>
+              <button onClick={() => setModalAbierto(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Producto</label>
+                  <select 
+                    value={form.producto_id} 
+                    onChange={e => setForm({...form, producto_id: e.target.value})}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="">Seleccione un producto</option>
+                    {productos.map(p => <option key={p.id_producto} value={p.id_producto}>{p.codigo} - {p.nombre}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Bodega</label>
+                  <select 
+                    value={form.bodega_id} 
+                    onChange={e => setForm({...form, bodega_id: e.target.value})}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="">Seleccione bodega</option>
+                    {bodegas.map(b => <option key={b.id} value={b.id}>{b.nombre}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Movimiento</label>
+                  <select 
+                    value={form.tipo_movimiento} 
+                    onChange={e => setForm({...form, tipo_movimiento: e.target.value})}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="AJUSTE_POSITIVO">Entrada (Positivo)</option>
+                    <option value="AJUSTE_NEGATIVO">Salida (Negativo)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Cantidad</label>
+                  <input 
+                    type="number" min="0" step="0.01"
+                    value={form.cantidad} 
+                    onChange={e => setForm({...form, cantidad: e.target.value})}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Costo Unitario ($)</label>
+                  <input 
+                    type="number" min="0" step="0.01" placeholder="Ej: 15.50"
+                    value={form.costo_unitario} 
+                    onChange={e => setForm({...form, costo_unitario: e.target.value})}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Notas / Justificación</label>
+                  <input 
+                    type="text" 
+                    value={form.notas} 
+                    onChange={e => setForm({...form, notas: e.target.value})}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+              <button 
+                onClick={() => setModalAbierto(false)}
+                className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={guardarAjuste}
+                disabled={guardando}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {guardando ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
+                Guardar Ajuste
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
 }
