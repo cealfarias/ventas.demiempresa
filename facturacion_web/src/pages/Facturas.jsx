@@ -152,19 +152,30 @@ export default function Facturas() {
   const eliminarLinea = (idx) => setForm({ ...form, items: form.items.filter((_, i) => i !== idx) });
 
   const guardar = async () => {
+    if (!form.cliente_id) return alert("Seleccione un cliente");
+    if (form.items.length === 0) return alert("Agregue al menos un producto");
+    
     setGuardando(true);
     try {
       const payload = {
         ...form,
+        bodega_salida_id: form.bodega_salida_id ? parseInt(form.bodega_salida_id) : null,
         subtotal: subtotal,
         iva: iva,
         total: total,
-        items: form.items.map(i => ({ ...i, precio_unitario: Math.round(parseFloat(i.precio_unitario) * 100), subtotal: Math.round(i.cantidad * parseFloat(i.precio_unitario) * 100) }))
+        items: form.items.map(i => ({ 
+          ...i, 
+          precio_unitario: Math.round(parseFloat(i.precio_unitario) * 100), 
+          subtotal: Math.round(i.cantidad * parseFloat(i.precio_unitario) * 100) 
+        }))
       };
       await api.post(`/api/v1/facturacion/facturas/?empresa_id=${empresaId()}&usuario_id=1`, payload);
       setVista('lista');
       cargar();
-    } catch (e) { alert(e.response?.data?.detail || 'Error al emitir factura'); }
+    } catch (e) { 
+      const detail = e.response?.data?.detail;
+      alert(typeof detail === 'string' ? detail : 'Error al emitir factura'); 
+    }
     finally { setGuardando(false); }
   };
 
