@@ -466,7 +466,8 @@ def eliminar_orden(orden_id: int, empresa_id: str, db: Session = Depends(get_db)
                 kardexs = db.query(Kardex).filter(
                     Kardex.empresa_id == empresa_id,
                     Kardex.producto_id == det.producto_id,
-                    Kardex.referencia == oc.numero
+                    Kardex.referencia_tipo == "orden_compra",
+                    Kardex.referencia_id == orden_id
                 ).all()
                 for k in kardexs:
                     db.delete(k)
