@@ -32,6 +32,9 @@ def obtener_kpis(empresa_id: str, periodo: str = "dia", db: Session = Depends(ge
     elif periodo == "mes":
         inicio = hoy.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         query_ventas = query_ventas.filter(Factura.fecha_emision >= inicio)
+    elif periodo == "anio":
+        inicio = hoy.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        query_ventas = query_ventas.filter(Factura.fecha_emision >= inicio)
         
     ventas = query_ventas.scalar() or 0
 
