@@ -341,6 +341,7 @@ export default function Facturas() {
           <p className="font-medium">No hay facturas emitidas</p>
         </div>
       ) : (
+        <>
         <div id="table-facturas" className="bg-white border rounded-2xl overflow-hidden shadow-sm relative z-0">
           <table className="w-full text-left">
             <thead>
@@ -409,6 +410,7 @@ export default function Facturas() {
             </div>
           </div>
         )}
+        </>
       )}
     </div>
   );
