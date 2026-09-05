@@ -39,6 +39,10 @@ export default function OrdenesCompra() {
   const [cargando, setCargando] = useState(true);
   const [vista, setVista] = useState('lista'); // lista | nueva | recibir
   const [error, setError] = useState('');
+  
+  // Paginación
+  const [paginaActiva, setPaginaActiva] = useState(1);
+  const ITEMS_POR_PAGINA = 15;
 
   // Estados para vista "nueva"
   const [proveedores, setProveedores] = useState([]);
@@ -559,6 +563,9 @@ export default function OrdenesCompra() {
   }
 
   // Vista lista (default)
+  const totalPaginas = Math.ceil(ordenes.length / ITEMS_POR_PAGINA);
+  const ordenesPaginadas = ordenes.slice((paginaActiva - 1) * ITEMS_POR_PAGINA, paginaActiva * ITEMS_POR_PAGINA);
+
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex justify-between items-start mb-6">
@@ -591,6 +598,7 @@ export default function OrdenesCompra() {
             <thead>
               <tr className="bg-slate-50 border-b text-xs uppercase text-slate-500 font-semibold">
                 <th className="px-5 py-3.5">Número</th>
+                <th className="px-5 py-3.5">Fecha</th>
                 <th className="px-5 py-3.5">Proveedor</th>
                 <th className="px-5 py-3.5 text-right">Total</th>
                 <th className="px-5 py-3.5 text-center">Estado</th>
@@ -598,9 +606,12 @@ export default function OrdenesCompra() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {ordenes.map(oc => (
+              {ordenesPaginadas.map(oc => (
                 <tr key={oc.id} className="hover:bg-slate-50">
                   <td className="px-5 py-4 font-medium text-slate-800">{oc.numero}</td>
+                  <td className="px-5 py-4 text-sm text-slate-500">
+                    {oc.fecha_emision ? new Date(oc.fecha_emision).toLocaleDateString() : 'N/A'}
+                  </td>
                   <td className="px-5 py-4 text-sm text-slate-600">{oc.proveedor_nombre}</td>
                   <td className="px-5 py-4 text-right font-bold text-indigo-700">{fmt(oc.total)}</td>
                   <td className="px-5 py-4 text-center">{badgeEstado(oc.estado)}</td>
@@ -626,6 +637,29 @@ export default function OrdenesCompra() {
               ))}
             </tbody>
           </table>
+          {totalPaginas > 1 && (
+            <div className="px-5 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50">
+              <span className="text-sm text-slate-500">
+                Mostrando {(paginaActiva - 1) * ITEMS_POR_PAGINA + 1} al {Math.min(paginaActiva * ITEMS_POR_PAGINA, ordenes.length)} de {ordenes.length} órdenes
+              </span>
+              <div className="flex gap-1">
+                <button 
+                  onClick={() => setPaginaActiva(p => Math.max(1, p - 1))} 
+                  disabled={paginaActiva === 1}
+                  className="px-3 py-1.5 text-sm font-medium border border-slate-200 rounded-lg bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Anterior
+                </button>
+                <button 
+                  onClick={() => setPaginaActiva(p => Math.min(totalPaginas, p + 1))} 
+                  disabled={paginaActiva === totalPaginas}
+                  className="px-3 py-1.5 text-sm font-medium border border-slate-200 rounded-lg bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
