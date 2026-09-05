@@ -11,6 +11,16 @@ const FORM_VACIO = {
   contacto_nombre: '', contacto_telefono: '', limite_credito: '', saldo_inicial: ''
 };
 
+const Field = ({ label, children }) => (
+  <div>
+    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 block">{label}</label>
+    {children}
+  </div>
+);
+const Input = (props) => (
+  <input {...props} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+);
+
 export default function Proveedores() {
   const [proveedores, setProveedores] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -70,16 +80,6 @@ export default function Proveedores() {
     } catch (e) { alert(e.response?.data?.detail || 'Error al guardar.'); }
     finally { setGuardando(false); }
   };
-
-  const Field = ({ label, children }) => (
-    <div>
-      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 block">{label}</label>
-      {children}
-    </div>
-  );
-  const Input = (props) => (
-    <input {...props} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-  );
 
   return (
     <div className="p-8 max-w-7xl mx-auto">

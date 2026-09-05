@@ -4,6 +4,9 @@ import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
 
+const Field = ({ label, children }) => <div><label className="text-xs font-semibold text-slate-500 uppercase block mb-1">{label}</label>{children}</div>;
+const Input = (props) => <input {...props} className="w-full px-3 py-2 bg-slate-50 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500" />;
+
 export default function ConfiguracionDTE() {
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -51,9 +54,6 @@ export default function ConfiguracionDTE() {
       reader.readAsArrayBuffer(file);
     }
   };
-
-  const Field = ({ label, children }) => <div><label className="text-xs font-semibold text-slate-500 uppercase block mb-1">{label}</label>{children}</div>;
-  const Input = (props) => <input {...props} className="w-full px-3 py-2 bg-slate-50 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500" />;
 
   if (cargando) return <div className="p-8 text-center text-slate-400">Cargando configuración...</div>;
 

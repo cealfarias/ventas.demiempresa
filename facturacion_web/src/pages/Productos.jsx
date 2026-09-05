@@ -4,6 +4,14 @@ import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
 
+const FORM_VACIO = {
+  codigo: '', nombre: '', descripcion: '', imagen_url: '', 
+  precio_venta: '', costo_promedio: '', stock: ''
+};
+
+const Field = ({ label, children }) => <div><label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 block">{label}</label>{children}</div>;
+const Input = (props) => <input {...props} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />;
+
 export default function Productos() {
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -11,17 +19,10 @@ export default function Productos() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
-  const FORM_VACIO = {
-    codigo: '', nombre: '', descripcion: '', imagen_url: '', 
-    precio_venta: '', costo_promedio: '', stock: ''
-  };
   const [modalAbierto, setModalAbierto] = useState(false);
   const [editando, setEditando] = useState(null);
   const [form, setForm] = useState(FORM_VACIO);
   const [guardando, setGuardando] = useState(false);
-
-  const Field = ({ label, children }) => <div><label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 block">{label}</label>{children}</div>;
-  const Input = (props) => <input {...props} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />;
 
   const cargarProductos = async () => {
     try {
