@@ -248,8 +248,8 @@ def actualizar_factura(factura_id: int, empresa_id: str, usuario_id: int, data: 
             registrar_movimiento(
                 db=db, empresa_id=empresa_id, bodega_id=f.bodega_salida_id,
                 producto_id=item.producto_id, tipo_movimiento='ENTRADA_AJUSTE',
-                cantidad=item.cantidad, costo_unitario=int(round(item.precio_unitario * 100)), # costo aproximado para reversion
-                referencia=f"Reversion por edicion Fac. {f.id}", usuario_id=usuario_id
+                cantidad=item.cantidad, costo_unitario=item.precio_unitario, # costo aproximado para reversion
+                notas=f"Reversion por edicion Fac. {f.id}", usuario_id=usuario_id
             )
 
     # Actualizar datos de factura
@@ -304,7 +304,7 @@ def actualizar_factura(factura_id: int, empresa_id: str, usuario_id: int, data: 
                     db=db, empresa_id=empresa_id, bodega_id=f.bodega_salida_id,
                     producto_id=i_data.producto_id, tipo_movimiento='SALIDA_VENTA',
                     cantidad=i_data.cantidad, costo_unitario=prod.costo_promedio or 0,
-                    referencia=f"Venta editada Fac. {f.id}", usuario_id=usuario_id
+                    notas=f"Venta editada Fac. {f.id}", usuario_id=usuario_id
                 )
             except Exception as e:
                 raise HTTPException(status_code=400, detail=str(e))
