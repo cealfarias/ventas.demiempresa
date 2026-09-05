@@ -99,8 +99,10 @@ export default function OrdenesCompra() {
     try {
       const payload = {
         ...formOC,
+        bodega_destino_id: formOC.bodega_destino_id ? parseInt(formOC.bodega_destino_id) : null,
+        proveedor_id: parseInt(formOC.proveedor_id),
         fecha_esperada_entrega: formOC.fecha_esperada_entrega ? new Date(formOC.fecha_esperada_entrega).toISOString() : null,
-        detalles: formOC.detalles.map(d => ({ ...d, precio_unitario: Math.round(parseFloat(d.precio_unitario) * 100) }))
+        detalles: formOC.detalles.map(d => ({ ...d, producto_id: parseInt(d.producto_id), precio_unitario: Math.round(parseFloat(d.precio_unitario) * 100) }))
       };
         let res;
         if (editandoId) {
@@ -116,7 +118,8 @@ export default function OrdenesCompra() {
       setVista('lista');
       cargarDatos();
     } catch (e) {
-      alert(e.response?.data?.detail || 'Error al guardar la orden');
+      const detail = e.response?.data?.detail;
+        alert(typeof detail === 'string' ? detail : JSON.stringify(detail) || 'Error al guardar la orden');
     } finally {
       setGuardando(false);
     }
@@ -154,9 +157,10 @@ export default function OrdenesCompra() {
       await api.post(`/api/v1/compras/ordenes-compra/${ocActiva.id}/recibir`, payload);
       setVista('lista');
       cargarDatos();
-    } catch (e) {
-      alert(e.response?.data?.detail || 'Error al recibir');
-    } finally {
+      } catch (e) {
+        const detail = e.response?.data?.detail;
+        alert(typeof detail === 'string' ? detail : JSON.stringify(detail) || 'Error al procesar');
+      } finally {
       setGuardando(false);
     }
   };
