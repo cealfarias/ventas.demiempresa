@@ -146,7 +146,7 @@ export default function Facturas() {
       const prod = productos.find(p => String(p.id_producto) === String(val));
       if (prod) {
         let precio = (prod.precio_venta || 0) / 100;
-        nuevos[idx].precio_unitario = precio.toFixed(2);
+        nuevos[idx].precio_unitario = precio.toFixed(4);
       }
     }
     
@@ -169,7 +169,7 @@ export default function Facturas() {
       items: fac.items ? fac.items.map(i => ({
         producto_id: i.producto_id,
         cantidad: i.cantidad,
-        precio_unitario: (i.precio_unitario / 100).toFixed(2),
+        precio_unitario: Number(i.precio_unitario).toFixed(4),
         subtotal: i.subtotal
       })) : []
     });
@@ -191,7 +191,7 @@ export default function Facturas() {
         total: total,
         items: form.items.map(i => ({ 
           ...i, 
-          precio_unitario: Math.round(parseFloat(i.precio_unitario) * 100), 
+          precio_unitario: parseFloat(i.precio_unitario), 
           subtotal: Math.round(i.cantidad * parseFloat(i.precio_unitario) * 100) 
         }))
       };
@@ -311,7 +311,7 @@ export default function Facturas() {
                     />
                   </td>
                   <td className="py-2"><input type="number" min="0.1" step="any" value={it.cantidad} onChange={e => actualizarLinea(i, 'cantidad', e.target.value)} className="w-full px-2 py-1.5 border rounded-lg" /></td>
-                  <td className="py-2"><input type="number" min="0" step="0.01" value={it.precio_unitario} onChange={e => actualizarLinea(i, 'precio_unitario', e.target.value)} className="w-full px-2 py-1.5 border rounded-lg" /></td>
+                  <td className="py-2"><input type="number" min="0" step="0.0001" value={it.precio_unitario} onChange={e => actualizarLinea(i, 'precio_unitario', e.target.value)} className="w-full px-2 py-1.5 border rounded-lg" /></td>
                   <td className="py-2 text-right text-sm font-medium">${((it.cantidad || 0) * (it.precio_unitario || 0)).toFixed(2)}</td>
                   <td className="py-2 text-right"><button onClick={() => eliminarLinea(i)} className="text-red-400"><XCircle className="w-4 h-4" /></button></td>
                 </tr>

@@ -142,7 +142,7 @@ class ItemFactura(Base):
     producto_id = Column(Integer, ForeignKey("productos.id_producto"), nullable=False)
     
     cantidad = Column(Float, nullable=False)
-    precio_unitario = Column(Integer, nullable=False)
+    precio_unitario = Column(Float, nullable=False)
     subtotal = Column(Integer, nullable=False)
     
     factura = relationship("Factura", back_populates="items")

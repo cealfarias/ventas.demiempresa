@@ -17,7 +17,7 @@ router = APIRouter(prefix="/facturas", tags=["Facturas y DTEs"])
 class ItemFacturaCreate(BaseModel):
     producto_id: int
     cantidad: float
-    precio_unitario: int  # centavos
+    precio_unitario: float  # exact value
     subtotal: int
 
 class FacturaCreate(BaseModel):
