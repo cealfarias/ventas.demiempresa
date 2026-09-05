@@ -17,7 +17,7 @@ class AjusteManualRequest(BaseModel):
     producto_id: int
     tipo_movimiento: str          # AJUSTE_POSITIVO | AJUSTE_NEGATIVO
     cantidad: float
-    costo_unitario: int           # centavos
+    costo_unitario: float           # centavos
     usuario_id: Optional[int] = None
     notas: Optional[str] = None
 
@@ -31,8 +31,8 @@ class KardexResponse(BaseModel):
     referencia_tipo: Optional[str]
     referencia_id: Optional[int]
     cantidad: float
-    costo_unitario: int
-    costo_total: int
+    costo_unitario: float
+    costo_total: float
     stock_anterior: float
     stock_resultante: float
     fecha: datetime
@@ -48,8 +48,8 @@ class StockResponse(BaseModel):
     bodega_id: int
     bodega_nombre: str
     stock_actual: float
-    costo_promedio: int
-    valor_total: int              # stock_actual × costo_promedio (centavos)
+    costo_promedio: float
+    valor_total: float              # stock_actual × costo_promedio (centavos)
 
 # ── Helper interno (reutilizable desde otros routers) ─────────────────────────
 
@@ -60,7 +60,7 @@ def registrar_movimiento(
     producto_id: int,
     tipo_movimiento: str,
     cantidad: float,
-    costo_unitario: int,
+    costo_unitario: float,
     referencia_tipo: str = None,
     referencia_id: int = None,
     usuario_id: int = None,
@@ -96,7 +96,7 @@ def registrar_movimiento(
         nuevo_stock = stock_anterior + cantidad
         # Costo promedio ponderado
         if nuevo_stock > 0:
-            saldo.costo_promedio = int(
+            saldo.costo_promedio = (
                 (stock_anterior * saldo.costo_promedio + cantidad * costo_unitario) / nuevo_stock
             )
         saldo.stock_actual = nuevo_stock
@@ -120,7 +120,7 @@ def registrar_movimiento(
         referencia_id=referencia_id,
         cantidad=cantidad,
         costo_unitario=costo_unitario,
-        costo_total=int(cantidad * costo_unitario),
+        costo_total=cantidad * costo_unitario,
         stock_anterior=stock_anterior,
         stock_resultante=saldo.stock_actual,
         usuario_id=usuario_id,
@@ -220,7 +220,7 @@ def ver_existencias(
             bodega_nombre=r.bodega.nombre if r.bodega else "—",
             stock_actual=r.stock_actual,
             costo_promedio=r.costo_promedio,
-            valor_total=int(r.stock_actual * r.costo_promedio)
+            valor_total=r.stock_actual * r.costo_promedio
         )
         for r in registros
     ]

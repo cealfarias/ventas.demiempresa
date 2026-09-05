@@ -89,8 +89,8 @@ class Producto(Base):
     descripcion = Column(Text)
     imagen_url = Column(String(500), nullable=True)
     
-    precio_venta = Column(Integer, default=0) # Centavos o 4 decimales
-    costo_promedio = Column(Integer, default=0)
+    precio_venta = Column(Float, default=0.0)
+    costo_promedio = Column(Float, default=0.0)
     stock = Column(Float, default=0.0)
     
     activo = Column(Boolean, default=True)
@@ -198,7 +198,7 @@ class StockBodega(Base):
     bodega_id = Column(Integer, ForeignKey("bodegas.id"), nullable=False)
 
     stock_actual = Column(Float, nullable=False, default=0.0)
-    costo_promedio = Column(Integer, nullable=False, default=0)   # centavos
+    costo_promedio = Column(Float, nullable=False, default=0.0)
 
     __table_args__ = (
         UniqueConstraint("empresa_id", "producto_id", "bodega_id", name="uq_stock_producto_bodega"),
@@ -225,8 +225,8 @@ class Kardex(Base):
     referencia_id = Column(Integer)        # ID del documento origen
 
     cantidad = Column(Float, nullable=False)
-    costo_unitario = Column(Integer, nullable=False, default=0)  # centavos al momento
-    costo_total = Column(Integer, nullable=False, default=0)     # centavos
+    costo_unitario = Column(Float, nullable=False, default=0.0)
+    costo_total = Column(Float, nullable=False, default=0.0)
 
     # Snapshot de existencias para auditoría
     stock_anterior = Column(Float, nullable=False, default=0.0)

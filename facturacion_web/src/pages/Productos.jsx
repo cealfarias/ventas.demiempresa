@@ -64,8 +64,8 @@ export default function Productos() {
     setForm({
       ...FORM_VACIO,
       ...p,
-      precio_venta: p.precio_venta ? (p.precio_venta / 100).toFixed(2) : '',
-      costo_promedio: p.costo_promedio ? (p.costo_promedio / 100).toFixed(2) : '',
+      precio_venta: p.precio_venta ? Number(p.precio_venta).toFixed(4) : '',
+      costo_promedio: p.costo_promedio ? Number(p.costo_promedio).toFixed(4) : '',
     });
     setModalAbierto(true);
   };
@@ -76,8 +76,8 @@ export default function Productos() {
     try {
       const payload = {
         ...form,
-        precio_venta: Math.round(parseFloat(form.precio_venta) * 100),
-        costo_promedio: form.costo_promedio ? Math.round(parseFloat(form.costo_promedio) * 100) : 0,
+        precio_venta: parseFloat(form.precio_venta),
+        costo_promedio: form.costo_promedio ? parseFloat(form.costo_promedio) : 0,
         stock: form.stock ? parseFloat(form.stock) : 0
       };
       
@@ -196,7 +196,7 @@ export default function Productos() {
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-sm font-bold text-slate-800">{prod.nombre}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">Costo: ${(prod.costo_promedio / 100).toFixed(2)}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Costo: ${Number(prod.costo_promedio).toFixed(4)}</p>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="inline-flex items-center gap-1.5">
@@ -205,7 +205,7 @@ export default function Productos() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <span className="text-sm font-bold text-emerald-600">${(prod.precio_venta / 100).toFixed(2)}</span>
+                      <span className="text-sm font-bold text-emerald-600">${Number(prod.precio_venta).toFixed(4)}</span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium border ${prod.activo ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
@@ -275,13 +275,13 @@ export default function Productos() {
                 <Field label="Precio de Venta (USD) *">
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
-                    <input type="number" min="0" step="0.01" value={form.precio_venta} onChange={e => setForm({...form, precio_venta: e.target.value})} className="w-full pl-6 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <input type="number" min="0" step="0.0001" value={form.precio_venta} onChange={e => setForm({...form, precio_venta: e.target.value})} className="w-full pl-6 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                   </div>
                 </Field>
                 <Field label="Costo Promedio (USD)">
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
-                    <input type="number" min="0" step="0.01" value={form.costo_promedio} onChange={e => setForm({...form, costo_promedio: e.target.value})} className="w-full pl-6 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <input type="number" min="0" step="0.0001" value={form.costo_promedio} onChange={e => setForm({...form, costo_promedio: e.target.value})} className="w-full pl-6 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                   </div>
                 </Field>
               </div>
