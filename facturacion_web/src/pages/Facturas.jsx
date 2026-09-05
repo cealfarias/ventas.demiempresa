@@ -210,7 +210,7 @@ export default function Facturas() {
   };
 
   const sumItems = form.items.reduce((acc, i) => acc + (i.cantidad * (parseFloat(i.precio_unitario) || 0) * 100), 0);
-  let subtotal = sumItems;
+  let subtotal = Math.round(sumItems);
   let iva = 0;
   
   if (form.tipo_doc === 'CCF') {
@@ -221,7 +221,7 @@ export default function Facturas() {
       iva = Math.round(subtotal * 0.13);
     }
   }
-  const total = subtotal + iva;
+  const total = Math.round(subtotal + iva);
 
   if (vista === 'nueva') {
     return (
