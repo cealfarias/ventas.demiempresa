@@ -105,6 +105,8 @@ export default function Facturas() {
   }, []);
 
   const [facturas, setFacturas] = useState([]);
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [itemsPorPagina] = useState(15);
   const [cargando, setCargando] = useState(true);
   const [vista, setVista] = useState('lista'); // lista | nueva
 
@@ -352,7 +354,10 @@ export default function Facturas() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {facturas.map(f => (
+              {[...facturas]
+                .sort((a, b) => b.id - a.id)
+                .slice((paginaActual - 1) * itemsPorPagina, paginaActual * itemsPorPagina)
+                .map(f => (
                 <tr key={f.id} className="hover:bg-slate-50">
                   <td className="px-5 py-4 font-medium text-slate-800">{f.numero}</td>
                   <td className="px-5 py-4 text-sm text-slate-600">{f.cliente_nombre}</td>
@@ -381,6 +386,29 @@ export default function Facturas() {
             </tbody>
           </table>
         </div>
+        {facturas.length > itemsPorPagina && (
+          <div className="flex items-center justify-between px-5 py-3 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
+            <span className="text-sm text-slate-500">
+              Mostrando {Math.min((paginaActual - 1) * itemsPorPagina + 1, facturas.length)} a {Math.min(paginaActual * itemsPorPagina, facturas.length)} de {facturas.length}
+            </span>
+            <div className="flex gap-1">
+              <button 
+                onClick={() => setPaginaActual(Math.max(1, paginaActual - 1))}
+                disabled={paginaActual === 1}
+                className="px-3 py-1 text-sm font-medium border rounded-md disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <button 
+                onClick={() => setPaginaActual(Math.min(Math.ceil(facturas.length / itemsPorPagina), paginaActual + 1))}
+                disabled={paginaActual >= Math.ceil(facturas.length / itemsPorPagina)}
+                className="px-3 py-1 text-sm font-medium border rounded-md disabled:opacity-50"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        )}
       )}
     </div>
   );
