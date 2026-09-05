@@ -10,11 +10,12 @@ router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 from datetime import datetime
 import pytz
 
-TIMEZONE = pytz.timezone("America/El_Salvador")
+local_tz = pytz.timezone("America/El_Salvador")
 
 @router.get("/kpis", response_model=Dict[str, Any])
-def obtener_kpis(empresa_id: str, periodo: str = "dia", db: Session = Depends(get_db)):
-    hoy = datetime.now(TIMEZONE)
+def obtener_kpis(empresa_id: str, periodo: str = "dia", tz: str = "America/El_Salvador", db: Session = Depends(get_db)):
+    local_tz = pytz.timezone(tz)
+    hoy = datetime.now(local_tz)
     
     # Total de Ventas (Facturas no anuladas)
     query_ventas = db.query(func.sum(Factura.total)).filter(
@@ -79,10 +80,11 @@ def obtener_kpis(empresa_id: str, periodo: str = "dia", db: Session = Depends(ge
     }
 
 @router.get("/grafico-ventas", response_model=list[Dict[str, Any]])
-def obtener_grafico_ventas(empresa_id: str, periodo: str = "anio", anio: int = None, db: Session = Depends(get_db)):
+def obtener_grafico_ventas(empresa_id: str, periodo: str = "anio", anio: int = None, tz: str = "America/El_Salvador", db: Session = Depends(get_db)):
+    local_tz = pytz.timezone(tz)
     from datetime import datetime, timedelta
     import calendar
-    hoy = datetime.now(TIMEZONE)
+    hoy = datetime.now(local_tz)
     if not anio:
         anio = hoy.year
 
@@ -100,7 +102,7 @@ def obtener_grafico_ventas(empresa_id: str, periodo: str = "anio", anio: int = N
         for f_fecha, f_total in facturas:
             if not f_fecha.tzinfo:
                 f_fecha = f_fecha.replace(tzinfo=pytz.UTC)
-            f_fecha = f_fecha.astimezone(TIMEZONE)
+            f_fecha = f_fecha.astimezone(local_tz)
             h = f_fecha.hour
             if 7 <= h <= 22:
                 ventas_por_hora[h] += f_total
@@ -117,7 +119,7 @@ def obtener_grafico_ventas(empresa_id: str, periodo: str = "anio", anio: int = N
         for f_fecha, f_total in facturas:
             if not f_fecha.tzinfo:
                 f_fecha = f_fecha.replace(tzinfo=pytz.UTC)
-            f_fecha = f_fecha.astimezone(TIMEZONE)
+            f_fecha = f_fecha.astimezone(local_tz)
             ventas_por_dia[f_fecha.weekday()] += f_total
         for i in range(7):
             resultado.append({"mes": dias_nombres[i], "ventas": ventas_por_dia[i]})
@@ -131,21 +133,21 @@ def obtener_grafico_ventas(empresa_id: str, periodo: str = "anio", anio: int = N
         for f_fecha, f_total in facturas:
             if not f_fecha.tzinfo:
                 f_fecha = f_fecha.replace(tzinfo=pytz.UTC)
-            f_fecha = f_fecha.astimezone(TIMEZONE)
+            f_fecha = f_fecha.astimezone(local_tz)
             ventas_por_dia[f_fecha.day] += f_total
         for d in range(1, last_day + 1):
             resultado.append({"mes": str(d), "ventas": ventas_por_dia[d]})
 
     else:
-        inicio_anio = datetime(anio, 1, 1, 0, 0, 0, tzinfo=TIMEZONE)
-        fin_anio = datetime(anio, 12, 31, 23, 59, 59, tzinfo=TIMEZONE)
+        inicio_anio = datetime(anio, 1, 1, 0, 0, 0, tzinfo=local_tz)
+        fin_anio = datetime(anio, 12, 31, 23, 59, 59, tzinfo=local_tz)
         facturas = query.filter(Factura.fecha_emision >= inicio_anio, Factura.fecha_emision <= fin_anio).all()
         meses_nombres = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
         ventas_por_mes = {i: 0 for i in range(1, 13)}
         for f_fecha, f_total in facturas:
             if not f_fecha.tzinfo:
                 f_fecha = f_fecha.replace(tzinfo=pytz.UTC)
-            f_fecha = f_fecha.astimezone(TIMEZONE)
+            f_fecha = f_fecha.astimezone(local_tz)
             mes = f_fecha.month
             ventas_por_mes[mes] += f_total
         for i in range(1, 13):

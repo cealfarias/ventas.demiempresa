@@ -12,19 +12,22 @@ export default function Dashboard() {
   const [cargando, setCargando] = useState(true);
   const [periodo, setPeriodo] = useState('dia'); // dia, mes
   const [anioSeleccionado, setAnioSeleccionado] = useState(new Date().getFullYear());
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const cargar = async () => {
       setCargando(true);
       try {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
         const [resKpis, resChart] = await Promise.all([
-          api.get(`/api/v1/dashboard/kpis?empresa_id=${empresaId()}&periodo=${periodo}`),
-          api.get(`/api/v1/dashboard/grafico-ventas?empresa_id=${empresaId()}&periodo=${periodo}&anio=${anioSeleccionado}`)
+          api.get(`/api/v1/dashboard/kpis?empresa_id=${empresaId()}&periodo=${periodo}&tz=${tz}`),
+          api.get(`/api/v1/dashboard/grafico-ventas?empresa_id=${empresaId()}&periodo=${periodo}&anio=${anioSeleccionado}&tz=${tz}`)
         ]);
         setKpis(resKpis.data);
         setChartData(resChart.data.map(d => ({ ...d, ventas: d.ventas / 100 }))); // convertir a dólares para el gráfico
       } catch (e) {
         console.error("Error al cargar KPIs", e);
+        setError('Error al cargar métricas del servidor');
       } finally {
         setCargando(false);
       }
