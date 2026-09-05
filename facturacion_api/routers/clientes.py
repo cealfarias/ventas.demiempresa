@@ -21,6 +21,7 @@ class ClienteBase(BaseModel):
     es_gran_contribuyente: bool = False
     actividad_economica_cod: Optional[str] = None
     limite_credito: int = 0
+    saldo_inicial: int = 0
 
 class ClienteCreate(ClienteBase):
     pass
@@ -37,6 +38,7 @@ class ClienteUpdate(BaseModel):
     es_gran_contribuyente: Optional[bool] = None
     actividad_economica_cod: Optional[str] = None
     limite_credito: Optional[int] = None
+    saldo_inicial: Optional[int] = None
     activo: Optional[bool] = None
 
 class ClienteResponse(ClienteBase):

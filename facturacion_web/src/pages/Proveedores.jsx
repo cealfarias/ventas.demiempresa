@@ -8,7 +8,7 @@ const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
 const FORM_VACIO = {
   codigo: '', nombre: '', nombre_comercial: '', nit: '', nrc: '',
   es_gran_contribuyente: false, email: '', telefono: '', direccion: '',
-  contacto_nombre: '', contacto_telefono: '', limite_credito: ''
+  contacto_nombre: '', contacto_telefono: '', limite_credito: '', saldo_inicial: ''
 };
 
 export default function Proveedores() {
@@ -44,7 +44,11 @@ export default function Proveedores() {
   const abrirNuevo = () => { setEditando(null); setForm(FORM_VACIO); setModalAbierto(true); };
   const abrirEditar = (p) => {
     setEditando(p);
-    setForm({ ...FORM_VACIO, ...p, limite_credito: p.limite_credito ? (p.limite_credito / 100).toFixed(2) : '' });
+    setForm({ 
+      ...FORM_VACIO, ...p, 
+      limite_credito: p.limite_credito ? (p.limite_credito / 100).toFixed(2) : '',
+      saldo_inicial: p.saldo_inicial ? (p.saldo_inicial / 100).toFixed(2) : ''
+    });
     setModalAbierto(true);
   };
 
@@ -54,7 +58,8 @@ export default function Proveedores() {
     try {
       const payload = {
         ...form,
-        limite_credito: form.limite_credito ? Math.round(parseFloat(form.limite_credito) * 100) : 0
+        limite_credito: form.limite_credito ? Math.round(parseFloat(form.limite_credito) * 100) : 0,
+        saldo_inicial: form.saldo_inicial ? Math.round(parseFloat(form.saldo_inicial) * 100) : 0
       };
       if (editando) {
         await api.put(`/api/v1/compras/proveedores/${editando.id}?empresa_id=${empresaId()}`, payload);
@@ -220,17 +225,26 @@ export default function Proveedores() {
                   <Field label="Teléfono"><Input value={form.contacto_telefono} onChange={e => setForm(f => ({ ...f, contacto_telefono: e.target.value }))} placeholder="7777-8888" /></Field>
                 </div>
               </div>
-              <div className="border-t border-slate-100 pt-3">
-                <Field label="Límite de Crédito (USD)">
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
-                    <input type="number" step="0.01" min="0" value={form.limite_credito}
-                      onChange={e => setForm(f => ({ ...f, limite_credito: e.target.value }))}
-                      placeholder="0.00"
-                      className="w-full pl-6 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                  </div>
-                </Field>
-              </div>
+                <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
+                  <Field label="Límite de Crédito (USD)">
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                      <input type="number" step="0.01" min="0" value={form.limite_credito}
+                        onChange={e => setForm(f => ({ ...f, limite_credito: e.target.value }))}
+                        placeholder="0.00"
+                        className="w-full pl-6 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    </div>
+                  </Field>
+                  <Field label="Saldo Inicial (USD)">
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                      <input type="number" step="0.01" min="0" value={form.saldo_inicial}
+                        onChange={e => setForm(f => ({ ...f, saldo_inicial: e.target.value }))}
+                        placeholder="0.00"
+                        className="w-full pl-6 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    </div>
+                  </Field>
+                </div>
               {editando && (
                 <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
                   <input type="checkbox" checked={form.activo} onChange={e => setForm(f => ({ ...f, activo: e.target.checked }))} className="w-4 h-4 text-indigo-600 rounded" />

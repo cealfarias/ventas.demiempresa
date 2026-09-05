@@ -20,6 +20,7 @@ class ProveedorBase(BaseModel):
     contacto_nombre: Optional[str] = None
     contacto_telefono: Optional[str] = None
     limite_credito: int = 0
+    saldo_inicial: int = 0
 
 class ProveedorCreate(ProveedorBase):
     pass
@@ -36,6 +37,7 @@ class ProveedorUpdate(BaseModel):
     contacto_nombre: Optional[str] = None
     contacto_telefono: Optional[str] = None
     limite_credito: Optional[int] = None
+    saldo_inicial: Optional[int] = None
     activo: Optional[bool] = None
 
 class ProveedorResponse(ProveedorBase):

@@ -8,7 +8,7 @@ const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
 const FORM_VACIO = {
   codigo: '', nombre: '', nombre_comercial: '', nit: '', nrc: '', dui: '',
   email: '', telefono: '', direccion: '', es_gran_contribuyente: false,
-  actividad_economica_cod: '', limite_credito: ''
+  actividad_economica_cod: '', limite_credito: '', saldo_inicial: ''
 };
 
 const Field = ({ label, children }) => <div><label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 block">{label}</label>{children}</div>;
@@ -28,7 +28,7 @@ export default function Clientes() {
     try {
       const res = await api.get(`/api/v1/facturacion/clientes/?empresa_id=${empresaId()}&solo_activos=false`);
       setClientes(res.data);
-    } catch { }
+    } catch (e) { console.error(e); }
     finally { setCargando(false); }
   };
 
@@ -46,7 +46,11 @@ export default function Clientes() {
   const abrirNuevo = () => { setEditando(null); setForm(FORM_VACIO); setModalAbierto(true); };
   const abrirEditar = (c) => {
     setEditando(c);
-    setForm({ ...FORM_VACIO, ...c, limite_credito: c.limite_credito ? (c.limite_credito / 100).toFixed(2) : '' });
+    setForm({ 
+      ...FORM_VACIO, ...c, 
+      limite_credito: c.limite_credito ? (c.limite_credito / 100).toFixed(2) : '',
+      saldo_inicial: c.saldo_inicial ? (c.saldo_inicial / 100).toFixed(2) : ''
+    });
     setModalAbierto(true);
   };
 
@@ -56,7 +60,8 @@ export default function Clientes() {
     try {
       const payload = {
         ...form,
-        limite_credito: form.limite_credito ? Math.round(parseFloat(form.limite_credito) * 100) : 0
+        limite_credito: form.limite_credito ? Math.round(parseFloat(form.limite_credito) * 100) : 0,
+        saldo_inicial: form.saldo_inicial ? Math.round(parseFloat(form.saldo_inicial) * 100) : 0
       };
       if (editando) {
         await api.put(`/api/v1/facturacion/clientes/${editando.id_cliente}?empresa_id=${empresaId()}`, payload);
@@ -175,12 +180,20 @@ export default function Clientes() {
                 <Field label="Actividad Económica (CAT-019)"><Input value={form.actividad_economica_cod} onChange={e => setForm({...form, actividad_economica_cod: e.target.value})} placeholder="Ej: 62010" /></Field>
               </div>
 
-              <Field label="Límite de Crédito (USD)">
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
-                  <input type="number" min="0" step="0.01" value={form.limite_credito} onChange={e => setForm({...form, limite_credito: e.target.value})} className="w-full pl-6 pr-3 py-2 bg-slate-50 border rounded-xl text-sm" />
-                </div>
-              </Field>
+              <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
+                <Field label="Límite de Crédito (USD)">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                    <input type="number" min="0" step="0.01" value={form.limite_credito} onChange={e => setForm({...form, limite_credito: e.target.value})} className="w-full pl-6 pr-3 py-2 bg-slate-50 border rounded-xl text-sm" />
+                  </div>
+                </Field>
+                <Field label="Saldo Inicial (USD)">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                    <input type="number" min="0" step="0.01" value={form.saldo_inicial} onChange={e => setForm({...form, saldo_inicial: e.target.value})} className="w-full pl-6 pr-3 py-2 bg-slate-50 border rounded-xl text-sm" />
+                  </div>
+                </Field>
+              </div>
 
               {editando && (
                 <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">

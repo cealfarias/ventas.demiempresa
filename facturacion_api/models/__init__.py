@@ -68,6 +68,7 @@ class Cliente(Base):
     actividad_economica_cod = Column(String(10)) # CAT-019
     
     limite_credito = Column(Integer, default=0)   # Dinero en centavos
+    saldo_inicial = Column(Integer, default=0)    # centavos
     saldo_pendiente = Column(Integer, default=0)
     
     activo = Column(Boolean, default=True)
@@ -263,6 +264,7 @@ class Proveedor(Base):
     contacto_telefono = Column(String(20))
 
     limite_credito = Column(Integer, default=0)    # centavos
+    saldo_inicial = Column(Integer, default=0)     # centavos
     saldo_pendiente = Column(Integer, default=0)   # centavos
 
     activo = Column(Boolean, default=True)
