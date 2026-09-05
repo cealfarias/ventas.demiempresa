@@ -1,6 +1,35 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ShoppingCart, Plus, Search, FileText, CheckCircle2, AlertCircle, XCircle, FileJson, Clock, UploadCloud, Eye, Trash2, Edit } from 'lucide-react';
 import { api } from '../services/api';
+import Select from 'react-select';
+
+const selectStyles = {
+  control: (base) => ({
+    ...base,
+    borderRadius: '0.75rem',
+    borderColor: '#e2e8f0',
+    backgroundColor: '#f8fafc',
+    padding: '0.1rem',
+    boxShadow: 'none',
+    '&:hover': { borderColor: '#cbd5e1' }
+  })
+};
+
+const selectStylesSmall = {
+  control: (base) => ({
+    ...base,
+    borderRadius: '0.5rem',
+    borderColor: '#e2e8f0',
+    backgroundColor: '#f8fafc',
+    minHeight: '34px',
+    boxShadow: 'none',
+    '&:hover': { borderColor: '#cbd5e1' }
+  }),
+  valueContainer: (base) => ({ ...base, padding: '0 6px' }),
+  input: (base) => ({ ...base, margin: '0', padding: '0' }),
+  dropdownIndicator: (base) => ({ ...base, padding: '4px' }),
+  menuPortal: base => ({ ...base, zIndex: 9999 })
+};
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
 const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
@@ -199,25 +228,50 @@ export default function OrdenesCompra() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-semibold text-slate-500 uppercase">Proveedor</label>
-              <select value={formOC.proveedor_id} onChange={e => setFormOC({...formOC, proveedor_id: e.target.value})} className="w-full mt-1 px-3 py-2 border rounded-xl bg-slate-50">
-                <option value="">Seleccione...</option>
-                {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-              </select>
+              <div className="mt-1">
+                <Select
+                  value={proveedores.map(p => ({value: p.id, label: p.nombre})).find(opt => String(opt.value) === String(formOC.proveedor_id)) || null}
+                  onChange={opt => setFormOC({...formOC, proveedor_id: opt ? opt.value : ''})}
+                  options={proveedores.map(p => ({value: p.id, label: p.nombre}))}
+                  placeholder="Seleccione..."
+                  styles={selectStyles}
+                  isClearable
+                  noOptionsMessage={() => "No se encontraron proveedores"}
+                />
+              </div>
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-500 uppercase">Bodega Destino</label>
-              <select value={formOC.bodega_destino_id} onChange={e => setFormOC({...formOC, bodega_destino_id: e.target.value})} className="w-full mt-1 px-3 py-2 border rounded-xl bg-slate-50">
-                <option value="">Seleccione...</option>
-                {bodegas.map(b => <option key={b.id} value={b.id}>{b.nombre}</option>)}
-              </select>
+              <div className="mt-1">
+                <Select
+                  value={bodegas.map(b => ({value: b.id, label: b.nombre})).find(opt => String(opt.value) === String(formOC.bodega_destino_id)) || null}
+                  onChange={opt => setFormOC({...formOC, bodega_destino_id: opt ? opt.value : ''})}
+                  options={bodegas.map(b => ({value: b.id, label: b.nombre}))}
+                  placeholder="Seleccione..."
+                  styles={selectStyles}
+                  isClearable
+                  noOptionsMessage={() => "No se encontraron bodegas"}
+                />
+              </div>
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-500 uppercase">Tipo Documento</label>
-              <select value={formOC.tipo_doc} onChange={e => setFormOC({...formOC, tipo_doc: e.target.value})} className="w-full mt-1 px-3 py-2 border rounded-xl bg-slate-50">
-                <option value="CCF">Comprobante de Crédito Fiscal (CCF)</option>
-                <option value="FACTURA_CONSUMIDOR">Factura Consumidor Final</option>
-                <option value="FSE">Factura de Sujeto Excluido (FSE)</option>
-              </select>
+              <div className="mt-1">
+                <Select
+                  value={[
+                    { value: 'CCF', label: 'Comprobante de Crédito Fiscal (CCF)' },
+                    { value: 'FACTURA_CONSUMIDOR', label: 'Factura Consumidor Final' },
+                    { value: 'FSE', label: 'Factura de Sujeto Excluido (FSE)' }
+                  ].find(opt => opt.value === formOC.tipo_doc)}
+                  onChange={opt => setFormOC({...formOC, tipo_doc: opt ? opt.value : 'CCF'})}
+                  options={[
+                    { value: 'CCF', label: 'Comprobante de Crédito Fiscal (CCF)' },
+                    { value: 'FACTURA_CONSUMIDOR', label: 'Factura Consumidor Final' },
+                    { value: 'FSE', label: 'Factura de Sujeto Excluido (FSE)' }
+                  ]}
+                  styles={selectStyles}
+                />
+              </div>
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-500 uppercase">Fecha Esperada</label>
@@ -257,10 +311,16 @@ export default function OrdenesCompra() {
               {formOC.detalles.map((d, i) => (
                 <tr key={i} className="border-b border-slate-50">
                   <td className="py-2">
-                    <select value={d.producto_id} onChange={e => actualizarLinea(i, 'producto_id', e.target.value)} className="w-full px-2 py-1.5 border rounded-lg text-sm bg-slate-50">
-                      <option value="">Seleccionar...</option>
-                      {productos.map(p => <option key={p.id_producto} value={p.id_producto}>{p.nombre}</option>)}
-                    </select>
+                    <Select
+                      value={productos.map(p => ({value: p.id_producto, label: p.nombre})).find(opt => String(opt.value) === String(d.producto_id)) || null}
+                      onChange={opt => actualizarLinea(i, 'producto_id', opt ? opt.value : '')}
+                      options={productos.map(p => ({value: p.id_producto, label: p.nombre}))}
+                      placeholder="Seleccionar..."
+                      styles={selectStylesSmall}
+                      menuPortalTarget={document.body}
+                      isClearable
+                      noOptionsMessage={() => "Sin resultados"}
+                    />
                   </td>
                   <td className="py-2"><input type="number" min="0.1" step="any" value={d.cantidad_pedida} onChange={e => actualizarLinea(i, 'cantidad_pedida', e.target.value)} className="w-full px-2 py-1.5 border rounded-lg text-sm bg-slate-50" /></td>
                   <td className="py-2"><input type="number" min="0" step="0.01" value={d.precio_unitario} onChange={e => actualizarLinea(i, 'precio_unitario', e.target.value)} className="w-full px-2 py-1.5 border rounded-lg text-sm bg-slate-50" /></td>
@@ -301,10 +361,17 @@ export default function OrdenesCompra() {
 
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
           <label className="text-xs font-semibold text-slate-500 uppercase block mb-1">Bodega de Destino</label>
-          <select value={recepcion.bodega_destino_id} onChange={e => setRecepcion({...recepcion, bodega_destino_id: e.target.value})} className="w-full px-3 py-2 border rounded-xl bg-slate-50 mb-6">
-            <option value="">Seleccionar bodega...</option>
-            {bodegas.map(b => <option key={b.id} value={b.id}>{b.nombre}</option>)}
-          </select>
+          <div className="mb-6">
+            <Select
+              value={bodegas.map(b => ({value: b.id, label: b.nombre})).find(opt => String(opt.value) === String(recepcion.bodega_destino_id)) || null}
+              onChange={opt => setRecepcion({...recepcion, bodega_destino_id: opt ? opt.value : ''})}
+              options={bodegas.map(b => ({value: b.id, label: b.nombre}))}
+              placeholder="Seleccionar bodega..."
+              styles={selectStyles}
+              isClearable
+              noOptionsMessage={() => "No se encontraron bodegas"}
+            />
+          </div>
 
           <table className="w-full text-left mb-6">
             <thead>

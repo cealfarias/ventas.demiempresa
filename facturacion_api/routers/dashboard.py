@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from database import get_db
-from models import Factura, Cliente, Proveedor, CuentaPorCobrar, CuentaPorPagar, Producto
+from models import Factura, Cliente, Proveedor, CuentaPorCobrar, CuentaPorPagar, Producto, OrdenCompra
 from typing import Dict, Any
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
@@ -92,65 +92,105 @@ def obtener_grafico_ventas(empresa_id: str, periodo: str = "anio", anio: int = N
         Factura.empresa_id == empresa_id,
         Factura.estado != "anulada"
     )
+    query_compras = db.query(OrdenCompra.fecha_emision, OrdenCompra.total).filter(
+        OrdenCompra.empresa_id == empresa_id,
+        OrdenCompra.estado != "anulada"
+    )
     resultado = []
 
     if periodo == "dia":
-        inicio = hoy.replace(hour=7, minute=0, second=0, microsecond=0)
-        fin = hoy.replace(hour=22, minute=59, second=59, microsecond=0)
+        inicio = hoy.replace(hour=0, minute=0, second=0, microsecond=0)
+        fin = hoy.replace(hour=23, minute=59, second=59, microsecond=0)
         facturas = query.filter(Factura.fecha_emision >= inicio, Factura.fecha_emision <= fin).all()
-        ventas_por_hora = {h: 0 for h in range(7, 23)}
+        compras = query_compras.filter(OrdenCompra.fecha_emision >= inicio, OrdenCompra.fecha_emision <= fin).all()
+        
+        ventas_por_hora = {h: 0 for h in range(0, 24)}
+        compras_por_hora = {h: 0 for h in range(0, 24)}
+        
         for f_fecha, f_total in facturas:
-            if not f_fecha.tzinfo:
-                f_fecha = f_fecha.replace(tzinfo=pytz.UTC)
+            if not f_fecha.tzinfo: f_fecha = f_fecha.replace(tzinfo=pytz.UTC)
             f_fecha = f_fecha.astimezone(local_tz)
-            h = f_fecha.hour
-            if 7 <= h <= 22:
-                ventas_por_hora[h] += f_total
-        for h in range(7, 23):
-            label = f"{h} AM" if h < 12 else ("12 PM" if h == 12 else f"{h-12} PM")
-            resultado.append({"mes": label, "ventas": ventas_por_hora[h]})
+            if 0 <= f_fecha.hour <= 23: ventas_por_hora[f_fecha.hour] += f_total
+            
+        for c_fecha, c_total in compras:
+            if not c_fecha.tzinfo: c_fecha = c_fecha.replace(tzinfo=pytz.UTC)
+            c_fecha = c_fecha.astimezone(local_tz)
+            if 0 <= c_fecha.hour <= 23: compras_por_hora[c_fecha.hour] += c_total
+            
+        for h in range(0, 24):
+            if h == 0: label = "12 AM"
+            elif h < 12: label = f"{h} AM"
+            elif h == 12: label = "12 PM"
+            else: label = f"{h-12} PM"
+            resultado.append({"mes": label, "ventas": ventas_por_hora[h], "compras": compras_por_hora[h]})
 
     elif periodo == "semana":
         start_of_week = (hoy - timedelta(days=hoy.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
         end_of_week = start_of_week + timedelta(days=6, hours=23, minutes=59, seconds=59)
         facturas = query.filter(Factura.fecha_emision >= start_of_week, Factura.fecha_emision <= end_of_week).all()
+        compras = query_compras.filter(OrdenCompra.fecha_emision >= start_of_week, OrdenCompra.fecha_emision <= end_of_week).all()
+        
         dias_nombres = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
         ventas_por_dia = {i: 0 for i in range(7)}
+        compras_por_dia = {i: 0 for i in range(7)}
+        
         for f_fecha, f_total in facturas:
-            if not f_fecha.tzinfo:
-                f_fecha = f_fecha.replace(tzinfo=pytz.UTC)
+            if not f_fecha.tzinfo: f_fecha = f_fecha.replace(tzinfo=pytz.UTC)
             f_fecha = f_fecha.astimezone(local_tz)
             ventas_por_dia[f_fecha.weekday()] += f_total
+            
+        for c_fecha, c_total in compras:
+            if not c_fecha.tzinfo: c_fecha = c_fecha.replace(tzinfo=pytz.UTC)
+            c_fecha = c_fecha.astimezone(local_tz)
+            compras_por_dia[c_fecha.weekday()] += c_total
+            
         for i in range(7):
-            resultado.append({"mes": dias_nombres[i], "ventas": ventas_por_dia[i]})
+            resultado.append({"mes": dias_nombres[i], "ventas": ventas_por_dia[i], "compras": compras_por_dia[i]})
 
     elif periodo == "mes":
         _, last_day = calendar.monthrange(hoy.year, hoy.month)
         inicio = hoy.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         fin = hoy.replace(day=last_day, hour=23, minute=59, second=59, microsecond=0)
         facturas = query.filter(Factura.fecha_emision >= inicio, Factura.fecha_emision <= fin).all()
+        compras_list = query_compras.filter(OrdenCompra.fecha_emision >= inicio, OrdenCompra.fecha_emision <= fin).all()
+        
         ventas_por_dia = {d: 0 for d in range(1, last_day + 1)}
+        compras_por_dia = {d: 0 for d in range(1, last_day + 1)}
+        
         for f_fecha, f_total in facturas:
-            if not f_fecha.tzinfo:
-                f_fecha = f_fecha.replace(tzinfo=pytz.UTC)
+            if not f_fecha.tzinfo: f_fecha = f_fecha.replace(tzinfo=pytz.UTC)
             f_fecha = f_fecha.astimezone(local_tz)
             ventas_por_dia[f_fecha.day] += f_total
+            
+        for c_fecha, c_total in compras_list:
+            if not c_fecha.tzinfo: c_fecha = c_fecha.replace(tzinfo=pytz.UTC)
+            c_fecha = c_fecha.astimezone(local_tz)
+            compras_por_dia[c_fecha.day] += c_total
+            
         for d in range(1, last_day + 1):
-            resultado.append({"mes": str(d), "ventas": ventas_por_dia[d]})
+            resultado.append({"mes": str(d), "ventas": ventas_por_dia[d], "compras": compras_por_dia[d]})
 
     else:
         inicio_anio = datetime(anio, 1, 1, 0, 0, 0, tzinfo=local_tz)
         fin_anio = datetime(anio, 12, 31, 23, 59, 59, tzinfo=local_tz)
         facturas = query.filter(Factura.fecha_emision >= inicio_anio, Factura.fecha_emision <= fin_anio).all()
+        compras_list = query_compras.filter(OrdenCompra.fecha_emision >= inicio_anio, OrdenCompra.fecha_emision <= fin_anio).all()
+        
         meses_nombres = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
         ventas_por_mes = {i: 0 for i in range(1, 13)}
+        compras_por_mes = {i: 0 for i in range(1, 13)}
+        
         for f_fecha, f_total in facturas:
-            if not f_fecha.tzinfo:
-                f_fecha = f_fecha.replace(tzinfo=pytz.UTC)
+            if not f_fecha.tzinfo: f_fecha = f_fecha.replace(tzinfo=pytz.UTC)
             f_fecha = f_fecha.astimezone(local_tz)
-            mes = f_fecha.month
-            ventas_por_mes[mes] += f_total
+            ventas_por_mes[f_fecha.month] += f_total
+            
+        for c_fecha, c_total in compras_list:
+            if not c_fecha.tzinfo: c_fecha = c_fecha.replace(tzinfo=pytz.UTC)
+            c_fecha = c_fecha.astimezone(local_tz)
+            compras_por_mes[c_fecha.month] += c_total
+            
         for i in range(1, 13):
-            resultado.append({"mes": meses_nombres[i-1], "ventas": ventas_por_mes[i]})
+            resultado.append({"mes": meses_nombres[i-1], "ventas": ventas_por_mes[i], "compras": compras_por_mes[i]})
             
     return resultado

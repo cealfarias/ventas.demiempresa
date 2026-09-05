@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, TrendingUp, Users, AlertTriangle, Truck, CreditCard, ShoppingCart, Calendar } from 'lucide-react';
 import { api } from '../services/api';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
 const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
@@ -24,7 +24,7 @@ export default function Dashboard() {
           api.get(`/api/v1/dashboard/grafico-ventas?empresa_id=${empresaId()}&periodo=${periodo}&anio=${anioSeleccionado}&tz=${tz}`)
         ]);
         setKpis(resKpis.data);
-        setChartData(resChart.data.map(d => ({ ...d, ventas: d.ventas / 100 }))); // convertir a dólares para el gráfico
+        setChartData(resChart.data.map(d => ({ ...d, ventas: d.ventas / 100, compras: d.compras / 100 })));
       } catch (e) {
         console.error("Error al cargar KPIs", e);
         setError('Error al cargar métricas del servidor');
@@ -124,8 +124,8 @@ export default function Dashboard() {
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-8">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h3 className="text-lg font-bold text-slate-800">Historial de Ventas</h3>
-            <p className="text-sm text-slate-500">Facturación aprobada mes a mes</p>
+            <h3 className="text-lg font-bold text-slate-800">Historial de Ventas y Compras</h3>
+            <p className="text-sm text-slate-500">Comparativa de ingresos y abastecimiento</p>
           </div>
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-slate-400" />
@@ -142,21 +142,23 @@ export default function Dashboard() {
         </div>
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
               <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
               <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} tickFormatter={(val) => `$${val}`} />
               <Tooltip 
                 cursor={{fill: '#f1f5f9'}}
-                formatter={(value) => [`$${value.toFixed(2)}`, 'Ventas']}
+                formatter={(value, name) => [`$${value.toFixed(2)}`, name.charAt(0).toUpperCase() + name.slice(1)]}
                 contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
               />
-              <Bar dataKey="ventas" radius={[4, 4, 0, 0]}>
+              <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
+              <Bar dataKey="ventas" name="ventas" radius={[4, 4, 0, 0]}>
                 {chartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.ventas > 0 ? '#4f46e5' : '#e2e8f0'} />
                 ))}
               </Bar>
-            </BarChart>
+              <Line type="monotone" dataKey="compras" name="compras" stroke="#f59e0b" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} activeDot={{r: 6}} />
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       </div>
