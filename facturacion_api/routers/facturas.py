@@ -280,7 +280,7 @@ def actualizar_factura(factura_id: int, empresa_id: str, usuario_id: int, data: 
                 f.fecha_emision = tz.localize(datetime.combine(fecha_req, datetime.min.time()))
 
     # Borrar items anteriores
-    db.query(DetalleFactura).filter(DetalleFactura.factura_id == f.id).delete()
+    db.query(ItemFactura).filter(ItemFactura.factura_id == f.id).delete()
     
     # Insertar items nuevos y descontar inventario
     for i_data in data.items:
@@ -288,7 +288,7 @@ def actualizar_factura(factura_id: int, empresa_id: str, usuario_id: int, data: 
         if not prod:
             raise HTTPException(status_code=404, detail=f"Producto {i_data.producto_id} no encontrado")
             
-        detalle = DetalleFactura(
+        detalle = ItemFactura(
             factura_id=f.id,
             producto_id=i_data.producto_id,
             cantidad=i_data.cantidad,
@@ -310,6 +310,7 @@ def actualizar_factura(factura_id: int, empresa_id: str, usuario_id: int, data: 
                 raise HTTPException(status_code=400, detail=str(e))
                 
     db.commit()
+    db.refresh(f)
     
     # Return same format as listar_facturas
     items_resp = []
