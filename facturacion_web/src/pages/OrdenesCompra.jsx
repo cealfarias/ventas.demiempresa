@@ -538,6 +538,11 @@ export default function OrdenesCompra() {
                   <td className="px-5 py-4 text-right font-bold text-indigo-700">{fmt(oc.total)}</td>
                   <td className="px-5 py-4 text-center">{badgeEstado(oc.estado)}</td>
                   <td className="px-5 py-4 flex gap-2 justify-end">
+                      {['borrador', 'enviada'].includes(oc.estado) && (
+                        <button onClick={() => iniciarEdicion(oc)} className="text-xs bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-200 font-medium transition-colors flex items-center gap-1">
+                          Editar
+                        </button>
+                      )}
                     <button onClick={() => abrirDetalle(oc)} className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-medium transition-colors flex items-center gap-1">
                       <Eye className="w-3.5 h-3.5" /> Detalle
                     </button>
