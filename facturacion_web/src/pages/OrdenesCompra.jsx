@@ -212,6 +212,7 @@ export default function OrdenesCompra() {
               <select value={formOC.tipo_doc} onChange={e => setFormOC({...formOC, tipo_doc: e.target.value})} className="w-full mt-1 px-3 py-2 border rounded-xl bg-slate-50">
                 <option value="CCF">Comprobante de Crédito Fiscal (CCF)</option>
                 <option value="FACTURA_CONSUMIDOR">Factura Consumidor Final</option>
+                <option value="FSE">Factura de Sujeto Excluido (FSE)</option>
               </select>
             </div>
             <div>
