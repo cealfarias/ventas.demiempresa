@@ -190,8 +190,8 @@ def actualizar_orden(oc_id: int, empresa_id: str, data: OrdenCompraCreate, db: S
     if not oc:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
     
-    if oc.estado != "BORRADOR" and oc.estado != "EMITIDA":
-        raise HTTPException(status_code=400, detail="Solo se pueden editar ordenes en estado BORRADOR o EMITIDA")
+    if oc.estado not in ["borrador", "enviada"]:
+        raise HTTPException(status_code=400, detail="Solo se pueden editar ordenes en estado BORRADOR o ENVIADA")
 
     oc.proveedor_id = data.proveedor_id
     oc.tipo_doc = data.tipo_doc
