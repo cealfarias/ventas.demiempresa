@@ -319,7 +319,7 @@ class DetalleOrdenCompra(Base):
 
     cantidad_pedida = Column(Float, nullable=False)
     cantidad_recibida = Column(Float, default=0.0)     # se actualiza en recepcion
-    precio_unitario = Column(Integer, nullable=False)  # centavos
+    precio_unitario = Column(Float, nullable=False)  # exact value, max 4 decimals
     subtotal = Column(Integer, nullable=False)         # centavos
 
     orden = relationship("OrdenCompra", back_populates="detalles")

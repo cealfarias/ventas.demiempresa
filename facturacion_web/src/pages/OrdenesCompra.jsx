@@ -120,7 +120,7 @@ export default function OrdenesCompra() {
         detalles: oc.detalles.map(d => ({
             producto_id: d.producto_id || '',
             cantidad_pedida: d.cantidad_pedida,
-            precio_unitario: (d.precio_unitario / 100).toFixed(2)
+            precio_unitario: Number(d.precio_unitario).toFixed(4)
         }))
     });
     setVista('nueva');
@@ -135,7 +135,7 @@ export default function OrdenesCompra() {
         bodega_destino_id: formOC.bodega_destino_id ? parseInt(formOC.bodega_destino_id) : null,
         proveedor_id: parseInt(formOC.proveedor_id),
         fecha_esperada_entrega: formOC.fecha_esperada_entrega ? new Date(formOC.fecha_esperada_entrega).toISOString() : null,
-        detalles: formOC.detalles.map(d => ({ ...d, producto_id: parseInt(d.producto_id), precio_unitario: Math.round(parseFloat(d.precio_unitario) * 100) }))
+        detalles: formOC.detalles.map(d => ({ ...d, producto_id: parseInt(d.producto_id), precio_unitario: parseFloat(d.precio_unitario) }))
       };
         let res;
         if (editandoId) {
@@ -327,7 +327,7 @@ export default function OrdenesCompra() {
                     />
                   </td>
                   <td className="py-2"><input type="number" min="0.1" step="any" value={d.cantidad_pedida} onChange={e => actualizarLinea(i, 'cantidad_pedida', e.target.value)} className="w-full px-2 py-1.5 border rounded-lg text-sm bg-slate-50" /></td>
-                  <td className="py-2"><input type="number" min="0" step="0.01" value={d.precio_unitario} onChange={e => actualizarLinea(i, 'precio_unitario', e.target.value)} className="w-full px-2 py-1.5 border rounded-lg text-sm bg-slate-50" /></td>
+                  <td className="py-2"><input type="number" min="0" step="0.0001" value={d.precio_unitario} onChange={e => actualizarLinea(i, 'precio_unitario', e.target.value)} className="w-full px-2 py-1.5 border rounded-lg text-sm bg-slate-50" /></td>
                   <td className="py-2 text-right text-sm font-medium text-slate-700">${((d.cantidad_pedida || 0) * (d.precio_unitario || 0)).toFixed(2)}</td>
                   <td className="py-2 text-right"><button onClick={() => removerLinea(i)} className="text-red-400 hover:text-red-600"><XCircle className="w-4 h-4" /></button></td>
                 </tr>
@@ -535,8 +535,8 @@ export default function OrdenesCompra() {
                 <tr key={d.id} className="hover:bg-slate-50">
                   <td className="py-2">{d.producto_nombre}</td>
                   <td className="py-2 text-right">{d.cantidad_pedida}</td>
-                  <td className="py-2 text-right">{fmt(d.precio_unitario)}</td>
-                  <td className="py-2 text-right font-medium">{fmt(d.cantidad_pedida * d.precio_unitario)}</td>
+                  <td className="py-2 text-right">{`${Number(d.precio_unitario).toFixed(4)}`}</td>
+                  <td className="py-2 text-right font-medium">{fmt(d.subtotal)}</td>
                 </tr>
               ))}
             </tbody>

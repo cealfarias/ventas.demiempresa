@@ -16,7 +16,7 @@ router = APIRouter(prefix="/ordenes-compra", tags=["Órdenes de Compra"])
 class DetalleOCBase(BaseModel):
     producto_id: int
     cantidad_pedida: float
-    precio_unitario: int   # centavos
+    precio_unitario: float   # exact value
 
 class OrdenCompraCreate(BaseModel):
     proveedor_id: int
@@ -49,7 +49,7 @@ class DetalleOCResponse(BaseModel):
     producto_nombre: str
     cantidad_pedida: float
     cantidad_recibida: float
-    precio_unitario: int
+    precio_unitario: float
     subtotal: int
     pendiente: float
 
@@ -161,7 +161,7 @@ def crear_orden(empresa_id: str, usuario_id: int, data: OrdenCompraCreate, db: S
         if not producto:
             raise HTTPException(status_code=404, detail=f"Producto {item.producto_id} no encontrado")
         
-        item_subtotal = int(item.cantidad_pedida * item.precio_unitario)
+        item_subtotal = int(round(item.cantidad_pedida * item.precio_unitario * 100))
         detalle = DetalleOrdenCompra(
             orden_compra_id=oc.id,
             producto_id=item.producto_id,
@@ -209,7 +209,7 @@ def actualizar_orden(oc_id: int, empresa_id: str, data: OrdenCompraCreate, db: S
             if not prod:
                 raise HTTPException(status_code=400, detail=f"Producto {item.producto_id} no encontrado")
         
-        item_subtotal = int(item.cantidad_pedida * item.precio_unitario)
+        item_subtotal = int(round(item.cantidad_pedida * item.precio_unitario * 100))
         detalle = DetalleOrdenCompra(
             orden_compra_id=oc.id,
             producto_id=item.producto_id,
@@ -401,7 +401,7 @@ def crear_desde_dte(empresa_id: str, payload: ImportarDTERequest, usuario_id: in
             Producto.nombre == descripcion
         ).first()
         
-        precio_unitario = int(float(item.get("precioUni", 0)) * 100)
+        precio_unitario = float(item.get("precioUni", 0))
         cantidad = float(item.get("cantidad", 0))
         
         if not producto:
