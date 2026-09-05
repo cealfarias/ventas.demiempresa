@@ -223,7 +223,7 @@ export default function Facturas() {
             </div>
               <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase">Fecha de Emisión</label>
-                <input type="date" value={form.fecha_emision || ''} onChange={e => setForm({...form, fecha_emision: e.target.value})} className="w-full mt-1 px-3 py-2 border rounded-xl" />
+                <input type="datetime-local" value={form.fecha_emision || ''} onChange={e => setForm({...form, fecha_emision: e.target.value})} className="w-full mt-1 px-3 py-2 border rounded-xl" />
               </div>
               <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase">Bodega de Salida (Inventario)</label>
@@ -328,7 +328,7 @@ export default function Facturas() {
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Receipt className="w-6 h-6 text-indigo-600" /> Facturas DTE</h1>
           <p className="text-sm text-slate-500 mt-1">Historial de ventas y documentos tributarios</p>
         </div>
-        <button id="btn-emitir-factura" onClick={() => { setForm({ cliente_id: '', bodega_salida_id: '', tipo_doc: 'FACTURA', condicion_operacion: 'CONTADO', dias_credito: 30, items: [], fecha_emision: new Date().toISOString().split('T')[0], entrega_domicilio: false, incluye_iva: false }); setVista('nueva'); }} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 relative z-0">
+        <button id="btn-emitir-factura" onClick={() => { setForm({ cliente_id: '', bodega_salida_id: '', tipo_doc: 'FACTURA', condicion_operacion: 'CONTADO', dias_credito: 30, items: [], fecha_emision: (new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000)).toISOString().slice(0, 16), entrega_domicilio: false, incluye_iva: false }); setVista('nueva'); }} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 relative z-0">
           <Plus className="w-4 h-4" /> Emitir Factura
         </button>
       </div>

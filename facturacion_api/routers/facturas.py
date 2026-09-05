@@ -134,12 +134,19 @@ def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Ses
         from datetime import datetime
         import pytz
         tz = pytz.timezone("America/El_Salvador")
-        fecha_req = datetime.strptime(data.fecha_emision, "%Y-%m-%d").date()
-        ahora = datetime.now(tz)
-        if fecha_req == ahora.date():
-            f.fecha_emision = ahora
+        if "T" in data.fecha_emision:
+            # Viene fecha y hora: YYYY-MM-DDTHH:MM
+            # Quitar segundos si los trae
+            fecha_str = data.fecha_emision[:16]
+            fecha_req = datetime.strptime(fecha_str, "%Y-%m-%dT%H:%M")
+            f.fecha_emision = tz.localize(fecha_req)
         else:
-            f.fecha_emision = tz.localize(datetime.combine(fecha_req, datetime.min.time()))
+            fecha_req = datetime.strptime(data.fecha_emision, "%Y-%m-%d").date()
+            ahora = datetime.now(tz)
+            if fecha_req == ahora.date():
+                f.fecha_emision = ahora
+            else:
+                f.fecha_emision = tz.localize(datetime.combine(fecha_req, datetime.min.time()))
     
     db.add(f)
     db.flush()
