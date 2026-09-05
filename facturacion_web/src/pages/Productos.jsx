@@ -11,6 +11,18 @@ export default function Productos() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
+  const FORM_VACIO = {
+    codigo: '', nombre: '', descripcion: '', imagen_url: '', 
+    precio_venta: '', costo_promedio: '', stock: ''
+  };
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [editando, setEditando] = useState(null);
+  const [form, setForm] = useState(FORM_VACIO);
+  const [guardando, setGuardando] = useState(false);
+
+  const Field = ({ label, children }) => <div><label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 block">{label}</label>{children}</div>;
+  const Input = (props) => <input {...props} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />;
+
   const cargarProductos = async () => {
     try {
       setLoading(true);
@@ -44,6 +56,54 @@ export default function Productos() {
     currentPage * itemsPerPage
   );
 
+  const abrirNuevo = () => { setEditando(null); setForm(FORM_VACIO); setModalAbierto(true); };
+  
+  const abrirEditar = (p) => {
+    setEditando(p);
+    setForm({
+      ...FORM_VACIO,
+      ...p,
+      precio_venta: p.precio_venta ? (p.precio_venta / 100).toFixed(2) : '',
+      costo_promedio: p.costo_promedio ? (p.costo_promedio / 100).toFixed(2) : '',
+    });
+    setModalAbierto(true);
+  };
+
+  const guardar = async () => {
+    if (!form.nombre || !form.codigo || !form.precio_venta) return;
+    setGuardando(true);
+    try {
+      const payload = {
+        ...form,
+        precio_venta: Math.round(parseFloat(form.precio_venta) * 100),
+        costo_promedio: form.costo_promedio ? Math.round(parseFloat(form.costo_promedio) * 100) : 0,
+        stock: form.stock ? parseFloat(form.stock) : 0
+      };
+      
+      if (editando) {
+        await api.put(`/api/v1/facturacion/productos/${editando.id_producto}?empresa_id=${empresaId()}`, payload);
+      } else {
+        await api.post(`/api/v1/facturacion/productos/?empresa_id=${empresaId()}`, payload);
+      }
+      setModalAbierto(false);
+      cargarProductos();
+    } catch (e) {
+      alert("Error guardando: " + (e.response?.data?.detail || e.message));
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const eliminar = async (p) => {
+    if(!window.confirm(`¿Seguro que deseas eliminar ${p.nombre}?`)) return;
+    try {
+      await api.delete(`/api/v1/facturacion/productos/${p.id_producto}?empresa_id=${empresaId()}`);
+      cargarProductos();
+    } catch (e) {
+      alert("Error eliminando: " + (e.response?.data?.detail || e.message));
+    }
+  };
+
   return (
     <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
@@ -61,7 +121,7 @@ export default function Productos() {
             <UploadCloud className="w-4 h-4 text-slate-500" />
             Importar
           </button>
-          <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all shadow-lg shadow-indigo-500/30 flex items-center gap-2 transform hover:-translate-y-0.5">
+          <button onClick={abrirNuevo} className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all shadow-lg shadow-indigo-500/30 flex items-center gap-2 transform hover:-translate-y-0.5">
             <Plus className="w-4 h-4" />
             Nuevo Producto
           </button>
@@ -153,10 +213,10 @@ export default function Productos() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                        <button onClick={() => abrirEditar(prod)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                        <button onClick={() => eliminar(prod)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -192,6 +252,59 @@ export default function Productos() {
           </div>
         </div>
       </div>
+
+      {/* Modal */}
+      {modalAbierto && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+            <h2 className="text-lg font-bold text-slate-800 mb-5">{editando ? 'Editar Producto' : 'Nuevo Producto'}</h2>
+            
+            <div className="space-y-4">
+              <Field label="Código *">
+                <Input value={form.codigo} onChange={e => setForm({...form, codigo: e.target.value})} />
+              </Field>
+              <Field label="Nombre del Producto *">
+                <Input value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} />
+              </Field>
+              <Field label="Descripción">
+                <textarea value={form.descripcion} onChange={e => setForm({...form, descripcion: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" rows={2} />
+              </Field>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Precio de Venta (USD) *">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                    <input type="number" min="0" step="0.01" value={form.precio_venta} onChange={e => setForm({...form, precio_venta: e.target.value})} className="w-full pl-6 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  </div>
+                </Field>
+                <Field label="Costo Promedio (USD)">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                    <input type="number" min="0" step="0.01" value={form.costo_promedio} onChange={e => setForm({...form, costo_promedio: e.target.value})} className="w-full pl-6 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  </div>
+                </Field>
+              </div>
+
+              {!editando && (
+                <Field label="Stock Inicial">
+                  <Input type="number" min="0" step="any" value={form.stock} onChange={e => setForm({...form, stock: e.target.value})} />
+                </Field>
+              )}
+              
+              <Field label="URL de la Imagen">
+                <Input value={form.imagen_url} onChange={e => setForm({...form, imagen_url: e.target.value})} placeholder="https://..." />
+              </Field>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setModalAbierto(false)} className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-medium">Cancelar</button>
+              <button onClick={guardar} disabled={guardando || !form.nombre || !form.codigo || !form.precio_venta} className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl disabled:opacity-50 hover:bg-indigo-700 font-medium">
+                {guardando ? 'Guardando...' : 'Guardar Producto'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

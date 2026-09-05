@@ -38,3 +38,38 @@ def crear_producto(empresa_id: str, producto: ProductoCreate, db: Session = Depe
     db.commit()
     db.refresh(db_producto)
     return db_producto
+
+class ProductoUpdate(BaseModel):
+    codigo: Optional[str] = None
+    nombre: Optional[str] = None
+    descripcion: Optional[str] = None
+    imagen_url: Optional[str] = None
+    precio_venta: Optional[int] = None
+    costo_promedio: Optional[int] = None
+    stock: Optional[float] = None
+    activo: Optional[bool] = None
+
+@router.put("/{id_producto}", response_model=ProductoResponse)
+def actualizar_producto(id_producto: int, empresa_id: str, producto: ProductoUpdate, db: Session = Depends(get_db)):
+    db_prod = db.query(Producto).filter(Producto.id_producto == id_producto, Producto.empresa_id == empresa_id).first()
+    if not db_prod:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    
+    update_data = producto.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_prod, key, value)
+        
+    db.commit()
+    db.refresh(db_prod)
+    return db_prod
+
+@router.delete("/{id_producto}")
+def eliminar_producto(id_producto: int, empresa_id: str, db: Session = Depends(get_db)):
+    db_prod = db.query(Producto).filter(Producto.id_producto == id_producto, Producto.empresa_id == empresa_id).first()
+    if not db_prod:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    
+    db_prod.activo = False
+    db.commit()
+    return {"detail": "Producto eliminado (marcado inactivo)"}
+
