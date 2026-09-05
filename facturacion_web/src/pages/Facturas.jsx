@@ -174,7 +174,7 @@ export default function Facturas() {
       cargar();
     } catch (e) { 
       const detail = e.response?.data?.detail;
-      alert(typeof detail === 'string' ? detail : 'Error al emitir factura'); 
+      alert(typeof detail === 'string' ? detail : JSON.stringify(detail) || 'Error al emitir factura'); 
     }
     finally { setGuardando(false); }
   };

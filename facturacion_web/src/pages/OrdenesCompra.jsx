@@ -15,7 +15,7 @@ export default function OrdenesCompra() {
   const [proveedores, setProveedores] = useState([]);
   const [bodegas, setBodegas] = useState([]);
   const [productos, setProductos] = useState([]);
-  const [formOC, setFormOC] = useState({ proveedor_id: '', tipo_doc: 'CCF', bodega_destino_id: '', fecha_esperada_entrega: '', notas: '', detalles: [] });
+  const [formOC, setFormOC] = useState({ proveedor_id: '', tipo_doc: 'CCF', bodega_destino_id: '', fecha_esperada_entrega: '', notas: '', detalles: [], calcular_iva: true });
   const [guardando, setGuardando] = useState(false);
   const [dteJson, setDteJson] = useState('');
   const [mostrarDte, setMostrarDte] = useState(false);
@@ -156,7 +156,7 @@ export default function OrdenesCompra() {
 
   if (vista === 'nueva') {
     const subtotal = formOC.detalles.reduce((acc, d) => acc + (d.cantidad_pedida * (parseFloat(d.precio_unitario) || 0)), 0);
-    const iva = subtotal * 0.13;
+    const iva = formOC.calcular_iva ? subtotal * 0.13 : 0;
     const total = subtotal + iva;
 
     return (
@@ -194,10 +194,16 @@ export default function OrdenesCompra() {
             </div>
           </div>
           
-          <label className="flex items-center gap-2 text-sm text-indigo-600 font-medium cursor-pointer mt-4">
-            <input type="checkbox" checked={mostrarDte} onChange={e => setMostrarDte(e.target.checked)} className="rounded" />
-            Importar DTE (JSON) de proveedor
-          </label>
+          <div className="flex gap-6 mt-4">
+            <label className="flex items-center gap-2 text-sm text-indigo-600 font-medium cursor-pointer">
+              <input type="checkbox" checked={mostrarDte} onChange={e => setMostrarDte(e.target.checked)} className="rounded" />
+              Importar DTE (JSON) de proveedor
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-700 font-medium cursor-pointer">
+              <input type="checkbox" checked={formOC.calcular_iva} onChange={e => setFormOC({...formOC, calcular_iva: e.target.checked})} className="rounded" />
+              Calcular IVA (13%)
+            </label>
+          </div>
           
           {mostrarDte && (
             <textarea placeholder="Pegue aquí el JSON recibido del proveedor..." value={dteJson} onChange={e => setDteJson(e.target.value)} rows={3} className="w-full px-3 py-2 border rounded-xl bg-slate-50 text-xs font-mono" />

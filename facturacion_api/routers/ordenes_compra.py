@@ -24,6 +24,7 @@ class OrdenCompraCreate(BaseModel):
     bodega_destino_id: Optional[int] = None
     fecha_esperada_entrega: Optional[datetime] = None
     notas: Optional[str] = None
+    calcular_iva: bool = True
     detalles: List[DetalleOCBase]
 
 class RecepcionDetalleRequest(BaseModel):
@@ -172,7 +173,7 @@ def crear_orden(empresa_id: str, usuario_id: int, data: OrdenCompraCreate, db: S
         db.add(detalle)
         subtotal += item_subtotal
 
-    iva = int(subtotal * 0.13)
+    iva = int(subtotal * 0.13) if data.calcular_iva else 0
     oc.subtotal = subtotal
     oc.iva = iva
     oc.total = subtotal + iva
