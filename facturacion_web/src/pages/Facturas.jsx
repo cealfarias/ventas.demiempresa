@@ -165,7 +165,7 @@ export default function Facturas() {
       dias_credito: 30,
       entrega_domicilio: false,
       incluye_iva: false,
-      fecha_emision: fac.fecha_emision ? fac.fecha_emision.slice(0, 16) : (new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000)).toISOString().slice(0, 16),
+      fecha_emision: fac.fecha_emision ? (new Date(new Date(fac.fecha_emision).getTime() - new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : (new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000)).toISOString().slice(0, 16),
       items: fac.items ? fac.items.map(i => ({
         producto_id: i.producto_id,
         cantidad: i.cantidad,
@@ -375,7 +375,7 @@ export default function Facturas() {
             <thead>
               <tr className="bg-slate-50 border-b text-xs uppercase text-slate-500 font-semibold">
                 <th className="px-5 py-3.5">Número</th>
-                <th className="px-5 py-3.5">Cliente</th>
+                <th className="px-5 py-3.5">Fecha</th><th className="px-5 py-3.5">Cliente</th>
                 <th className="px-5 py-3.5">Documento</th>
                 <th className="px-5 py-3.5 text-right">Total</th>
                 <th className="px-5 py-3.5 text-center">MH Estado</th>
@@ -389,7 +389,7 @@ export default function Facturas() {
                 .map(f => (
                 <tr key={f.id} className="hover:bg-slate-50">
                   <td className="px-5 py-4 font-medium text-slate-800">{f.numero}</td>
-                  <td className="px-5 py-4 text-sm text-slate-600">{f.cliente_nombre}</td>
+                  <td className="px-5 py-4 text-sm text-slate-600">{f.fecha_emision ? new Date(f.fecha_emision).toLocaleString() : ''}</td><td className="px-5 py-4 text-sm text-slate-600">{f.cliente_nombre}</td>
                   <td className="px-5 py-4 text-sm">
                     <div>{f.tipo_doc}</div>
                     <div className="text-xs text-slate-400">{f.condicion_operacion}</div>
