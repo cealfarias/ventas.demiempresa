@@ -98,8 +98,9 @@ def obtener_grafico_ventas(empresa_id: str, periodo: str = "anio", anio: int = N
         facturas = query.filter(Factura.fecha_emision >= inicio, Factura.fecha_emision <= fin).all()
         ventas_por_hora = {h: 0 for h in range(7, 23)}
         for f_fecha, f_total in facturas:
-            if f_fecha.tzinfo:
-                f_fecha = f_fecha.astimezone(TIMEZONE)
+            if not f_fecha.tzinfo:
+                f_fecha = f_fecha.replace(tzinfo=pytz.UTC)
+            f_fecha = f_fecha.astimezone(TIMEZONE)
             h = f_fecha.hour
             if 7 <= h <= 22:
                 ventas_por_hora[h] += f_total
@@ -114,8 +115,9 @@ def obtener_grafico_ventas(empresa_id: str, periodo: str = "anio", anio: int = N
         dias_nombres = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
         ventas_por_dia = {i: 0 for i in range(7)}
         for f_fecha, f_total in facturas:
-            if f_fecha.tzinfo:
-                f_fecha = f_fecha.astimezone(TIMEZONE)
+            if not f_fecha.tzinfo:
+                f_fecha = f_fecha.replace(tzinfo=pytz.UTC)
+            f_fecha = f_fecha.astimezone(TIMEZONE)
             ventas_por_dia[f_fecha.weekday()] += f_total
         for i in range(7):
             resultado.append({"mes": dias_nombres[i], "ventas": ventas_por_dia[i]})
@@ -127,8 +129,9 @@ def obtener_grafico_ventas(empresa_id: str, periodo: str = "anio", anio: int = N
         facturas = query.filter(Factura.fecha_emision >= inicio, Factura.fecha_emision <= fin).all()
         ventas_por_dia = {d: 0 for d in range(1, last_day + 1)}
         for f_fecha, f_total in facturas:
-            if f_fecha.tzinfo:
-                f_fecha = f_fecha.astimezone(TIMEZONE)
+            if not f_fecha.tzinfo:
+                f_fecha = f_fecha.replace(tzinfo=pytz.UTC)
+            f_fecha = f_fecha.astimezone(TIMEZONE)
             ventas_por_dia[f_fecha.day] += f_total
         for d in range(1, last_day + 1):
             resultado.append({"mes": str(d), "ventas": ventas_por_dia[d]})
@@ -140,8 +143,9 @@ def obtener_grafico_ventas(empresa_id: str, periodo: str = "anio", anio: int = N
         meses_nombres = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
         ventas_por_mes = {i: 0 for i in range(1, 13)}
         for f_fecha, f_total in facturas:
-            if f_fecha.tzinfo:
-                f_fecha = f_fecha.astimezone(TIMEZONE)
+            if not f_fecha.tzinfo:
+                f_fecha = f_fecha.replace(tzinfo=pytz.UTC)
+            f_fecha = f_fecha.astimezone(TIMEZONE)
             mes = f_fecha.month
             ventas_por_mes[mes] += f_total
         for i in range(1, 13):
