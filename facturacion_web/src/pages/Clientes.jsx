@@ -22,6 +22,10 @@ export default function Clientes() {
   const [editando, setEditando] = useState(null);
   const [form, setForm] = useState(FORM_VACIO);
   const [guardando, setGuardando] = useState(false);
+  
+  const [paginaActiva, setPaginaActiva] = useState(1);
+  const [soloConSaldo, setSoloConSaldo] = useState(true);
+  const ITEMS_POR_PAGINA = 15;
 
   const cargar = async () => {
     setCargando(true);
@@ -36,12 +40,16 @@ export default function Clientes() {
 
   const filtrados = useMemo(() => {
     const q = busqueda.toLowerCase();
-    return clientes.filter(c =>
-      c.nombre.toLowerCase().includes(q) ||
-      (c.nit || '').includes(q) ||
-      (c.dui || '').includes(q)
-    );
-  }, [clientes, busqueda]);
+    return clientes.filter(c => {
+      if (soloConSaldo && (c.saldo_pendiente || 0) <= 0) return false;
+      return c.nombre.toLowerCase().includes(q) ||
+             (c.nit || '').includes(q) ||
+             (c.dui || '').includes(q);
+    });
+  }, [clientes, busqueda, soloConSaldo]);
+
+  const totalPaginas = Math.ceil(filtrados.length / ITEMS_POR_PAGINA);
+  const clientesPaginados = filtrados.slice((paginaActiva - 1) * ITEMS_POR_PAGINA, paginaActiva * ITEMS_POR_PAGINA);
 
   const abrirNuevo = () => { setEditando(null); setForm(FORM_VACIO); setModalAbierto(true); };
   const abrirEditar = (c) => {
@@ -87,10 +95,16 @@ export default function Clientes() {
         </button>
       </div>
 
-      <div className="relative mb-5 max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <input type="text" placeholder="Buscar por nombre, NIT o DUI..." value={busqueda} onChange={e => setBusqueda(e.target.value)}
-          className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-5 max-w-2xl">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input type="text" placeholder="Buscar por nombre, NIT o DUI..." value={busqueda} onChange={e => {setBusqueda(e.target.value); setPaginaActiva(1);}}
+            className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+        <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer bg-white px-4 py-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
+          <input type="checkbox" checked={soloConSaldo} onChange={e => {setSoloConSaldo(e.target.checked); setPaginaActiva(1);}} className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" />
+          Solo con saldo pendiente
+        </label>
       </div>
 
       {cargando ? (
@@ -114,7 +128,7 @@ export default function Clientes() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtrados.map(c => (
+              {clientesPaginados.map(c => (
                 <tr key={c.id_cliente} className="hover:bg-slate-50">
                   <td className="px-5 py-4">
                     <p className="font-semibold text-slate-800 text-sm">{c.nombre}</p>
@@ -146,6 +160,29 @@ export default function Clientes() {
               ))}
             </tbody>
           </table>
+          {totalPaginas > 1 && (
+            <div className="px-5 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50">
+              <span className="text-sm text-slate-500">
+                Mostrando {(paginaActiva - 1) * ITEMS_POR_PAGINA + 1} al {Math.min(paginaActiva * ITEMS_POR_PAGINA, filtrados.length)} de {filtrados.length} clientes
+              </span>
+              <div className="flex gap-1">
+                <button 
+                  onClick={() => setPaginaActiva(p => Math.max(1, p - 1))} 
+                  disabled={paginaActiva === 1}
+                  className="px-3 py-1.5 text-sm font-medium border border-slate-200 rounded-lg bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Anterior
+                </button>
+                <button 
+                  onClick={() => setPaginaActiva(p => Math.min(totalPaginas, p + 1))} 
+                  disabled={paginaActiva === totalPaginas}
+                  className="px-3 py-1.5 text-sm font-medium border border-slate-200 rounded-lg bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
