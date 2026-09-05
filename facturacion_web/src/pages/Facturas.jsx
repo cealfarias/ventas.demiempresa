@@ -109,6 +109,7 @@ export default function Facturas() {
   const [itemsPorPagina] = useState(15);
   const [cargando, setCargando] = useState(true);
   const [vista, setVista] = useState('lista'); // lista | nueva
+  const [editandoId, setEditandoId] = useState(null);
 
   const [clientes, setClientes] = useState([]);
   const [productos, setProductos] = useState([]);
@@ -153,6 +154,29 @@ export default function Facturas() {
   };
   const eliminarLinea = (idx) => setForm({ ...form, items: form.items.filter((_, i) => i !== idx) });
 
+  
+  const iniciarEdicion = (fac) => {
+    // Populate form with existing data
+    setForm({
+      cliente_id: fac.cliente_id || '',
+      bodega_salida_id: '', // Not strictly tracked in list view, user must reselect if they want to deduct
+      tipo_doc: fac.tipo_doc || 'FACTURA',
+      condicion_operacion: fac.condicion_operacion || 'CONTADO',
+      dias_credito: 30,
+      entrega_domicilio: false,
+      incluye_iva: false,
+      fecha_emision: fac.fecha_emision ? fac.fecha_emision.slice(0, 16) : (new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000)).toISOString().slice(0, 16),
+      items: fac.items ? fac.items.map(i => ({
+        producto_id: i.producto_id,
+        cantidad: i.cantidad,
+        precio_unitario: (i.precio_unitario / 100).toFixed(2),
+        subtotal: i.subtotal
+      })) : []
+    });
+    setEditandoId(fac.id);
+    setVista('nueva');
+  };
+
   const guardar = async () => {
     if (!form.cliente_id) return alert("Seleccione un cliente");
     if (form.items.length === 0) return alert("Agregue al menos un producto");
@@ -171,8 +195,12 @@ export default function Facturas() {
           subtotal: Math.round(i.cantidad * parseFloat(i.precio_unitario) * 100) 
         }))
       };
-      await api.post(`/api/v1/facturacion/facturas/?empresa_id=${empresaId()}&usuario_id=1`, payload);
-      setVista('lista');
+      if (editandoId) {
+        await api.put(`/api/v1/facturacion/facturas/${editandoId}?empresa_id=${empresaId()}&usuario_id=1`, payload);
+      } else {
+        await api.post(`/api/v1/facturacion/facturas/?empresa_id=${empresaId()}&usuario_id=1`, payload);
+      }
+      setVista('lista'); setEditandoId(null);
       cargar();
     } catch (e) { 
       const detail = e.response?.data?.detail;
@@ -302,7 +330,7 @@ export default function Facturas() {
         </div>
 
         <div className="flex gap-4">
-          <button onClick={() => setVista('lista')} className="px-6 py-2.5 rounded-xl border font-medium">Cancelar</button>
+          <button onClick={() => { setVista('lista'); setEditandoId(null); }} className="px-6 py-2.5 rounded-xl border font-medium">Cancelar</button>
           <button onClick={guardar} disabled={guardando || !form.cliente_id || form.items.length === 0} className="flex-1 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium disabled:opacity-50">
             {guardando ? 'Emitiendo...' : 'Emitir Factura'}
           </button>
@@ -378,7 +406,10 @@ export default function Facturas() {
                   </td>
                   <td className="px-5 py-4 flex justify-end gap-2">
                     {f.estado_dte !== 'procesado' && (
-                      <button onClick={() => transmitirMH(f.id)} className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-medium">Transmitir MH</button>
+                      <>
+                        <button onClick={() => iniciarEdicion(f)} className="text-xs bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-200 font-medium">Editar</button>
+                        <button onClick={() => transmitirMH(f.id)} className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-medium">Transmitir MH</button>
+                      </>
                     )}
                     <a href={`http://localhost:8001/api/v1/facturacion/facturas/${f.id}/imprimir?empresa_id=${empresaId()}`} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-indigo-600 inline-flex items-center p-1"><FileOutput className="w-4 h-4" /></a>
                   </td>
