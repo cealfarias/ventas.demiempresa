@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from database import get_db
-from models import Producto
+from routers.kardex import registrar_movimiento
+from models import Producto, Bodega
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -34,9 +35,32 @@ def listar_productos(empresa_id: str, db: Session = Depends(get_db)):
 @router.post("/", response_model=ProductoResponse, status_code=status.HTTP_201_CREATED)
 def crear_producto(empresa_id: str, producto: ProductoCreate, db: Session = Depends(get_db)):
     db_producto = Producto(**producto.dict(), empresa_id=empresa_id)
+    stock_inicial = db_producto.stock
+    db_producto.stock = 0.0  # Se registrar va kardex
     db.add(db_producto)
     db.commit()
     db.refresh(db_producto)
+    
+    if stock_inicial > 0:
+        bodega = db.query(Bodega).filter(Bodega.empresa_id == empresa_id, Bodega.es_principal == True).first()
+        if not bodega:
+            bodega = db.query(Bodega).filter(Bodega.empresa_id == empresa_id).first()
+            
+        if bodega:
+            registrar_movimiento(
+                db=db,
+                empresa_id=empresa_id,
+                bodega_id=bodega.id,
+                producto_id=db_producto.id_producto,
+                tipo_movimiento="AJUSTE_POSITIVO",
+                cantidad=stock_inicial,
+                costo_unitario=db_producto.costo_promedio,
+                referencia_tipo="manual",
+                notas="Saldo inicial"
+            )
+            db.commit()
+            db.refresh(db_producto)
+            
     return db_producto
 
 class ProductoUpdate(BaseModel):
@@ -44,8 +68,8 @@ class ProductoUpdate(BaseModel):
     nombre: Optional[str] = None
     descripcion: Optional[str] = None
     imagen_url: Optional[str] = None
-    precio_venta: Optional[int] = None
-    costo_promedio: Optional[int] = None
+    precio_venta: Optional[float] = None
+    costo_promedio: Optional[float] = None
     stock: Optional[float] = None
     activo: Optional[bool] = None
 
