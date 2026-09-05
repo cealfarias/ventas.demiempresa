@@ -227,7 +227,7 @@ export default function Facturas() {
     return (
       <div className="p-8 max-w-5xl mx-auto">
         <h1 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-          <Receipt className="w-6 h-6 text-indigo-600" /> Emitir Factura
+          <Receipt className="w-6 h-6 text-indigo-600" /> {editandoId ? 'Actualizar Factura' : 'Emitir Factura'}
         </h1>
 
         <div className="bg-white p-6 rounded-2xl shadow-sm border mb-6 space-y-4">
@@ -332,7 +332,7 @@ export default function Facturas() {
         <div className="flex gap-4">
           <button onClick={() => { setVista('lista'); setEditandoId(null); }} className="px-6 py-2.5 rounded-xl border font-medium">Cancelar</button>
           <button onClick={guardar} disabled={guardando || !form.cliente_id || form.items.length === 0} className="flex-1 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium disabled:opacity-50">
-            {guardando ? 'Emitiendo...' : 'Emitir Factura'}
+            {guardando ? (editandoId ? 'Actualizando...' : 'Emitiendo...') : (editandoId ? 'Actualizar Factura' : 'Emitir Factura')}
           </button>
         </div>
       </div>
