@@ -173,7 +173,7 @@ const Layout = ({ children }) => {
           {canSeeCompras && (
             <SidebarSection label="Compras" expanded={expanded}>
               <SidebarLink to="/proveedores" icon={Truck} label="Proveedores" expanded={expanded} />
-              <SidebarLink to="/ordenes-compra" icon={ShoppingCart} label="Órdenes de Compra" expanded={expanded} />
+              <SidebarLink to="/ordenes-compra" icon={ShoppingCart} label="Compra" expanded={expanded} />
               <SidebarLink to="/cuentas-pagar" icon={CreditCard} label="Cuentas por Pagar" expanded={expanded} />
             </SidebarSection>
           )}

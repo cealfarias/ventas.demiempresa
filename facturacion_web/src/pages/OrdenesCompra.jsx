@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ShoppingCart, Plus, Search, FileText, CheckCircle2, AlertCircle, XCircle, FileJson, Clock, UploadCloud, Eye, Trash2 } from 'lucide-react';
+import { ShoppingCart, Plus, Search, FileText, CheckCircle2, AlertCircle, XCircle, FileJson, Clock, UploadCloud, Eye, Trash2, Edit } from 'lucide-react';
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
@@ -17,6 +17,7 @@ export default function OrdenesCompra() {
   const [productos, setProductos] = useState([]);
   const [formOC, setFormOC] = useState({ proveedor_id: '', tipo_doc: 'CCF', bodega_destino_id: '', fecha_esperada_entrega: '', notas: '', detalles: [], calcular_iva: true });
   const [guardando, setGuardando] = useState(false);
+  const [editandoId, setEditandoId] = useState(null);
   const [dteJson, setDteJson] = useState('');
   const [mostrarDte, setMostrarDte] = useState(false);
 
@@ -73,7 +74,27 @@ export default function OrdenesCompra() {
     setFormOC({ ...formOC, detalles: formOC.detalles.filter((_, i) => i !== index) });
   };
 
+  
+  const iniciarEdicion = (oc) => {
+    setEditandoId(oc.id);
+    setFormOC({
+        proveedor_id: oc.proveedor_id || '',
+        tipo_doc: oc.tipo_doc || 'CCF',
+        bodega_destino_id: oc.bodega_destino_id || '',
+        fecha_esperada_entrega: oc.fecha_esperada_entrega ? oc.fecha_esperada_entrega.split('T')[0] : '',
+        notas: oc.notas || '',
+        calcular_iva: oc.iva > 0,
+        detalles: oc.detalles.map(d => ({
+            producto_id: d.producto_id || '',
+            cantidad_pedida: d.cantidad_pedida,
+            precio_unitario: (d.precio_unitario / 100).toFixed(2)
+        }))
+    });
+    setVista('nueva');
+  };
+
   const guardarOC = async () => {
+
     setGuardando(true);
     try {
       const payload = {
@@ -81,11 +102,16 @@ export default function OrdenesCompra() {
         fecha_esperada_entrega: formOC.fecha_esperada_entrega ? new Date(formOC.fecha_esperada_entrega).toISOString() : null,
         detalles: formOC.detalles.map(d => ({ ...d, precio_unitario: Math.round(parseFloat(d.precio_unitario) * 100) }))
       };
-      const res = await api.post(`/api/v1/compras/ordenes-compra/?empresa_id=${empresaId()}&usuario_id=1`, payload);
-      
-      if (mostrarDte && dteJson) {
-        await api.post(`/api/v1/compras/ordenes-compra/${res.data.id}/importar-dte?empresa_id=${empresaId()}`, { json_dte: dteJson });
-      }
+        let res;
+        if (editandoId) {
+          res = await api.put(`/api/v1/compras/ordenes-compra/${editandoId}?empresa_id=${empresaId()}&usuario_id=1`, payload);
+        } else {
+          res = await api.post(`/api/v1/compras/ordenes-compra/?empresa_id=${empresaId()}&usuario_id=1`, payload);
+        }
+        
+        if (mostrarDte && dteJson) {
+          await api.post(`/api/v1/compras/ordenes-compra/${res.data.id}/importar-dte?empresa_id=${empresaId()}`, { json_dte: dteJson });
+        }
 
       setVista('lista');
       cargarDatos();
@@ -253,7 +279,7 @@ export default function OrdenesCompra() {
         <div className="flex gap-4">
           <button onClick={() => setVista('lista')} className="px-6 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium">Cancelar</button>
           <button onClick={guardarOC} disabled={guardando || !formOC.proveedor_id || formOC.detalles.length === 0} className="px-6 py-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 font-medium disabled:opacity-50 flex-1">
-            {guardando ? 'Guardando...' : 'Guardar Orden de Compra'}
+            {guardando ? 'Guardando...' : (editandoId ? 'Actualizar Orden de Compra' : 'Guardar Orden de Compra')}
           </button>
         </div>
       </div>
@@ -474,7 +500,7 @@ export default function OrdenesCompra() {
           <button onClick={() => { setDteJson(''); setVista('importar'); }} className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 shadow-lg shadow-emerald-500/30">
             <FileJson className="w-4 h-4" /> Importar DTE
           </button>
-          <button onClick={() => { setFormOC({ proveedor_id: '', tipo_doc: 'CCF', bodega_destino_id: '', fecha_esperada_entrega: '', notas: '', detalles: [] }); setDteJson(''); setMostrarDte(false); setVista('nueva'); }} className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 shadow-lg shadow-indigo-500/30">
+          <button onClick={() => { setFormOC({ proveedor_id: '', tipo_doc: 'CCF', bodega_destino_id: '', fecha_esperada_entrega: '', notas: '', detalles: [] }); setDteJson(''); setMostrarDte(false); setEditandoId(null); setVista('nueva'); }} className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 shadow-lg shadow-indigo-500/30">
             <Plus className="w-4 h-4" /> Nueva Orden
           </button>
         </div>
