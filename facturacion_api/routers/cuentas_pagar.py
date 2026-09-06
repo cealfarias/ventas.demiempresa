@@ -1,6 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from database import get_db
+from datetime import datetime
+import pytz
+TIMEZONE = pytz.timezone('America/El_Salvador')
 from models import CuentaPorPagar, PagoCxP, Proveedor
 from pydantic import BaseModel
 from typing import List, Optional

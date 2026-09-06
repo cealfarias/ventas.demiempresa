@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from database import get_db
-from models import Factura, ItemFactura, Cliente, Bodega, Producto, CuentaPorCobrar
+from models import Factura, ItemFactura, Cliente, Bodega, Producto, CuentaPorCobrar, SesionCaja, MovimientoCaja, Caja
 from routers.kardex import registrar_movimiento
 from pydantic import BaseModel
 from typing import List, Optional
