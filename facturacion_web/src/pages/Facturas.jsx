@@ -145,7 +145,7 @@ export default function Facturas() {
     if (campo === 'producto_id') {
       const prod = productos.find(p => String(p.id_producto) === String(val));
       if (prod) {
-        let precio = (prod.precio_venta || 0) / 100;
+        let precio = (prod.precio_venta || 0);
         nuevos[idx].precio_unitario = precio.toFixed(4);
       }
     }
