@@ -23,12 +23,15 @@ export default function Dashboard() {
       setCargando(true);
       try {
         const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const [resKpis, resChart] = await Promise.all([
+        const [resKpis, resChart, resTop] = await Promise.all([
           api.get(`/api/v1/dashboard/kpis?empresa_id=${empresaId()}&periodo=${periodo}&tz=${tz}`),
-          api.get(`/api/v1/dashboard/grafico-ventas?empresa_id=${empresaId()}&periodo=${periodo}&anio=${anioSeleccionado}&tz=${tz}`)
+          api.get(`/api/v1/dashboard/grafico-ventas?empresa_id=${empresaId()}&periodo=${periodo}&anio=${anioSeleccionado}&tz=${tz}`),
+          api.get(`/api/v1/dashboard/top-productos?empresa_id=${empresaId()}&periodo=${periodo}&anio=${anioSeleccionado}&tz=${tz}`)
         ]);
         setKpis(resKpis.data);
         setChartData(resChart.data.map(d => ({ ...d, ventas: d.ventas / 100, compras: d.compras / 100 })));
+        setTopProductos(resTop.data);
+        setCurrentPage(1);
       } catch (e) {
         console.error("Error al cargar KPIs", e);
         setError('Error al cargar métricas del servidor');
