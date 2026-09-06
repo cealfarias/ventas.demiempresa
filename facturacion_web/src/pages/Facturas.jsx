@@ -110,6 +110,8 @@ export default function Facturas() {
   const [cargando, setCargando] = useState(true);
   const [vista, setVista] = useState('lista'); // lista | nueva
   const [editandoId, setEditandoId] = useState(null);
+  const [modalVuelto, setModalVuelto] = useState(false);
+  const [efectivoRecibido, setEfectivoRecibido] = useState("");
 
   const [clientes, setClientes] = useState([]);
   const [productos, setProductos] = useState([]);
@@ -177,7 +179,19 @@ export default function Facturas() {
     setVista('nueva');
   };
 
+  
+  const intentarGuardar = () => {
+    if (form.condicion_operacion === "CONTADO" && form.metodo_pago === "efectivo") {
+      setEfectivoRecibido((total/100).toFixed(2));
+      setModalVuelto(true);
+    } else {
+      guardar();
+    }
+  };
+
   const guardar = async () => {
+    setModalVuelto(false);
+
     if (!form.cliente_id) return window.dispatchEvent(new CustomEvent('avatar:say', { detail: { text: 'Seleccione un cliente', options: [{label:'Aceptar', action:null}] }}));
     if (form.items.length === 0) return window.dispatchEvent(new CustomEvent('avatar:say', { detail: { text: 'Agregue al menos un producto', options: [{label:'Aceptar', action:null}] }}));
     
@@ -226,6 +240,52 @@ export default function Facturas() {
   if (vista === 'nueva') {
     return (
       <div className="p-8 max-w-5xl mx-auto">
+        {modalVuelto && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+              <h2 className="text-lg font-bold text-slate-800 mb-4">Pago en Efectivo</h2>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
+                  <span className="text-slate-500 font-medium">Total a Pagar:</span>
+                  <span className="text-xl font-bold text-indigo-600">${(total/100).toFixed(2)}</span>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Efectivo Recibido</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">$</span>
+                    <input 
+                      type="number" 
+                      min={(total/100).toFixed(2)} 
+                      step="any" 
+                      value={efectivoRecibido} 
+                      onChange={e => setEfectivoRecibido(e.target.value)} 
+                      className="w-full pl-8 pr-3 py-2.5 bg-white border border-slate-300 rounded-xl font-bold text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" 
+                      autoFocus
+                      onFocus={e => e.target.select()}
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-between items-center pt-2">
+                  <span className="text-slate-500 font-medium">Vuelto (Cambio):</span>
+                  <span className={`text-xl font-bold ${parseFloat(efectivoRecibido || 0) < total/100 ? "text-red-500" : "text-emerald-500"}`}>
+                    ${Math.max(0, parseFloat(efectivoRecibido || 0) - total/100).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button onClick={() => setModalVuelto(false)} className="flex-1 px-4 py-2 border border-slate-200 rounded-xl text-slate-600 font-medium">Cancelar</button>
+                <button 
+                  onClick={guardar} 
+                  disabled={parseFloat(efectivoRecibido || 0) < total/100 || guardando}
+                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium disabled:opacity-50"
+                >
+                  {guardando ? "Cobrando..." : "Cobrar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <h1 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
           <Receipt className="w-6 h-6 text-indigo-600" /> {editandoId ? 'Actualizar Factura' : 'Emitir Factura'}
         </h1>
@@ -341,7 +401,7 @@ export default function Facturas() {
 
         <div className="flex gap-4">
           <button onClick={() => { setVista('lista'); setEditandoId(null); }} className="px-6 py-2.5 rounded-xl border font-medium">Cancelar</button>
-          <button onClick={guardar} disabled={guardando || !form.cliente_id || form.items.length === 0} className="flex-1 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium disabled:opacity-50">
+          <button onClick={intentarGuardar} disabled={guardando || !form.cliente_id || form.items.length === 0} className="flex-1 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium disabled:opacity-50">
             {guardando ? (editandoId ? 'Actualizando...' : 'Emitiendo...') : (editandoId ? 'Actualizar Factura' : 'Emitir Factura')}
           </button>
         </div>
