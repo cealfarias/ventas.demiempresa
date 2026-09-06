@@ -215,7 +215,7 @@ const Layout = ({ children }) => {
       {/* Contenido principal */}
       <main className="flex-1 overflow-y-auto">
         <header className="h-14 bg-white border-b border-slate-200 flex items-center px-6 justify-between sticky top-0 z-10">
-          <h2 className="text-xs font-semibold text-slate-400 tracking-wider uppercase">Ambiente Seguro SaaS - Deploy: 3604b8d</h2>
+          <h2 className="text-xs font-semibold text-slate-400 tracking-wider uppercase">Ambiente Seguro SaaS - Deploy: 6e6df6f</h2>
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
               <NombreEmpresa />
