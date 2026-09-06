@@ -178,8 +178,8 @@ export default function Facturas() {
   };
 
   const guardar = async () => {
-    if (!form.cliente_id) return alert("Seleccione un cliente");
-    if (form.items.length === 0) return alert("Agregue al menos un producto");
+    if (!form.cliente_id) return window.dispatchEvent(new CustomEvent('avatar:say', { detail: { text: 'Seleccione un cliente', options: [{label:'Aceptar', action:null}] }}));
+    if (form.items.length === 0) return window.dispatchEvent(new CustomEvent('avatar:say', { detail: { text: 'Agregue al menos un producto', options: [{label:'Aceptar', action:null}] }}));
     
     setGuardando(true);
     try {
@@ -204,7 +204,7 @@ export default function Facturas() {
       cargar();
     } catch (e) { 
       const detail = e.response?.data?.detail;
-      alert(typeof detail === 'string' ? detail : JSON.stringify(detail) || 'Error al emitir factura'); 
+      window.dispatchEvent(new CustomEvent('avatar:say', { detail: { text: typeof detail === 'string' ? detail : JSON.stringify(detail) || 'Error al emitir factura', options: [{label:'Aceptar', action:null}] }})); 
     }
     finally { setGuardando(false); }
   };
@@ -342,10 +342,10 @@ export default function Facturas() {
   const transmitirMH = async (id) => {
     try {
       await api.post(`/api/v1/facturacion/dte/transmitir/${id}?empresa_id=${empresaId()}`);
-      alert('DTE transmitido y aceptado exitosamente por el MH.');
+      window.dispatchEvent(new CustomEvent('avatar:say', { detail: { text: 'DTE transmitido y aceptado exitosamente por el MH.', options: [{label:'Aceptar', action:null}] }}));
       cargar();
     } catch (e) {
-      alert(e.response?.data?.detail || 'Error al transmitir DTE al Ministerio de Hacienda');
+      window.dispatchEvent(new CustomEvent('avatar:say', { detail: { text: e.response?.data?.detail || 'Error al transmitir DTE al Ministerio de Hacienda', options: [{label:'Aceptar', action:null}] }}));
     }
   };
 
