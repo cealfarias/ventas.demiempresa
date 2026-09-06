@@ -42,13 +42,15 @@ def obtener_kpis(empresa_id: str, periodo: str = "dia", tz: str = "America/El_Sa
     # Cuentas por Cobrar Pendientes
     cxc = db.query(func.sum(CuentaPorCobrar.monto_pendiente)).filter(
         CuentaPorCobrar.empresa_id == empresa_id,
-        CuentaPorCobrar.estado != "pagada"
+        CuentaPorCobrar.estado != "pagada",
+        CuentaPorCobrar.estado != "anulada"
     ).scalar() or 0
 
     # Cuentas por Pagar Pendientes
     cxp = db.query(func.sum(CuentaPorPagar.monto_pendiente)).filter(
         CuentaPorPagar.empresa_id == empresa_id,
-        CuentaPorPagar.estado != "pagada"
+        CuentaPorPagar.estado != "pagada",
+        CuentaPorPagar.estado != "anulada"
     ).scalar() or 0
 
     # Clientes Activos

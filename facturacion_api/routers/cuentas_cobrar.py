@@ -49,6 +49,8 @@ def listar_cuentas(empresa_id: str, estado: Optional[str] = None, cliente_id: Op
     query = db.query(CuentaPorCobrar).filter(CuentaPorCobrar.empresa_id == empresa_id)
     if estado:
         query = query.filter(CuentaPorCobrar.estado == estado)
+    else:
+        query = query.filter(CuentaPorCobrar.estado != "anulada")
     if cliente_id:
         query = query.filter(CuentaPorCobrar.cliente_id == cliente_id)
     

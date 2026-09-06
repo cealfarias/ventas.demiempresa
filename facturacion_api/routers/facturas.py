@@ -380,6 +380,7 @@ def anular_factura(factura_id: int, empresa_id: str, usuario_id: int, db: Sessio
             cxc.estado = "anulada"
             if f.cliente:
                 f.cliente.saldo_pendiente = max(0, (f.cliente.saldo_pendiente or 0) - cxc.monto_pendiente)
+            cxc.monto_pendiente = 0
     
     f.estado = "anulada"
     db.commit()
