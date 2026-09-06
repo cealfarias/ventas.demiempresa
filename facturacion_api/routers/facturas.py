@@ -84,7 +84,7 @@ def listar_facturas(empresa_id: str, db: Session = Depends(get_db)):
     resultado = []
     for f in facturas:
         items = []
-        for d in f.items:
+        for d in db.query(ItemFactura).filter(ItemFactura.factura_id == f.id).all():
             items.append(ItemFacturaResponse(
                 id=d.id, producto_id=d.producto_id,
                 producto_nombre=d.producto.nombre if d.producto else "",
@@ -314,9 +314,9 @@ def actualizar_factura(factura_id: int, empresa_id: str, usuario_id: int, data: 
     
     # Return same format as listar_facturas
     items_resp = []
-    for d in f.items:
+    for d in db.query(ItemFactura).filter(ItemFactura.factura_id == f.id).all():
         items_resp.append(ItemFacturaResponse(
-            producto_id=d.producto_id,
+            id=d.id, producto_id=d.producto_id,
             producto_nombre=d.producto.nombre,
             cantidad=d.cantidad,
             precio_unitario=d.precio_unitario,
