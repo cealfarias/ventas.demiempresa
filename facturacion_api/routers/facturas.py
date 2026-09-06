@@ -49,7 +49,7 @@ class FacturaResponse(BaseModel):
     numero: str
     cliente_id: int
     cliente_nombre: str
-    bodega_salida_id: Optional[int]
+    bodega_salida_id: Optional[int] = None
     tipo_doc: str
     condicion_operacion: str
     subtotal: int
@@ -57,8 +57,8 @@ class FacturaResponse(BaseModel):
     total: int
     estado: str
     estado_dte: str
-    codigo_generacion: Optional[str]
-    sello_recepcion: Optional[str]
+    codigo_generacion: Optional[str] = None
+    sello_recepcion: Optional[str] = None
     fecha_emision: datetime
     items: List[ItemFacturaResponse] = []
 
@@ -247,7 +247,7 @@ def actualizar_factura(factura_id: int, empresa_id: str, usuario_id: int, data: 
         for item in f.items:
             registrar_movimiento(
                 db=db, empresa_id=empresa_id, bodega_id=f.bodega_salida_id,
-                producto_id=item.producto_id, tipo_movimiento='ENTRADA_AJUSTE',
+                producto_id=item.producto_id, tipo_movimiento='AJUSTE_POSITIVO',
                 cantidad=item.cantidad, costo_unitario=item.precio_unitario, # costo aproximado para reversion
                 notas=f"Reversion por edicion Fac. {f.id}", usuario_id=usuario_id
             )
@@ -328,6 +328,7 @@ def actualizar_factura(factura_id: int, empresa_id: str, usuario_id: int, data: 
         numero=f.numero,
         cliente_id=f.cliente_id,
         cliente_nombre=cliente.nombre_comercial or cliente.nombre,
+        bodega_salida_id=f.bodega_salida_id,
         tipo_doc=f.tipo_doc,
         condicion_operacion=f.condicion_operacion,
         subtotal=f.subtotal,
