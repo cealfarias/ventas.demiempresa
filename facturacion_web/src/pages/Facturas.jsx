@@ -115,7 +115,7 @@ export default function Facturas() {
   const [productos, setProductos] = useState([]);
   const [bodegas, setBodegas] = useState([]);
   
-  const [form, setForm] = useState({ cliente_id: '', bodega_salida_id: '', tipo_doc: 'FACTURA', condicion_operacion: 'CONTADO', dias_credito: 30, items: [] });
+  const [form, setForm] = useState({ cliente_id: '', bodega_salida_id: '', tipo_doc: 'FACTURA', condicion_operacion: 'CONTADO', metodo_pago: 'efectivo', dias_credito: 30, items: [] });
   const [guardando, setGuardando] = useState(false);
 
   const cargar = async () => {
@@ -268,6 +268,16 @@ export default function Facturas() {
               </select>
             </div>
           </div>
+            {form.condicion_operacion === 'CONTADO' && (
+                <div className="w-1/4">
+                  <label className="text-xs font-semibold text-slate-500 uppercase">Método de Pago</label>
+                  <select value={form.metodo_pago} onChange={e => setForm({...form, metodo_pago: e.target.value})} className="w-full mt-1 px-3 py-2 border rounded-xl">
+                    <option value="efectivo">Efectivo (Caja)</option>
+                    <option value="transferencia">Transferencia (Caja)</option>
+                    <option value="tarjeta">Tarjeta (Caja)</option>
+                  </select>
+                </div>
+              )}
             {form.condicion_operacion === 'CREDITO' && (
               <div className="w-1/4">
                 <label className="text-xs font-semibold text-slate-500 uppercase">Plazo Crédito (Días)</label>
@@ -367,7 +377,7 @@ export default function Facturas() {
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Receipt className="w-6 h-6 text-indigo-600" /> Facturas DTE</h1>
           <p className="text-sm text-slate-500 mt-1">Historial de ventas y documentos tributarios</p>
         </div>
-        <button id="btn-emitir-factura" onClick={() => { setForm({ cliente_id: '', bodega_salida_id: '', tipo_doc: 'FACTURA', condicion_operacion: 'CONTADO', dias_credito: 30, items: [], fecha_emision: (new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000)).toISOString().slice(0, 16), entrega_domicilio: false, incluye_iva: false }); setVista('nueva'); }} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 relative z-0">
+        <button id="btn-emitir-factura" onClick={() => { setForm({ cliente_id: '', bodega_salida_id: '', tipo_doc: 'FACTURA', condicion_operacion: 'CONTADO', metodo_pago: 'efectivo', dias_credito: 30, items: [], fecha_emision: (new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000)).toISOString().slice(0, 16), entrega_domicilio: false, incluye_iva: false }); setVista('nueva'); }} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 relative z-0">
           <Plus className="w-4 h-4" /> Emitir Factura
         </button>
       </div>

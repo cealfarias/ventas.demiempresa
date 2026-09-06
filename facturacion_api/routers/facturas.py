@@ -26,6 +26,7 @@ class FacturaCreate(BaseModel):
     
     tipo_doc: str = "FACTURA" # FACTURA | CCF | EXPORTACION
     condicion_operacion: str = "CONTADO" # CONTADO | CREDITO
+    metodo_pago: Optional[str] = "efectivo" # efectivo | transferencia | tarjeta
     dias_credito: int = 30 # Usado si es CREDITO
     
     fecha_emision: Optional[str] = None # YYYY-MM-DD

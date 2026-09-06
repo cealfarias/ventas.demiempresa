@@ -170,6 +170,11 @@ const Layout = ({ children }) => {
             </SidebarSection>
           )}
 
+          <SidebarSection label="Finanzas" expanded={expanded}>
+            <SidebarLink to="/cajas" icon={Wallet} label="Control de Caja" expanded={expanded} />
+            <SidebarLink to="/gastos" icon={DollarSign} label="Gastos Operativos" expanded={expanded} />
+          </SidebarSection>
+
           {canSeeCompras && (
             <SidebarSection label="Compras" expanded={expanded}>
               <SidebarLink to="/proveedores" icon={Truck} label="Proveedores" expanded={expanded} />
@@ -260,7 +265,7 @@ function App() {
                   {/* Fase 2 — Compras */}
                   <Route path="/proveedores" element={<Proveedores />} />
                   <Route path="/ordenes-compra" element={<OrdenesCompra />} />
-                  <Route path="/cuentas-pagar" element={<CuentasPagar />} />
+                  <Route path="/cuentas-pagar" element={<CuentasPagar />} />\n            <Route path="/cajas" element={<Cajas />} />\n            <Route path="/gastos" element={<Gastos />} />
                   {/* Fase 3 — Ventas */}
                   <Route path="/clientes" element={<Clientes />} />
                   <Route path="/facturas" element={<Facturas />} />
