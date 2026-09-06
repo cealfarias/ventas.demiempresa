@@ -339,6 +339,17 @@ export default function Facturas() {
     );
   }
 
+  const anularFactura = async (id) => {
+    if (!window.confirm("¿Está seguro de anular esta factura? Esta acción revertirá los saldos y el inventario, y no se puede deshacer.")) return;
+    try {
+      await api.put(`/api/v1/facturacion/facturas/${id}/anular?empresa_id=${empresaId()}&usuario_id=1`);
+      window.dispatchEvent(new CustomEvent("avatar:say", { detail: { text: "Factura anulada exitosamente.", options: [{label:"Aceptar", action:null}] }}));
+      cargar();
+    } catch (e) {
+      window.dispatchEvent(new CustomEvent("avatar:say", { detail: { text: e.response?.data?.detail || "Error al anular la factura", options: [{label:"Aceptar", action:null}] }}));
+    }
+  };
+
   const transmitirMH = async (id) => {
     try {
       await api.post(`/api/v1/facturacion/dte/transmitir/${id}?empresa_id=${empresaId()}`);
@@ -387,7 +398,7 @@ export default function Facturas() {
                 .sort((a, b) => b.id - a.id)
                 .slice((paginaActual - 1) * itemsPorPagina, paginaActual * itemsPorPagina)
                 .map(f => (
-                <tr key={f.id} className="hover:bg-slate-50">
+                <tr key={f.id} className={`hover:bg-slate-50 ${f.estado === "anulada" ? "bg-red-50/75" : ""}`}>
                   <td className="px-5 py-4 font-medium text-slate-800">{f.numero}</td>
                   <td className="px-5 py-4 text-sm text-slate-600">{f.fecha_emision ? new Date(f.fecha_emision).toLocaleString() : ''}</td><td className="px-5 py-4 text-sm text-slate-600">{f.cliente_nombre}</td>
                   <td className="px-5 py-4 text-sm">
@@ -396,7 +407,9 @@ export default function Facturas() {
                   </td>
                   <td className="px-5 py-4 text-right font-bold text-indigo-700">{fmt(f.total)}</td>
                   <td className="px-5 py-4 text-center">
-                    {f.estado_dte === 'procesado' ? (
+                    {f.estado === "anulada" ? (
+                      <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">Anulada</span>
+                    ) : f.estado_dte === 'procesado' ? (
                       <span className="px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">Aprobado</span>
                     ) : f.estado_dte === 'rechazado' ? (
                       <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">Rechazado</span>
@@ -411,7 +424,12 @@ export default function Facturas() {
                         <button onClick={() => transmitirMH(f.id)} className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-medium">Transmitir MH</button>
                       </>
                     )}
-                    <a href={`http://localhost:8001/api/v1/facturacion/facturas/${f.id}/imprimir?empresa_id=${empresaId()}`} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-indigo-600 inline-flex items-center p-1"><FileOutput className="w-4 h-4" /></a>
+                    {f.estado !== "anulada" && (
+                      <button onClick={() => anularFactura(f.id)} className="text-slate-400 hover:text-red-600 inline-flex items-center p-1 mr-1" title="Anular Factura">
+                        <XCircle className="w-4 h-4" />
+                      </button>
+                    )}
+                    <a href={`${import.meta.env.VITE_API_URL || 'https://ventas-demiempresa.onrender.com'}/api/v1/facturacion/facturas/${f.id}/imprimir?empresa_id=${empresaId()}`} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-indigo-600 inline-flex items-center p-1"><FileOutput className="w-4 h-4" /></a>
                   </td>
                 </tr>
               ))}

@@ -350,6 +350,60 @@ def actualizar_factura(factura_id: int, empresa_id: str, usuario_id: int, data: 
     )
 
 
+
+@router.put("/{factura_id}/anular", response_model=FacturaResponse)
+def anular_factura(factura_id: int, empresa_id: str, usuario_id: int, db: Session = Depends(get_db)):
+    f = db.query(Factura).filter(Factura.id == factura_id, Factura.empresa_id == empresa_id).first()
+    if not f:
+        raise HTTPException(status_code=404, detail="Factura no encontrada")
+    if f.estado == "anulada":
+        raise HTTPException(status_code=400, detail="La factura ya se encuentra anulada")
+    if f.estado_dte == "procesado":
+        raise HTTPException(status_code=400, detail="No se puede anular una factura ya transmitida a Hacienda")
+
+    if f.bodega_salida_id:
+        from routers.kardex import registrar_movimiento
+        for item in f.items:
+            try:
+                registrar_movimiento(
+                    db=db, empresa_id=empresa_id, bodega_id=f.bodega_salida_id,
+                    producto_id=item.producto_id, tipo_movimiento="AJUSTE_POSITIVO",
+                    cantidad=item.cantidad, costo_unitario=item.precio_unitario,
+                    notas=f"Reversion por anulacion Fac. {f.id}", usuario_id=usuario_id
+                )
+            except Exception as e:
+                pass
+
+    if f.condicion_operacion == "CREDITO":
+        cxc = db.query(CuentaPorCobrar).filter(CuentaPorCobrar.factura_id == f.id).first()
+        if cxc and cxc.estado != "anulada":
+            cxc.estado = "anulada"
+            if f.cliente:
+                f.cliente.saldo_pendiente = max(0, (f.cliente.saldo_pendiente or 0) - cxc.monto_pendiente)
+    
+    f.estado = "anulada"
+    db.commit()
+    db.refresh(f)
+    
+    items_resp = []
+    for d in db.query(ItemFactura).filter(ItemFactura.factura_id == f.id).all():
+        items_resp.append(ItemFacturaResponse(
+            id=d.id, producto_id=d.producto_id,
+            producto_nombre=d.producto.nombre,
+            cantidad=d.cantidad,
+            precio_unitario=d.precio_unitario,
+            subtotal=d.subtotal
+        ))
+    return FacturaResponse(
+        id=f.id, empresa_id=f.empresa_id, numero=f.numero,
+        cliente_id=f.cliente_id, cliente_nombre=f.cliente.nombre_comercial or f.cliente.nombre,
+        bodega_salida_id=f.bodega_salida_id, tipo_doc=f.tipo_doc,
+        condicion_operacion=f.condicion_operacion, subtotal=f.subtotal,
+        iva=f.iva, total=f.total, estado=f.estado, estado_dte=f.estado_dte,
+        codigo_generacion=f.codigo_generacion, sello_recepcion=f.sello_recepcion,
+        fecha_emision=f.fecha_emision, items=items_resp
+    )
+
 @router.get("/{factura_id}/imprimir")
 def imprimir_factura(factura_id: int, empresa_id: str, db: Session = Depends(get_db)):
     factura = db.query(Factura).filter(Factura.id == factura_id, Factura.empresa_id == empresa_id).first()
