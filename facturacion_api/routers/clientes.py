@@ -37,6 +37,7 @@ class ClienteUpdate(BaseModel):
     telefono: Optional[str] = None
     direccion: Optional[str] = None
     es_gran_contribuyente: Optional[bool] = None
+    es_predeterminado: Optional[bool] = None
     actividad_economica_cod: Optional[str] = None
     limite_credito: Optional[int] = None
     saldo_inicial: Optional[int] = None
