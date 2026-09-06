@@ -16,6 +16,8 @@ import OrdenesCompra from './pages/OrdenesCompra';
 import CuentasPagar from './pages/CuentasPagar';
 import Clientes from './pages/Clientes';
 import Facturas from './pages/Facturas';
+import Cajas from './pages/Cajas';
+import Gastos from './pages/Gastos';
 import CuentasCobrar from './pages/CuentasCobrar';
 import ConfiguracionDTE from './pages/ConfiguracionDTE';
 
@@ -265,7 +267,9 @@ function App() {
                   {/* Fase 2 — Compras */}
                   <Route path="/proveedores" element={<Proveedores />} />
                   <Route path="/ordenes-compra" element={<OrdenesCompra />} />
-                  <Route path="/cuentas-pagar" element={<CuentasPagar />} />\n            <Route path="/cajas" element={<Cajas />} />\n            <Route path="/gastos" element={<Gastos />} />
+                  <Route path="/cuentas-pagar" element={<CuentasPagar />} />
+            <Route path="/cajas" element={<Cajas />} />
+            <Route path="/gastos" element={<Gastos />} />
                   {/* Fase 3 — Ventas */}
                   <Route path="/clientes" element={<Clientes />} />
                   <Route path="/facturas" element={<Facturas />} />
