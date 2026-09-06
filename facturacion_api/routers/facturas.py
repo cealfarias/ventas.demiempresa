@@ -474,7 +474,7 @@ def imprimir_factura(factura_id: int, empresa_id: str, db: Session = Depends(get
                 <tr>
                     <td>{item.cantidad}</td>
                     <td>{item.producto.nombre if item.producto else 'N/A'}</td>
-                    <td class="text-right">${item.precio_unitario / 100:.2f}</td>
+                    <td class="text-right">${item.precio_unitario:.4f}</td>
                     <td class="text-right">${item.subtotal / 100:.2f}</td>
                 </tr>
         """
