@@ -78,9 +78,18 @@ def _generar_numero_factura(db: Session, empresa_id: str, tipo_doc: str) -> str:
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
+from datetime import datetime, timedelta, timezone
+
 @router.get("/", response_model=List[FacturaResponse])
 def listar_facturas(empresa_id: str, db: Session = Depends(get_db)):
-    facturas = db.query(Factura).filter(Factura.empresa_id == empresa_id).order_by(Factura.fecha_emision.desc()).all()
+    # El Salvador is UTC-6
+    tz_sv = timezone(timedelta(hours=-6))
+    hoy_sv = datetime.now(tz_sv).replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    facturas = db.query(Factura).filter(
+        Factura.empresa_id == empresa_id,
+        Factura.fecha_emision >= hoy_sv
+    ).order_by(Factura.fecha_emision.desc()).limit(150).all()
     
     resultado = []
     for f in facturas:
