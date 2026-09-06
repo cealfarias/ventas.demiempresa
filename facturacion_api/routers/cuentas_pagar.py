@@ -108,6 +108,10 @@ def registrar_pago(cuenta_id: int, empresa_id: str, pago: PagoRequest, db: Sessi
     if cuenta.proveedor:
         cuenta.proveedor.saldo_pendiente = max(0, (cuenta.proveedor.saldo_pendiente or 0) - pago.monto)
 
+    if pago.usuario_id:
+        sesion = db.query(SesionCaja).join(Caja).filter(SesionCaja.usuario_id == pago.usuario_id, SesionCaja.estado == "abierta", Caja.empresa_id == empresa_id).first()
+        if sesion:
+            db.add(MovimientoCaja(sesion_caja_id=sesion.id, tipo="egreso", metodo_pago=pago.metodo_pago, monto=pago.monto, concepto=f"Pago a Proveedor", fecha=datetime.now(TIMEZONE), referencia_tipo="pago_compra", referencia_id=nuevo_pago.id))
     db.commit()
     db.refresh(cuenta)
     
