@@ -195,7 +195,7 @@ def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Ses
             factura_id=f.id,
             fecha_vencimiento=datetime.now(TIMEZONE) + timedelta(days=data.dias_credito),
             monto_original=data.total,
-            saldo_pendiente=data.total,
+            monto_pendiente=data.total,
             estado="pendiente"
         )
         db.add(cxc)
