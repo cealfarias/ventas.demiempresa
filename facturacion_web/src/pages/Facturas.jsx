@@ -409,6 +409,24 @@ export default function Facturas() {
     );
   }
 
+  
+  const iniciarNuevaFactura = () => {
+    const clienteDefault = clientes.find(c => c.es_predeterminado);
+    setForm({
+      cliente_id: clienteDefault ? clienteDefault.id_cliente : "",
+      bodega_salida_id: "",
+      tipo_doc: "FACTURA",
+      condicion_operacion: "CONTADO",
+      metodo_pago: "efectivo",
+      dias_credito: 30,
+      items: [{ producto_id: "", cantidad: 1, precio_unitario: 0 }],
+      fecha_emision: (new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000)).toISOString().slice(0, 16),
+      entrega_domicilio: false,
+      incluye_iva: false
+    });
+    setVista("nueva");
+  };
+
   const anularFactura = async (id) => {
     if (!window.confirm("¿Está seguro de anular esta factura? Esta acción revertirá los saldos y el inventario, y no se puede deshacer.")) return;
     try {
@@ -437,7 +455,7 @@ export default function Facturas() {
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Receipt className="w-6 h-6 text-indigo-600" /> Facturas DTE</h1>
           <p className="text-sm text-slate-500 mt-1">Historial de ventas y documentos tributarios</p>
         </div>
-        <button id="btn-emitir-factura" onClick={() => { setForm({ cliente_id: '', bodega_salida_id: '', tipo_doc: 'FACTURA', condicion_operacion: 'CONTADO', metodo_pago: 'efectivo', dias_credito: 30, items: [], fecha_emision: (new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000)).toISOString().slice(0, 16), entrega_domicilio: false, incluye_iva: false }); setVista('nueva'); }} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 relative z-0">
+        <button id="btn-emitir-factura" onClick={iniciarNuevaFactura} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 relative z-0">
           <Plus className="w-4 h-4" /> Emitir Factura
         </button>
       </div>

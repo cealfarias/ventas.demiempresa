@@ -19,6 +19,7 @@ class ClienteBase(BaseModel):
     telefono: Optional[str] = None
     direccion: Optional[str] = None
     es_gran_contribuyente: bool = False
+    es_predeterminado: bool = False
     actividad_economica_cod: Optional[str] = None
     limite_credito: int = 0
     saldo_inicial: int = 0
@@ -61,6 +62,9 @@ def listar_clientes(empresa_id: str, solo_activos: bool = True, db: Session = De
 
 @router.post("/", response_model=ClienteResponse, status_code=status.HTTP_201_CREATED)
 def crear_cliente(empresa_id: str, cliente: ClienteCreate, db: Session = Depends(get_db)):
+    if cliente.es_predeterminado:
+        db.query(Cliente).filter(Cliente.empresa_id == empresa_id).update({"es_predeterminado": False})
+    
     db_cliente = Cliente(**cliente.dict(), empresa_id=empresa_id)
     db.add(db_cliente)
     db.commit()
@@ -74,6 +78,9 @@ def actualizar_cliente(cliente_id: int, empresa_id: str, datos: ClienteUpdate, d
     if not c:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     
+    if datos.es_predeterminado:
+        db.query(Cliente).filter(Cliente.empresa_id == empresa_id, Cliente.id_cliente != cliente_id).update({"es_predeterminado": False})
+        
     for campo, valor in datos.dict(exclude_unset=True).items():
         setattr(c, campo, valor)
         

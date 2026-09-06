@@ -134,6 +134,7 @@ export default function Clientes() {
                     <p className="font-semibold text-slate-800 text-sm">{c.nombre}</p>
                     {c.nombre_comercial && <p className="text-xs text-slate-500">{c.nombre_comercial}</p>}
                     {c.es_gran_contribuyente && <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-md mt-1 inline-block">GRAN CONTRIBUYENTE</span>}
+                    {c.es_predeterminado && <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-md mt-1 ml-1 inline-block">PREDETERMINADO</span>}
                   </td>
                   <td className="px-5 py-4 text-sm text-slate-600">
                     {c.nit && <div>NIT: {c.nit}</div>}

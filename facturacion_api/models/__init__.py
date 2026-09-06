@@ -58,6 +58,7 @@ class Cliente(Base):
     nombre_comercial = Column(String(200))
     nit = Column(String(20))
     nrc = Column(String(20))
+    es_predeterminado = Column(Boolean, default=False)
     dui = Column(String(20))
     email = Column(String(100))
     telefono = Column(String(20))
@@ -256,6 +257,7 @@ class Proveedor(Base):
     nombre_comercial = Column(String(200))
     nit = Column(String(20))
     nrc = Column(String(20))
+    es_predeterminado = Column(Boolean, default=False)
     es_gran_contribuyente = Column(Boolean, default=False)
     email = Column(String(100))
     telefono = Column(String(20))
@@ -417,6 +419,7 @@ class ConfiguracionDTE(Base):
     # Datos del Emisor
     nit = Column(String(20))
     nrc = Column(String(20))
+    es_predeterminado = Column(Boolean, default=False)
     nombre_comercial = Column(String(200))
     actividad_economica_cod = Column(String(10)) # ej. 62010
     desc_actividad_economica = Column(String(200))
