@@ -215,6 +215,10 @@ export default function Clientes() {
                   <input type="checkbox" checked={form.es_gran_contribuyente} onChange={e => setForm({...form, es_gran_contribuyente: e.target.checked})} className="rounded text-indigo-600" />
                   Gran Contribuyente
                 </label>
+                  <label className="flex items-center gap-2 text-sm text-slate-700 font-medium cursor-pointer">
+                    <input type="checkbox" checked={form.es_predeterminado || false} onChange={e => setForm({...form, es_predeterminado: e.target.checked})} className="rounded text-emerald-600" />
+                    Predeterminado (Contado)
+                  </label>
                 <Field label="Actividad Económica (CAT-019)"><Input value={form.actividad_economica_cod} onChange={e => setForm({...form, actividad_economica_cod: e.target.value})} placeholder="Ej: 62010" /></Field>
               </div>
 

@@ -5,10 +5,11 @@ import { api } from '../services/api';
 const empresaId = () => localStorage.getItem('empresa_id') || '';
 
 // Componente de búsqueda inteligente
-const SearchableSelect = ({ value, options, onChange, placeholder = "Buscar...", className="w-full px-3 py-2 border rounded-xl" }) => {
+const SearchableSelect = ({ value, options, onChange, placeholder = "Buscar...", className="w-full px-3 py-2 border rounded-xl", autoFocus = false }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const wrapperRef = React.useRef(null);
+  React.useEffect(() => { if (autoFocus) setOpen(true); }, [autoFocus]);
 
   React.useEffect(() => {
     const handleClickOutside = (event) => {
@@ -373,8 +374,7 @@ export default function Facturas() {
               {form.items.map((it, i) => (
                 <tr key={i} className="border-b border-slate-50">
                   <td className="py-2">
-                    <SearchableSelect 
-                      value={it.producto_id}
+                    <SearchableSelect autoFocus={i === form.items.length - 1} value={it.producto_id}
                       options={[{value: '', label: 'Seleccionar...'}, ...productos.map(p => ({value: p.id_producto, label: p.nombre}))]}
                       onChange={val => actualizarLinea(i, 'producto_id', val)}
                       className="w-full px-2 py-1.5 border rounded-lg"
