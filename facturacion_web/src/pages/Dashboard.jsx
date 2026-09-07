@@ -125,7 +125,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className={cargando ? 'opacity-50 pointer-events-none' : 'transition-opacity'}>
           <KpiCard 
             title={`Ventas Totales (${periodo === 'dia' ? 'Hoy' : periodo === 'semana' ? 'Semana' : periodo === 'mes' ? 'Mes' : 'Año'})`} 
@@ -133,6 +133,15 @@ export default function Dashboard() {
             icon={TrendingUp} 
             color="text-emerald-600" 
             subValue="DTE" subLabel="Emitidos"
+          />
+        </div>
+        <div className={cargando ? 'opacity-50 pointer-events-none' : 'transition-opacity'}>
+          <KpiCard 
+            title={`Compras Totales (${periodo === 'dia' ? 'Hoy' : periodo === 'semana' ? 'Semana' : periodo === 'mes' ? 'Mes' : 'Año'})`} 
+            value={fmt(kpis.compras_totales || 0)} 
+            icon={Package} 
+            color="text-indigo-600" 
+            subValue="Kardex" subLabel="Entradas"
           />
         </div>
         <KpiCard 

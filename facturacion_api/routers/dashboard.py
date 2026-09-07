@@ -23,21 +23,33 @@ def obtener_kpis(empresa_id: str, periodo: str = "dia", tz: str = "America/El_Sa
         Factura.estado != "anulada"
     )
     
+    # Total de Compras (Órdenes recibidas/enviadas)
+    query_compras = db.query(func.sum(OrdenCompra.total)).filter(
+        OrdenCompra.empresa_id == empresa_id,
+        OrdenCompra.estado != "anulada",
+        OrdenCompra.estado != "borrador"
+    )
+    
     if periodo == "dia":
         inicio = hoy.replace(hour=0, minute=0, second=0, microsecond=0)
         query_ventas = query_ventas.filter(Factura.fecha_emision >= inicio)
+        query_compras = query_compras.filter(OrdenCompra.fecha_emision >= inicio)
     elif periodo == "semana":
         from datetime import timedelta
         inicio = (hoy - timedelta(days=hoy.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
         query_ventas = query_ventas.filter(Factura.fecha_emision >= inicio)
+        query_compras = query_compras.filter(OrdenCompra.fecha_emision >= inicio)
     elif periodo == "mes":
         inicio = hoy.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         query_ventas = query_ventas.filter(Factura.fecha_emision >= inicio)
+        query_compras = query_compras.filter(OrdenCompra.fecha_emision >= inicio)
     elif periodo == "anio":
         inicio = hoy.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
         query_ventas = query_ventas.filter(Factura.fecha_emision >= inicio)
+        query_compras = query_compras.filter(OrdenCompra.fecha_emision >= inicio)
         
     ventas = query_ventas.scalar() or 0
+    compras = query_compras.scalar() or 0
 
     # Cuentas por Cobrar Pendientes
     cxc = db.query(func.sum(CuentaPorCobrar.monto_pendiente)).filter(
@@ -74,6 +86,7 @@ def obtener_kpis(empresa_id: str, periodo: str = "dia", tz: str = "America/El_Sa
 
     return {
         "ventas_totales": ventas,
+        "compras_totales": compras,
         "cuentas_por_cobrar": cxc,
         "cuentas_por_pagar": cxp,
         "clientes_activos": clientes_activos,
@@ -96,7 +109,8 @@ def obtener_grafico_ventas(empresa_id: str, periodo: str = "anio", anio: int = N
     )
     query_compras = db.query(OrdenCompra.fecha_emision, OrdenCompra.total).filter(
         OrdenCompra.empresa_id == empresa_id,
-        OrdenCompra.estado != "anulada"
+        OrdenCompra.estado != "anulada",
+        OrdenCompra.estado != "borrador"
     )
     resultado = []
 
