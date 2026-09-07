@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, DollarSign, Printer, FileText, User, ChevronRight } from 'lucide-react';
+import { CreditCard, DollarSign, Printer, User, ChevronRight, Calendar } from 'lucide-react';
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
@@ -9,6 +9,10 @@ export default function CuentasCobrar() {
   const [cuentasRaw, setCuentasRaw] = useState([]);
   const [cargando, setCargando] = useState(true);
   
+  // Filtros de fecha para el Estado de Cuenta
+  const [filtroTiempo, setFiltroTiempo] = useState('mes'); // hoy, semana, mes, anio
+  const [filtroAnio, setFiltroAnio] = useState(new Date().getFullYear());
+
   // Estados para modal de cliente (ver sus facturas)
   const [modalClienteAbierto, setModalClienteAbierto] = useState(false);
   const [clienteActivo, setClienteActivo] = useState(null);
@@ -25,15 +29,16 @@ export default function CuentasCobrar() {
       const res = await api.get(`/api/v1/facturacion/cuentas-cobrar/?empresa_id=${empresaId()}`);
       setCuentasRaw(res.data);
       
-      // Si el modal de cliente está abierto, actualizar sus datos en vivo
       if (clienteActivo) {
         const cuentasActualizadas = res.data.filter(c => c.estado !== 'pagada' && c.cliente_id === clienteActivo.cliente_id);
         if (cuentasActualizadas.length === 0) {
-          setModalClienteAbierto(false); // Ya pagó todo
+          setModalClienteAbierto(false);
         } else {
+          const todasCuentas = res.data.filter(c => c.cliente_id === clienteActivo.cliente_id);
           setClienteActivo(prev => ({
             ...prev,
-            cuentas: cuentasActualizadas,
+            cuentas_pendientes: cuentasActualizadas,
+            todas_cuentas: todasCuentas,
             saldo_pendiente_total: cuentasActualizadas.reduce((sum, c) => sum + c.monto_pendiente, 0),
             monto_original_total: cuentasActualizadas.reduce((sum, c) => sum + c.monto_original, 0),
             tiene_mora: cuentasActualizadas.some(c => new Date(c.fecha_vencimiento) < new Date())
@@ -46,31 +51,60 @@ export default function CuentasCobrar() {
 
   useEffect(() => { cargar(); }, []);
 
-  // Agrupar cuentas pendientes por cliente
+  // Agrupar TODAS las cuentas por cliente para el estado de cuenta histórico
   const agruparPorCliente = () => {
     const mapa = {};
-    cuentasRaw.filter(c => c.estado !== 'pagada').forEach(c => {
+    cuentasRaw.forEach(c => {
       if (!mapa[c.cliente_id]) {
         mapa[c.cliente_id] = {
           cliente_id: c.cliente_id,
           cliente_nombre: c.cliente_nombre,
-          cuentas: [],
+          todas_cuentas: [],
+          cuentas_pendientes: [],
           saldo_pendiente_total: 0,
           monto_original_total: 0,
           tiene_mora: false
         };
       }
-      mapa[c.cliente_id].cuentas.push(c);
-      mapa[c.cliente_id].saldo_pendiente_total += c.monto_pendiente;
-      mapa[c.cliente_id].monto_original_total += c.monto_original;
-      if (new Date(c.fecha_vencimiento) < new Date()) {
-        mapa[c.cliente_id].tiene_mora = true;
+      mapa[c.cliente_id].todas_cuentas.push(c);
+      if (c.estado !== 'pagada') {
+        mapa[c.cliente_id].cuentas_pendientes.push(c);
+        mapa[c.cliente_id].saldo_pendiente_total += c.monto_pendiente;
+        mapa[c.cliente_id].monto_original_total += c.monto_original;
+        if (new Date(c.fecha_vencimiento) < new Date()) {
+          mapa[c.cliente_id].tiene_mora = true;
+        }
       }
     });
-    return Object.values(mapa).sort((a, b) => b.saldo_pendiente_total - a.saldo_pendiente_total);
+    // Solo mostrar clientes que tienen saldo pendiente
+    return Object.values(mapa).filter(c => c.saldo_pendiente_total > 0).sort((a, b) => b.saldo_pendiente_total - a.saldo_pendiente_total);
   };
 
   const clientesAgrupados = agruparPorCliente();
+
+  const getDates = () => {
+    const now = new Date();
+    let start, end;
+    if (filtroTiempo === 'hoy') {
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    } else if (filtroTiempo === 'semana') {
+        const day = now.getDay() || 7;
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + 1);
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    } else if (filtroTiempo === 'mes') {
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    } else if (filtroTiempo === 'anio') {
+        start = new Date(filtroAnio, 0, 1);
+        if (parseInt(filtroAnio) === now.getFullYear()) {
+            end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        } else {
+            end = new Date(filtroAnio, 11, 31, 23, 59, 59);
+        }
+    }
+    return { start, end };
+  };
 
   const abrirDetallesCliente = (clienteData) => {
     setClienteActivo(clienteData);
@@ -109,40 +143,70 @@ export default function CuentasCobrar() {
 
   const imprimirEstadoCuentaCliente = (clienteData) => {
     const printWindow = window.open('', '_blank');
-    
-    let facturasRows = '';
-    let abonosRows = '';
+    const { start, end } = getDates();
 
-    clienteData.cuentas.forEach(c => {
-        const esVencida = new Date(c.fecha_vencimiento) < new Date();
-        facturasRows += `
-            <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${c.factura_numero || 'N/A'}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${new Date(c.fecha_creacion).toLocaleDateString()}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; color: ${esVencida ? '#b91c1c' : 'inherit'}; font-weight: ${esVencida ? 'bold' : 'normal'}">${c.fecha_vencimiento ? new Date(c.fecha_vencimiento).toLocaleDateString() : 'N/A'}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right;">${fmt(c.monto_original)}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${fmt(c.monto_pendiente)}</td>
-            </tr>
-        `;
+    let saldoAnterior = 0;
+    let cargosPeriodo = 0;
+    let abonosPeriodo = 0;
 
-        if (c.pagos && c.pagos.length > 0) {
-            c.pagos.forEach(p => {
-                abonosRows += `
-                    <tr>
-                        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${new Date(p.fecha).toLocaleString()}</td>
-                        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${c.factura_numero || 'N/A'}</td>
-                        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-transform: uppercase;">${p.metodo_pago}</td>
-                        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${p.referencia || '—'}</td>
-                        <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #059669;">${fmt(p.monto)}</td>
-                    </tr>
-                `;
-            });
-        }
+    const facturasEnPeriodo = [];
+    const abonosEnPeriodo = [];
+
+    // Calcular saldos históricos y separar movimientos del periodo
+    clienteData.todas_cuentas.forEach(c => {
+      const fechaFac = new Date(c.fecha_creacion);
+      if (fechaFac < start) {
+        saldoAnterior += c.monto_original;
+      } else if (fechaFac >= start && fechaFac <= end) {
+        cargosPeriodo += c.monto_original;
+        facturasEnPeriodo.push(c);
+      }
+
+      if (c.pagos) {
+        c.pagos.forEach(p => {
+          const fechaPago = new Date(p.fecha);
+          if (fechaPago < start) {
+            saldoAnterior -= p.monto;
+          } else if (fechaPago >= start && fechaPago <= end) {
+            abonosPeriodo += p.monto;
+            abonosEnPeriodo.push({ ...p, factura_numero: c.factura_numero });
+          }
+        });
+      }
     });
 
-    if (!abonosRows) {
-        abonosRows = '<tr><td colspan="5" style="padding: 15px; text-align: center; color: #64748b; font-style: italic;">No hay abonos registrados para estas facturas.</td></tr>';
-    }
+    const saldoFinal = saldoAnterior + cargosPeriodo - abonosPeriodo;
+
+    let facturasRows = '';
+    facturasEnPeriodo.sort((a,b) => new Date(a.fecha_creacion) - new Date(b.fecha_creacion)).forEach(c => {
+      const esVencida = new Date(c.fecha_vencimiento) < new Date();
+      facturasRows += `
+        <tr>
+          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${new Date(c.fecha_creacion).toLocaleDateString()}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${c.factura_numero || 'N/A'}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; color: ${esVencida ? '#b91c1c' : 'inherit'};">${c.fecha_vencimiento ? new Date(c.fecha_vencimiento).toLocaleDateString() : 'N/A'}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right;">${fmt(c.monto_original)}</td>
+        </tr>
+      `;
+    });
+
+    let abonosRows = '';
+    abonosEnPeriodo.sort((a,b) => new Date(a.fecha) - new Date(b.fecha)).forEach(p => {
+      abonosRows += `
+        <tr>
+          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${new Date(p.fecha).toLocaleString()}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${p.factura_numero || 'N/A'}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-transform: uppercase;">${p.metodo_pago}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${p.referencia || '—'}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right; color: #059669;">${fmt(p.monto)}</td>
+        </tr>
+      `;
+    });
+
+    if (!facturasRows) facturasRows = '<tr><td colspan="4" style="padding: 15px; text-align: center; color: #64748b; font-style: italic;">No hay facturas emitidas en este periodo.</td></tr>';
+    if (!abonosRows) abonosRows = '<tr><td colspan="5" style="padding: 15px; text-align: center; color: #64748b; font-style: italic;">No hay abonos registrados en este periodo.</td></tr>';
+
+    const periodoStr = `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;
 
     printWindow.document.write(`
       <html>
@@ -157,6 +221,8 @@ export default function CuentasCobrar() {
             th { text-align: left; padding: 10px 8px; background: #f1f5f9; border-bottom: 2px solid #cbd5e1; color: #475569; text-transform: uppercase; font-size: 12px; }
             .text-right { text-align: right; }
             .footer { text-align: center; margin-top: 50px; color: #94a3b8; font-size: 0.85em; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+            .resumen-tabla { width: 50%; margin-left: auto; margin-bottom: 40px; }
+            .resumen-tabla td { padding: 8px; border-bottom: 1px solid #e2e8f0; }
           </style>
         </head>
         <body>
@@ -166,37 +232,46 @@ export default function CuentasCobrar() {
               <p style="font-size: 18px; margin:0;"><strong>Cliente:</strong> ${clienteData.cliente_nombre}</p>
             </div>
             <div class="text-right" style="color: #475569; font-size: 14px;">
+              <p style="margin: 3px 0;"><strong>Periodo:</strong> ${periodoStr}</p>
               <p style="margin: 3px 0;"><strong>Fecha de Emisión:</strong> ${new Date().toLocaleDateString()}</p>
-              <p style="margin: 3px 0;"><strong>Documentos Pendientes:</strong> ${clienteData.cuentas.length}</p>
             </div>
           </div>
 
-          <div class="summary-box">
-            <div>
-              <p style="margin:0; color: #64748b; font-size: 14px; text-transform: uppercase;">Total Facturado (Pendientes)</p>
-              <h2 style="margin:5px 0 0 0; font-size: 24px;">${fmt(clienteData.monto_original_total)}</h2>
-            </div>
-            <div class="text-right">
-              <p style="margin:0; color: #64748b; font-size: 14px; text-transform: uppercase;">Saldo Actual a Pagar</p>
-              <h2 style="margin:5px 0 0 0; color: #b91c1c; font-size: 28px;">${fmt(clienteData.saldo_pendiente_total)}</h2>
-            </div>
-          </div>
+          <table class="resumen-tabla">
+            <tbody>
+              <tr>
+                <td><strong>Saldo Acumulado (Anterior)</strong></td>
+                <td class="text-right">${fmt(saldoAnterior)}</td>
+              </tr>
+              <tr>
+                <td>(+) Cargos del Periodo</td>
+                <td class="text-right">${fmt(cargosPeriodo)}</td>
+              </tr>
+              <tr>
+                <td>(-) Abonos del Periodo</td>
+                <td class="text-right" style="color: #059669;">${fmt(abonosPeriodo)}</td>
+              </tr>
+              <tr>
+                <td style="font-size: 16px;"><strong>SALDO TOTAL AL CORTE</strong></td>
+                <td class="text-right" style="font-size: 16px; font-weight: bold; color: #b91c1c;">${fmt(saldoFinal)}</td>
+              </tr>
+            </tbody>
+          </table>
 
-          <h3 style="color: #334155; font-size: 18px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">1. Detalle de Facturas Pendientes</h3>
+          <h3 style="color: #334155; font-size: 16px; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px;">1. Facturas Emitidas en el Periodo</h3>
           <table>
             <thead>
               <tr>
+                <th>Fecha Emisión</th>
                 <th>Documento</th>
-                <th>Emisión</th>
                 <th>Vencimiento</th>
-                <th class="text-right">Monto Original</th>
-                <th class="text-right">Saldo Pendiente</th>
+                <th class="text-right">Monto Facturado</th>
               </tr>
             </thead>
             <tbody>${facturasRows}</tbody>
           </table>
 
-          <h3 style="color: #334155; font-size: 18px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">2. Historial de Abonos Recibidos</h3>
+          <h3 style="color: #334155; font-size: 16px; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px;">2. Abonos Recibidos en el Periodo</h3>
           <table>
             <thead>
               <tr>
@@ -204,7 +279,7 @@ export default function CuentasCobrar() {
                 <th>Aplicado A</th>
                 <th>Método</th>
                 <th>Referencia</th>
-                <th class="text-right">Monto Depositado</th>
+                <th class="text-right">Monto Pagado</th>
               </tr>
             </thead>
             <tbody>${abonosRows}</tbody>
@@ -223,24 +298,56 @@ export default function CuentasCobrar() {
 
   const totalPorCobrar = clientesAgrupados.reduce((acc, c) => acc + c.saldo_pendiente_total, 0);
   const totalMora = clientesAgrupados.reduce((acc, c) => {
-    const moraCliente = c.cuentas.filter(fact => new Date(fact.fecha_vencimiento) < new Date()).reduce((sum, fact) => sum + fact.monto_pendiente, 0);
+    const moraCliente = c.cuentas_pendientes.filter(fact => new Date(fact.fecha_vencimiento) < new Date()).reduce((sum, fact) => sum + fact.monto_pendiente, 0);
     return acc + moraCliente;
   }, 0);
 
+  // Opciones de años basados en el año actual (hasta 5 años atrás)
+  const currentYear = new Date().getFullYear();
+  const anios = Array.from({length: 6}, (_, i) => currentYear - i);
+
   return (
     <div className="p-8 max-w-7xl mx-auto pb-24">
-      <div className="flex justify-between items-start mb-6">
+      {/* HEADER Y FILTROS */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <CreditCard className="w-6 h-6 text-emerald-600" /> Cuentas por Cobrar
           </h1>
           <p className="text-sm text-slate-500 mt-1">Saldos acumulados y estados de cuenta por cliente</p>
         </div>
+
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex bg-white rounded-xl shadow-sm p-1 border border-slate-200">
+            {['hoy', 'semana', 'mes', 'anio'].map(f => (
+              <button
+                key={f}
+                onClick={() => setFiltroTiempo(f)}
+                className={`px-4 py-1.5 text-sm font-medium rounded-lg capitalize transition-colors ${
+                  filtroTiempo === f ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                {f === 'hoy' ? 'Hoy' : f === 'semana' ? 'Esta Semana' : f === 'mes' ? 'Mes Actual' : 'Este Año'}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 bg-white rounded-xl shadow-sm border border-slate-200 px-3 py-1.5">
+            <Calendar className="w-4 h-4 text-slate-400" />
+            <select
+              value={filtroAnio}
+              onChange={(e) => setFiltroAnio(parseInt(e.target.value))}
+              className="bg-transparent text-sm font-medium text-slate-700 outline-none"
+            >
+              {anios.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-          <p className="text-sm text-slate-500 mb-1">Total por Cobrar</p>
+          <p className="text-sm text-slate-500 mb-1">Total General por Cobrar</p>
           <p className="text-3xl font-bold text-emerald-700">{fmt(totalPorCobrar)}</p>
         </div>
         <div className="bg-white border border-red-200 rounded-2xl p-5 shadow-sm bg-red-50/30">
@@ -273,7 +380,7 @@ export default function CuentasCobrar() {
               {clientesAgrupados.map(c => (
                 <tr key={c.cliente_id} className="hover:bg-slate-50">
                   <td className="px-5 py-4 font-medium text-slate-800">{c.cliente_nombre}</td>
-                  <td className="px-5 py-4 text-center text-sm font-semibold text-slate-600 bg-slate-50 w-32">{c.cuentas.length} docs</td>
+                  <td className="px-5 py-4 text-center text-sm font-semibold text-slate-600 bg-slate-50 w-32">{c.cuentas_pendientes.length} docs</td>
                   <td className="px-5 py-4 text-right text-sm text-slate-500">{fmt(c.monto_original_total)}</td>
                   <td className="px-5 py-4 text-right font-bold text-slate-800 text-lg">{fmt(c.saldo_pendiente_total)}</td>
                   <td className="px-5 py-4 text-center">
@@ -282,8 +389,8 @@ export default function CuentasCobrar() {
                     </span>
                   </td>
                   <td className="px-5 py-4 flex justify-end gap-2">
-                    <button onClick={() => imprimirEstadoCuentaCliente(c)} className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-medium flex items-center gap-1" title="Imprimir Estado de Cuenta PDF">
-                      <Printer className="w-3.5 h-3.5" /> Estado PDF
+                    <button onClick={() => imprimirEstadoCuentaCliente(c)} className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-medium flex items-center gap-1" title="Imprimir Estado de Cuenta PDF con fechas filtradas">
+                      <Printer className="w-3.5 h-3.5" /> PDF
                     </button>
                     <button onClick={() => abrirDetallesCliente(c)} className="text-xs bg-slate-800 text-white px-3 py-1.5 rounded-lg hover:bg-slate-700 font-medium flex items-center gap-1">
                       Cobrar / Detalles <ChevronRight className="w-3.5 h-3.5" />
@@ -320,7 +427,7 @@ export default function CuentasCobrar() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {clienteActivo.cuentas.map(fact => {
+                {clienteActivo.cuentas_pendientes.map(fact => {
                   const esVencida = new Date(fact.fecha_vencimiento) < new Date();
                   return (
                     <tr key={fact.id} className="hover:bg-slate-50">
