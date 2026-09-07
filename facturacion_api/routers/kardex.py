@@ -107,6 +107,8 @@ def registrar_movimiento(
                 detail=f"Stock insuficiente. Disponible: {stock_anterior}, Solicitado: {cantidad}"
             )
         saldo.stock_actual = stock_anterior - cantidad
+        # Método de Promedio Ponderado: las salidas toman el costo promedio actual de la bodega
+        costo_unitario = saldo.costo_promedio
     else:
         raise ValueError(f"tipo_movimiento desconocido: {tipo_movimiento}")
 
