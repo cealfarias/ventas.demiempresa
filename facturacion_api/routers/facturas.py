@@ -243,7 +243,7 @@ def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Ses
     if data.condicion_operacion == "CONTADO":
         sesion = db.query(SesionCaja).join(Caja).filter(SesionCaja.usuario_id == usuario_id, SesionCaja.estado == "abierta", Caja.empresa_id == empresa_id).first()
         if sesion:
-            db.add(MovimientoCaja(sesion_caja_id=sesion.id, tipo="ingreso", metodo_pago=data.metodo_pago or "efectivo", monto=data.total, concepto=f"Venta Contado: {f.tipo_doc} {f.numero}", fecha=datetime.now(TIMEZONE), referencia_tipo="factura", referencia_id=f.id))
+            db.add(MovimientoCaja(sesion_caja_id=sesion.id, tipo="ingreso", metodo_pago=data.metodo_pago or "efectivo", monto=data.total, concepto=f"Venta Contado: {f.tipo_doc} {f.numero}", fecha=datetime.now(TIMEZONE), referencia_tipo="factura", referencia_id=f.id, usuario_id=usuario_id))
 
     db.commit()
     db.refresh(f)
