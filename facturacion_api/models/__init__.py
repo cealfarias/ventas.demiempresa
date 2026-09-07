@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Float, Boolean, ForeignKey, DateTime, UniqueConstraint, Numeric
+from sqlalchemy import Column, Integer, String, Text, Float, Boolean, ForeignKey, DateTime, UniqueConstraint, Numeric, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import pytz
@@ -516,6 +516,8 @@ class SesionCaja(Base):
     saldo_inicial = Column(Integer, default=0) # centavos
     estado = Column(String(20), default="abierta") # abierta | cerrada
     notas = Column(Text, nullable=True)
+    detalle_arqueo = Column(JSON, nullable=True)
+    diferencia = Column(Integer, nullable=True) # centavos
     
     caja = relationship("Caja", back_populates="sesiones")
     usuario = relationship("Usuario")

@@ -4,6 +4,7 @@ from sqlalchemy import func
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from database import get_db
+from pydantic import BaseModel
 from models import Caja, SesionCaja, MovimientoCaja
 import pytz
 
@@ -97,9 +98,13 @@ def obtener_sesion_activa(empresa_id: str, usuario_id: int, db: Session = Depend
         "saldo_calculado": saldo_calculado,
         "movimientos_count": len(movimientos)
     }
+class CerrarTurnoRequest(BaseModel):
+    notas: str = ""
+    detalle_arqueo: Optional[Dict[str, int]] = None
+    diferencia: Optional[int] = None
 
 @router.post("/sesiones/{sesion_id}/cerrar")
-def cerrar_caja(sesion_id: int, empresa_id: str, notas: str = "", db: Session = Depends(get_db)):
+def cerrar_caja(sesion_id: int, empresa_id: str, data: CerrarTurnoRequest, db: Session = Depends(get_db)):
     sesion = db.query(SesionCaja).join(Caja).filter(
         SesionCaja.id == sesion_id,
         Caja.empresa_id == empresa_id
@@ -109,9 +114,39 @@ def cerrar_caja(sesion_id: int, empresa_id: str, notas: str = "", db: Session = 
         
     sesion.estado = "cerrada"
     sesion.fecha_cierre = datetime.now(TIMEZONE)
-    sesion.notas = notas
+    sesion.notas = data.notas
+    sesion.detalle_arqueo = data.detalle_arqueo
+    sesion.diferencia = data.diferencia
     db.commit()
     return {"mensaje": "Turno cerrado exitosamente"}
+
+@router.get("/historial")
+def historial_cajas(empresa_id: str, db: Session = Depends(get_db)):
+    sesiones = db.query(SesionCaja).join(Caja).filter(
+        Caja.empresa_id == empresa_id, 
+        SesionCaja.estado == "cerrada"
+    ).order_by(SesionCaja.fecha_cierre.desc()).limit(50).all()
+    
+    res = []
+    for s in sesiones:
+        movimientos = db.query(MovimientoCaja).filter(MovimientoCaja.sesion_caja_id == s.id).all()
+        ingresos = sum(m.monto for m in movimientos if m.tipo == "ingreso")
+        egresos = sum(m.monto for m in movimientos if m.tipo == "egreso")
+        saldo_calculado = s.saldo_inicial + ingresos - egresos
+        
+        res.append({
+            "sesion_id": s.id,
+            "caja_nombre": s.caja.nombre,
+            "usuario": s.usuario.nombre if s.usuario else "Desconocido",
+            "fecha_apertura": s.fecha_apertura,
+            "fecha_cierre": s.fecha_cierre,
+            "saldo_inicial": s.saldo_inicial,
+            "saldo_calculado": saldo_calculado,
+            "diferencia": s.diferencia,
+            "detalle_arqueo": s.detalle_arqueo,
+            "notas": s.notas
+        })
+    return res
 
 @router.get("/sesiones/{sesion_id}/movimientos")
 def listar_movimientos(sesion_id: int, empresa_id: str, db: Session = Depends(get_db)):
