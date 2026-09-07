@@ -16,7 +16,7 @@ export default function CuentasCobrar() {
   // Estados para modal de cobro (pagar una factura)
   const [modalAbierto, setModalAbierto] = useState(false);
   const [cuentaActiva, setCuentaActiva] = useState(null);
-  const [formPago, setFormPago] = useState({ monto: '', metodo_pago: 'efectivo', referencia: '', notas: '' });
+  const [formPago, setFormPago] = useState({ monto: '', metodo_pago: 'efectivo', referencia: '', notas: '', fecha: '' });
   const [guardando, setGuardando] = useState(false);
   
   const cargar = async () => {
@@ -77,9 +77,14 @@ export default function CuentasCobrar() {
     setModalClienteAbierto(true);
   };
 
+  const formatLocalDatetime = (d) => {
+    const tzOffset = d.getTimezoneOffset() * 60000;
+    return (new Date(d - tzOffset)).toISOString().slice(0, 16);
+  };
+
   const abrirPago = (cuenta) => {
     setCuentaActiva(cuenta);
-    setFormPago({ monto: (cuenta.monto_pendiente / 100).toFixed(2), metodo_pago: 'efectivo', referencia: '', notas: '' });
+    setFormPago({ monto: (cuenta.monto_pendiente / 100).toFixed(2), metodo_pago: 'efectivo', referencia: '', notas: '', fecha: formatLocalDatetime(new Date()) });
     setModalAbierto(true);
   };
 
@@ -91,7 +96,8 @@ export default function CuentasCobrar() {
         metodo_pago: formPago.metodo_pago,
         referencia: formPago.referencia,
         notas: formPago.notas,
-        usuario_id: 1
+        usuario_id: 1,
+        fecha: new Date(formPago.fecha).toISOString()
       };
       await api.post(`/api/v1/facturacion/cuentas-cobrar/${cuentaActiva.id}/pagar?empresa_id=${empresaId()}`, payload);
       setModalAbierto(false);
@@ -353,6 +359,10 @@ export default function CuentasCobrar() {
             <p className="text-sm text-slate-500 mb-5">Factura: {cuentaActiva.factura_numero || 'N/A'}</p>
 
             <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase">Fecha y Hora</label>
+                <input type="datetime-local" value={formPago.fecha} onChange={e => setFormPago({...formPago, fecha: e.target.value})} className="w-full mt-1 px-3 py-2 border rounded-xl text-slate-700" />
+              </div>
               <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase">Monto a Cobrar (USD)</label>
                 <input type="number" min="0" step="0.01" max={(cuentaActiva.monto_pendiente/100).toFixed(2)} value={formPago.monto} onChange={e => setFormPago({...formPago, monto: e.target.value})} className="w-full mt-1 px-3 py-2 border rounded-xl text-lg font-bold text-emerald-700" />

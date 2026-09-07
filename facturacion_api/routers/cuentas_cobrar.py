@@ -17,6 +17,7 @@ class PagoCxCRequest(BaseModel):
     referencia: Optional[str] = None
     notas: Optional[str] = None
     usuario_id: Optional[int] = None
+    fecha: Optional[datetime] = None
 
 class PagoCxCResponse(BaseModel):
     id: int
@@ -92,13 +93,16 @@ def registrar_pago(cuenta_id: int, empresa_id: str, pago: PagoCxCRequest, db: Se
     if pago.monto > cuenta.monto_pendiente:
         raise HTTPException(status_code=400, detail=f"El pago ({pago.monto/100:.2f}) supera el saldo pendiente ({cuenta.monto_pendiente/100:.2f})")
 
+    fecha_pago = pago.fecha if pago.fecha else datetime.now(TIMEZONE)
+    
     nuevo_pago = PagoCxC(
         cuenta_cobrar_id=cuenta_id,
         monto=pago.monto,
         metodo_pago=pago.metodo_pago,
         referencia=pago.referencia,
         notas=pago.notas,
-        usuario_id=pago.usuario_id
+        usuario_id=pago.usuario_id,
+        fecha=fecha_pago
     )
     db.add(nuevo_pago)
 
@@ -115,7 +119,7 @@ def registrar_pago(cuenta_id: int, empresa_id: str, pago: PagoCxCRequest, db: Se
     if pago.usuario_id:
         sesion = db.query(SesionCaja).join(Caja).filter(SesionCaja.usuario_id == pago.usuario_id, SesionCaja.estado == "abierta", Caja.empresa_id == empresa_id).first()
         if sesion:
-            db.add(MovimientoCaja(sesion_caja_id=sesion.id, tipo="ingreso", metodo_pago=pago.metodo_pago, monto=pago.monto, concepto=f"Abono a Factura {cuenta.factura.numero}" if getattr(cuenta, 'factura', None) else f"Abono a CxC", fecha=datetime.now(TIMEZONE), referencia_tipo="cobro", referencia_id=nuevo_pago.id, usuario_id=pago.usuario_id))
+            db.add(MovimientoCaja(sesion_caja_id=sesion.id, tipo="ingreso", metodo_pago=pago.metodo_pago, monto=pago.monto, concepto=f"Abono a Factura {cuenta.factura.numero}" if getattr(cuenta, 'factura', None) else f"Abono a CxC", fecha=fecha_pago, referencia_tipo="cobro", referencia_id=nuevo_pago.id, usuario_id=pago.usuario_id))
     db.commit()
     db.refresh(cuenta)
     
