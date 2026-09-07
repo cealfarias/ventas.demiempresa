@@ -4,7 +4,7 @@ from database import get_db
 from datetime import datetime
 import pytz
 TIMEZONE = pytz.timezone('America/El_Salvador')
-from models import CuentaPorCobrar, PagoCxC, Cliente
+from models import CuentaPorCobrar, PagoCxC, Cliente, SesionCaja, Caja, MovimientoCaja
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
