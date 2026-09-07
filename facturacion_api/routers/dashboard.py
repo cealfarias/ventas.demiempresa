@@ -133,12 +133,21 @@ def obtener_grafico_ventas(empresa_id: str, periodo: str = "anio", anio: int = N
             c_fecha = c_fecha.astimezone(local_tz)
             if 0 <= c_fecha.hour <= 23: compras_por_hora[c_fecha.hour] += c_total
             
-        for h in range(0, 24):
-            if h == 0: label = "12 AM"
-            elif h < 12: label = f"{h} AM"
+        # Franja 1: 0 a 7 (12 AM - 7:59 AM)
+        v_0_7 = sum(ventas_por_hora[h] for h in range(0, 8))
+        c_0_7 = sum(compras_por_hora[h] for h in range(0, 8))
+        resultado.append({"mes": "12 AM - 7:59 AM", "ventas": v_0_7, "compras": c_0_7})
+        
+        # Franja 2: Hora en hora de 8 AM a 10 PM (horas 8 a 22)
+        for h in range(8, 23):
+            if h < 12: label = f"{h} AM"
             elif h == 12: label = "12 PM"
             else: label = f"{h-12} PM"
             resultado.append({"mes": label, "ventas": ventas_por_hora[h], "compras": compras_por_hora[h]})
+            
+        # Franja 3: 11 PM a 11:59 PM (hora 23)
+        # Nota: La hora 22 cubre de 10:00 a 10:59, así que la última porción de la noche recae en la 23
+        resultado.append({"mes": "11 PM - 11:59 PM", "ventas": ventas_por_hora[23], "compras": compras_por_hora[23]})
 
     elif periodo == "semana":
         start_of_week = (hoy - timedelta(days=hoy.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
