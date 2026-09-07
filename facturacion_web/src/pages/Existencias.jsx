@@ -58,7 +58,7 @@ export default function Existencias() {
         producto_id: parseInt(form.producto_id),
         tipo_movimiento: form.tipo_movimiento,
         cantidad: parseFloat(form.cantidad),
-        costo_unitario: form.costo_unitario ? Math.round(parseFloat(form.costo_unitario) * 100) : 0,
+        costo_unitario: form.costo_unitario ? parseFloat(form.costo_unitario) : 0,
         usuario_id: 1,
         notas: form.notas
       };
@@ -122,7 +122,7 @@ export default function Existencias() {
         {[
           { label: 'Productos con registro', valor: kpis.totalProductos, icon: Package, color: 'text-indigo-600', bg: 'bg-indigo-50' },
           { label: 'Bodegas con stock', valor: kpis.totalBodegas, icon: Warehouse, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Valor total inventario', valor: fmt(kpis.valorTotal), icon: TrendingUp, color: 'text-violet-600', bg: 'bg-violet-50' },
+          { label: 'Valor total inventario', valor: '$' + Number(kpis.valorTotal).toFixed(2), icon: TrendingUp, color: 'text-violet-600', bg: 'bg-violet-50' },
           { label: 'Registros sin stock', valor: kpis.sinStock, icon: TrendingDown, color: 'text-red-500', bg: 'bg-red-50' },
         ].map((kpi, i) => (
           <div key={i} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
@@ -226,8 +226,8 @@ export default function Existencias() {
                           {s.stock_actual.toFixed(2)}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-right text-sm text-slate-600">{fmt(s.costo_promedio)}</td>
-                      <td className="px-5 py-3.5 text-right text-sm font-bold text-emerald-700">{fmt(s.valor_total)}</td>
+                      <td className="px-5 py-3.5 text-right text-sm text-slate-600">{'$' + Number(s.costo_promedio).toFixed(4)}</td>
+                      <td className="px-5 py-3.5 text-right text-sm font-bold text-emerald-700">{'$' + Number(s.valor_total).toFixed(2)}</td>
                       <td className="px-5 py-3.5 text-center">
                         {stockCritico ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-600 border border-red-200">
@@ -254,7 +254,7 @@ export default function Existencias() {
                     {datosFiltrados.length} registros
                   </td>
                   <td className="px-5 py-3.5 text-right text-emerald-700">
-                    {fmt(datosFiltrados.reduce((acc, s) => acc + s.valor_total, 0))}
+                    {'$' + Number(datosFiltrados.reduce((acc, s) => acc + s.valor_total, 0)).toFixed(2)}
                   </td>
                   <td />
                 </tr>

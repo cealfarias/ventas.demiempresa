@@ -177,7 +177,7 @@ export default function Kardex() {
                         {m.tipo_movimiento.includes('SALIDA') ? '-' : '+'}{m.cantidad}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-right text-sm text-slate-500">{m.costo_unitario > 0 ? fmt(m.costo_unitario) : '—'}</td>
+                    <td className="px-5 py-4 text-right text-sm text-slate-500">{m.costo_unitario > 0 ? '$' + Number(m.costo_unitario).toFixed(4) : '—'}</td>
                     <td className="px-5 py-4 text-right font-bold text-indigo-700 bg-indigo-50/30">{m.stock_resultante || m.saldo_cantidad || 0}</td>
                     <td className="px-5 py-4 text-center">
                       <button 
@@ -263,10 +263,10 @@ export default function Kardex() {
                   <span className="font-medium text-right">{movimientoActivo.cantidad}</span>
                   
                   <span className="text-slate-500">Costo Unitario:</span>
-                  <span className="font-medium text-right">{fmt(movimientoActivo.costo_unitario)}</span>
+                  <span className="font-medium text-right">{'$' + Number(movimientoActivo.costo_unitario).toFixed(4)}</span>
                   
                   <span className="text-slate-500">Valor Total:</span>
-                  <span className="font-medium text-right text-indigo-600">{fmt(movimientoActivo.costo_total || (movimientoActivo.costo_unitario * movimientoActivo.cantidad))}</span>
+                  <span className="font-medium text-right text-indigo-600">{'$' + Number(movimientoActivo.costo_total || (movimientoActivo.costo_unitario * movimientoActivo.cantidad)).toFixed(2)}</span>
                 </div>
               </div>
 
