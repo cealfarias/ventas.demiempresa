@@ -166,12 +166,16 @@ export default function OrdenesCompra() {
       bodega_destino_id: oc.bodega_destino_id || (bodegas.find(b => b.es_principal)?.id || ''),
       crear_cuenta_pagar: false,
       dias_credito: 30,
-      detalles: oc.detalles.filter(d => d.pendiente > 0).map(d => ({
-        detalle_id: d.id,
-        producto_nombre: d.producto_nombre,
-        pendiente: d.pendiente,
-        cantidad_recibida: d.pendiente
-      }))
+      detalles: oc.detalles.filter(d => d.pendiente > 0).map(d => {
+        const costo_total_linea = (d.subtotal / 100) * (d.pendiente / (d.cantidad_pedida || 1));
+        return {
+          detalle_id: d.id,
+          producto_nombre: d.producto_nombre,
+          pendiente: d.pendiente,
+          cantidad_recibida: d.pendiente,
+          costo_total_linea: costo_total_linea
+        };
+      })
     });
     setVista('recibir');
   };
@@ -185,7 +189,11 @@ export default function OrdenesCompra() {
         usuario_id: 1,
         crear_cuenta_pagar: recepcion.crear_cuenta_pagar,
         dias_credito: recepcion.dias_credito,
-        detalles: recepcion.detalles.map(d => ({ detalle_id: d.detalle_id, cantidad_recibida: parseFloat(d.cantidad_recibida) }))
+        detalles: recepcion.detalles.map(d => ({ 
+          detalle_id: d.detalle_id, 
+          cantidad_recibida: parseFloat(d.cantidad_recibida) || 0,
+          costo_unitario: d.costo_total_linea / (parseFloat(d.cantidad_recibida) || 1)
+        }))
       };
       await api.post(`/api/v1/compras/ordenes-compra/${ocActiva.id}/recibir`, payload);
       setVista('lista');
@@ -381,8 +389,10 @@ export default function OrdenesCompra() {
             <thead>
               <tr className="text-xs uppercase text-slate-500 border-b">
                 <th className="pb-2">Producto</th>
-                <th className="pb-2 text-right">Pendiente</th>
-                <th className="pb-2 w-32 text-right">Recibir Ahora</th>
+                <th className="pb-2 text-right">Pendiente (Original)</th>
+                <th className="pb-2 text-right">Costo Total ($)</th>
+                <th className="pb-2 w-32 text-right">Cant. Física</th>
+                <th className="pb-2 text-right">Costo Unit. (Calculado)</th>
               </tr>
             </thead>
             <tbody>
@@ -390,8 +400,9 @@ export default function OrdenesCompra() {
                 <tr key={i} className="border-b border-slate-50">
                   <td className="py-3 text-sm font-medium text-slate-800">{d.producto_nombre}</td>
                   <td className="py-3 text-right text-sm text-slate-500">{d.pendiente}</td>
+                  <td className="py-3 text-right text-sm font-bold text-slate-600">${d.costo_total_linea?.toFixed(2)}</td>
                   <td className="py-3 text-right">
-                    <input type="number" min="0" max={d.pendiente} step="any" value={d.cantidad_recibida} 
+                    <input type="number" min="0" step="any" value={d.cantidad_recibida} 
                       onChange={e => {
                         const nuevos = [...recepcion.detalles];
                         nuevos[i].cantidad_recibida = e.target.value;
@@ -399,6 +410,9 @@ export default function OrdenesCompra() {
                       }} 
                       className="w-full px-2 py-1 border rounded-lg text-sm bg-slate-50 text-right font-bold text-emerald-700" 
                     />
+                  </td>
+                  <td className="py-3 text-right text-sm font-bold text-emerald-600">
+                    ${(d.costo_total_linea / (parseFloat(d.cantidad_recibida) || 1)).toFixed(4)}
                   </td>
                 </tr>
               ))}

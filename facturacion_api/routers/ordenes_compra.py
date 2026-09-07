@@ -30,6 +30,7 @@ class OrdenCompraCreate(BaseModel):
 class RecepcionDetalleRequest(BaseModel):
     detalle_id: int
     cantidad_recibida: float
+    costo_unitario: Optional[float] = None
 
 class RecepcionRequest(BaseModel):
     empresa_id: str
@@ -264,12 +265,8 @@ def recibir_mercancia(oc_id: int, recepcion: RecepcionRequest, db: Session = Dep
         if cantidad_a_recibir <= 0:
             continue
 
-        disponible = detalle.cantidad_pedida - detalle.cantidad_recibida
-        if cantidad_a_recibir > disponible:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Producto {detalle.producto_id}: cantidad a recibir ({cantidad_a_recibir}) supera lo pendiente ({disponible})"
-            )
+        # Permitir recibir más unidades (conversión de empaques a unidades sueltas)
+        costo_unitario_real = item_recepcion.costo_unitario if item_recepcion.costo_unitario is not None else detalle.precio_unitario
 
         registrar_movimiento(
             db=db,
@@ -278,7 +275,7 @@ def recibir_mercancia(oc_id: int, recepcion: RecepcionRequest, db: Session = Dep
             producto_id=detalle.producto_id,
             tipo_movimiento="ENTRADA_COMPRA",
             cantidad=cantidad_a_recibir,
-            costo_unitario=detalle.precio_unitario,
+            costo_unitario=costo_unitario_real,
             referencia_tipo="orden_compra",
             referencia_id=oc_id,
             usuario_id=recepcion.usuario_id,
@@ -286,7 +283,7 @@ def recibir_mercancia(oc_id: int, recepcion: RecepcionRequest, db: Session = Dep
         )
 
         detalle.cantidad_recibida += cantidad_a_recibir
-        total_recibido_valor += int(cantidad_a_recibir * detalle.precio_unitario)
+        total_recibido_valor += int(round(cantidad_a_recibir * costo_unitario_real * 100))
 
     todos_los_detalles = db.query(DetalleOrdenCompra).filter(
         DetalleOrdenCompra.orden_compra_id == oc_id
