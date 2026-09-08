@@ -1,19 +1,102 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Bot, Mic, MicOff, Volume2, VolumeX, RotateCcw, Repeat, 
-  Send, Sparkles, X, ChevronUp, AlertCircle, ExternalLink, HelpCircle
+  Send, Sparkles, X, ChevronUp, AlertCircle, ExternalLink, Compass, HelpCircle
 } from 'lucide-react';
 import { api } from '../services/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+
+const MODULOS_KNOWLEDGE = {
+  "/dashboard": {
+    titulo: "📊 Dashboard de Control General",
+    guia: "1. Revisa las tarjetas de KPIs principales (Ventas totales, saldos).\n2. Observa la gráfica de ventas para tendencias temporales.\n3. Consulta el Top de Productos más vendidos.",
+    faqs: "P: ¿Cada cuánto se actualiza?\nR: En tiempo real al registrar facturas o gastos."
+  },
+  "/facturas": {
+    titulo: "🧾 Facturación DTE (Hacienda)",
+    guia: "1. Valida tener un turno de caja abierto.\n2. Selecciona el cliente.\n3. Añade productos revisando la existencia en bodega predeterminada.\n4. Selecciona el Tipo de DTE y presiona 'Emitir Factura'.",
+    faqs: "P: ¿Cómo anulo una factura?\nR: Presiona 'Anular' en el historial indicando el motivo."
+  },
+  "/cajas": {
+    titulo: "💼 Control de Caja & Financiamientos",
+    guia: "1. Presiona 'Aperturar Turno' con el saldo inicial.\n2. Para inyectar liquidez sin o con interés, usa 'Inyectar Capital'.\n3. Usa los botones de Editar o Eliminar para corregir movimientos.",
+    faqs: "P: ¿Qué es la inyección de capital?\nR: Aportes o préstamos para compras y gastos sin alterar ventas."
+  },
+  "/clientes": {
+    titulo: "👥 Gestión de Clientes",
+    guia: "1. Haz clic en 'Nuevo Cliente'.\n2. Completa NIT/NRC/DUI y actividad económica (CAT-019).\n3. Define el límite de crédito si aplican ventas a plazo.",
+    faqs: "P: ¿Quién es el cliente predeterminado?\nR: El cliente de venta rápida a consumidor final."
+  },
+  "/cuentas-cobrar": {
+    titulo: "💳 Cuentas por Cobrar",
+    guia: "1. Revisa los saldos pendientes por cliente.\n2. Presiona 'Registrar Cobro' para abonar o liquidar.\n3. El cobro recibido incrementa la disponibilidad de la caja activa.",
+    faqs: "P: ¿Cómo veo el historial de abonos?\nR: En la ficha de detalle de cada cliente."
+  },
+  "/gastos": {
+    titulo: "💸 Gastos Operativos",
+    guia: "1. Selecciona la categoría del gasto.\n2. Ingresa monto y concepto.\n3. Selecciona salida por Efectivo o Transferencia y guarda.",
+    faqs: "P: ¿Se descuenta del turno de caja?\nR: Sí, si se selecciona pago en Efectivo de Caja."
+  },
+  "/proveedores": {
+    titulo: "🚚 Gestión de Proveedores",
+    guia: "1. Registra distribuidores y casas comerciales.\n2. Ingresa su NIT/NRC para sustentar Crédito Fiscal en compras.",
+    faqs: "P: ¿Es necesario para órdenes de compra?\nR: Sí, las órdenes requieren seleccionar un proveedor."
+  },
+  "/ordenes-compra": {
+    titulo: "🛒 Órdenes de Compra & Recepción",
+    guia: "1. Crea la orden especificando proveedor e ítems.\n2. Al recibir los productos, marca el estado como 'Recibida'.\n3. El stock ingresará automáticamente a la bodega.",
+    faqs: "P: ¿Actualiza el costo promedio?\nR: Sí, recalcula el valor según el costo unitario de compra."
+  },
+  "/cuentas-pagar": {
+    titulo: "📄 Cuentas por Pagar",
+    guia: "1. Consulta los compromisos financieros con proveedores.\n2. Registra abonos parciales o pagos totales.",
+    faqs: "P: ¿Cómo registro el egreso?\nR: Selecciona si el pago sale de caja o banco."
+  },
+  "/bodegas": {
+    titulo: "🏬 Administración de Bodegas",
+    guia: "1. Registra las sucursales o almacenes de la empresa.\n2. Define la bodega 'Predeterminada' para venta rápida.",
+    faqs: "P: ¿Puedo tener varias bodegas?\nR: Sí, ilimitadas bodegas por empresa."
+  },
+  "/existencias": {
+    titulo: "📦 Existencias en Tiempo Real",
+    guia: "1. Consulta las unidades almacenadas por cada bodega.\n2. Filtra productos con alerta de stock mínimo.",
+    faqs: "P: ¿Cómo veo el valor del inventario?\nR: Multiplica las unidades por el costo promedio ponderado."
+  },
+  "/kardex": {
+    titulo: "📋 Libro Kardex (Trazabilidad)",
+    guia: "1. Selecciona un producto para auditar su historial.\n2. Analiza las entradas, salidas y saldo valorizado.",
+    faqs: "P: ¿Qué método fiscal utiliza?\nR: Costo Promedio Ponderado."
+  },
+  "/productos": {
+    titulo: "📦 Catálogo de Productos y Servicios",
+    guia: "1. Crea ítems ingresando código, precio y costo.\n2. Asigna imagen URL para visualización en facturación.",
+    faqs: "P: ¿Un servicio maneja stock?\nR: No, los servicios no descuentan unidades físicas."
+  },
+  "/despachos": {
+    titulo: "🚚 Logística y Rutas de Entrega",
+    guia: "1. Agrupa facturas emitidas por ruta de entrega.\n2. Actualiza los estados: Pendiente -> En Ruta -> Entregado.",
+    faqs: "P: ¿Se genera Guía DTE?\nR: Sí, se enlaza al documento de transporte de Hacienda."
+  },
+  "/configuracion-dte": {
+    titulo: "⚙️ Configuración DTE (Hacienda)",
+    guia: "1. Carga tu archivo .p12 y contraseña de certificado.\n2. Ingresa la clave API otorgada por el Ministerio de Hacienda.\n3. Selecciona el Entorno (Pruebas / Producción).",
+    faqs: "P: ¿Qué hago si da error de firma?\nR: Revisa que la clave del .p12 coincida exactamente."
+  },
+  "/usuarios": {
+    titulo: "👥 Gestión de Usuarios y Roles (RBAC)",
+    guia: "1. Registra colaboradores con su username y correo.\n2. Asigna uno de los 8 roles predefinidos.\n3. Modifica estados o restablece contraseñas.",
+    faqs: "P: ¿Quién puede gestionar usuarios?\nR: Exclusivamente el usuario con rol 'admin'."
+  }
+};
 
 const ROLE_SHORTCUTS = {
   cajera: [
-    { label: '💼 Aperturar Turno de Caja', action: '/cajas' },
-    { label: '🧾 Emitir Factura DTE', action: '/facturas' },
+    { label: '💼 Turno de Caja', action: '/cajas' },
+    { label: '🧾 Factura DTE', action: '/facturas' },
     { label: '📈 Inyectar Capital', action: '/cajas' },
   ],
   bodeguero: [
-    { label: '📦 Consultar Existencias', action: '/existencias' },
+    { label: '📦 Existencias', action: '/existencias' },
     { label: '📋 Libro Kardex', action: '/kardex' },
     { label: '📥 Órdenes de Compra', action: '/ordenes-compra' },
   ],
@@ -23,22 +106,22 @@ const ROLE_SHORTCUTS = {
     { label: '💵 Gastos Operativos', action: '/gastos' },
   ],
   encargado_compras: [
-    { label: '🛒 Crear Orden de Compra', action: '/ordenes-compra' },
-    { label: '🚚 Ver Proveedores', action: '/proveedores' },
+    { label: '🛒 Orden de Compra', action: '/ordenes-compra' },
+    { label: '🚚 Proveedores', action: '/proveedores' },
     { label: '📄 Cuentas por Pagar', action: '/cuentas-pagar' },
   ],
   vendedor: [
-    { label: '👥 Ver Clientes', action: '/clientes' },
-    { label: '📦 Ver Existencias', action: '/existencias' },
-    { label: '🧾 Cotizaciones DTE', action: '/facturas' },
+    { label: '👥 Clientes', action: '/clientes' },
+    { label: '📦 Existencias', action: '/existencias' },
+    { label: '🧾 Facturación', action: '/facturas' },
   ],
   despachador: [
     { label: '🚚 Rutas y Entregas', action: '/despachos' },
   ],
   admin: [
-    { label: '👥 Gestionar Usuarios & Roles', action: '/usuarios' },
+    { label: '👥 Usuarios & Roles', action: '/usuarios' },
     { label: '⚙️ Configuración DTE', action: '/configuracion-dte' },
-    { label: '📊 Dashboard General', action: '/' },
+    { label: '📊 Dashboard', action: '/' },
   ],
 };
 
@@ -54,10 +137,12 @@ export default function AvatarWidget() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const navigate = useNavigate();
+  const location = useLocation();
   const chatEndRef = useRef(null);
   const recognitionRef = useRef(null);
 
   const role = (localStorage.getItem('rol') || 'admin').toLowerCase();
+  const currentPath = location.pathname.endsWith('/') && location.pathname !== '/' ? location.pathname.slice(0, -1) : location.pathname;
 
   // 1. Diagnóstico de Hardware (Micrófono y Parlantes)
   useEffect(() => {
@@ -73,7 +158,7 @@ export default function AvatarWidget() {
   const speakText = (text) => {
     if (isMuted || !('speechSynthesis' in window)) return;
     try {
-      window.speechSynthesis.cancel(); // Cancelar lo anterior
+      window.speechSynthesis.cancel();
       const cleanText = text.replace(/[*_#`]/g, '');
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = 'es-ES';
@@ -84,14 +169,16 @@ export default function AvatarWidget() {
     }
   };
 
-  // 3. Inicializar mensaje de bienvenida según tiempo y rol
+  // 3. Inicializar mensaje de bienvenida según horario y módulo actual
   const initGreeting = () => {
     const isFirstTime = localStorage.getItem('avatar_facturacion_greeted') !== 'true';
     const hour = new Date().getHours();
     const greetingTime = hour < 12 ? 'Buenos días' : (hour < 18 ? 'Buenas tardes' : 'Buenas noches');
 
+    const modInfo = MODULOS_KNOWLEDGE[currentPath] || MODULOS_KNOWLEDGE["/dashboard"];
     const roleUpper = role.toUpperCase();
-    const initialText = `¡${greetingTime}! Soy tu Avatar Asistente. Tu perfil autenticado es **${roleUpper}**. Estoy aquí para orientarte en tus actividades del ERP.`;
+
+    const initialText = `¡${greetingTime}! Soy tu Avatar Asistente. Tu perfil es **${roleUpper}**.\nTe encuentras en **${modInfo.titulo}**.\n\nPresiona **'🧭 Guíame en esta página'** si deseas ver el paso a paso de este módulo.`;
 
     const greetingMsg = {
       sender: 'bot',
@@ -123,7 +210,7 @@ export default function AvatarWidget() {
 
   useEffect(() => {
     initGreeting();
-  }, [role]);
+  }, [role, currentPath]);
 
   // 4. Escuchar eventos globales 'avatar:say' emitidos por cualquier vista
   useEffect(() => {
@@ -157,7 +244,23 @@ export default function AvatarWidget() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isOpen]);
 
-  // 5. Mute Total (Silencio Total)
+  // 5. Función de Guía Paso a Paso de la Página Actual
+  const handleGuiamePagina = () => {
+    const modInfo = MODULOS_KNOWLEDGE[currentPath] || MODULOS_KNOWLEDGE["/dashboard"];
+    const guideText = `🧭 **Guía Paso a Paso: ${modInfo.titulo}**\n\n${modInfo.guia}\n\n💡 **Pregunta Frecuente:** ${modInfo.faqs}`;
+    
+    const botMsg = {
+      sender: 'bot',
+      text: guideText,
+      isOffTopic: false
+    };
+
+    setMessages((prev) => [...prev, botMsg]);
+    setLastInstruction(guideText);
+    speakText(guideText);
+  };
+
+  // 6. Mute Total
   const handleToggleMute = () => {
     const newMuted = !isMuted;
     setIsMuted(newMuted);
@@ -166,20 +269,20 @@ export default function AvatarWidget() {
     }
   };
 
-  // 6. Iniciar desde 0
+  // 7. Iniciar desde 0
   const handleResetSession = () => {
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     initGreeting();
   };
 
-  // 7. Repetir últimas instrucciones
+  // 8. Repetir últimas instrucciones
   const handleRepeatLast = () => {
     if (lastInstruction) {
       speakText(lastInstruction);
     }
   };
 
-  // 8. Speech-to-Text (Escuchar micrófono)
+  // 9. Speech-to-Text
   const handleToggleMic = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -217,7 +320,7 @@ export default function AvatarWidget() {
     }
   };
 
-  // Motor Inteligente Resiliente Client-Side (Fallback en caso de desconexión o retardo de API)
+  // 10. Motor Inteligente Resiliente Client-Side
   const processQueryClientSide = (query, currentRole) => {
     const msgLower = (query || '').toLowerCase().trim();
     const r = (currentRole || 'admin').toLowerCase();
@@ -230,7 +333,7 @@ export default function AvatarWidget() {
       "financiamiento", "préstamo", "aporte", "impuesto", "nit", "nrc", "iva",
       "ayuda", "hola", "buenos dias", "buenas tardes", "buenas noches", "gracias",
       "opciones", "manual", "configuración", "certificación", "token", "sucursal",
-      "inicio", "dashboard", "sesión", "turno", "arqueo"
+      "inicio", "dashboard", "sesión", "turno", "arqueo", "guia", "como", "usar"
     ];
 
     const isErpQuery = ERP_KEYWORDS.some(kw => msgLower.includes(kw)) || msgLower.split(' ').length <= 3;
@@ -242,70 +345,57 @@ export default function AvatarWidget() {
       };
     }
 
-    if (msgLower.includes("caja") || msgLower.includes("turno")) {
-      if (r === "cajera") {
-        return {
-          text: "Para registrar tus cobros de hoy, primero valida que el turno de caja esté abierto en el módulo 'Control de Caja'. Si requieres liquidez adicional para gastos o compras, puedes utilizar la función 'Inyectar Capital'.",
-          redirectUrl: "/cajas"
-        };
-      }
+    if (msgLower.includes("guia") || msgLower.includes("cómo usar") || msgLower.includes("esta página") || msgLower.includes("esta pantalla")) {
+      const modInfo = MODULOS_KNOWLEDGE[currentPath] || MODULOS_KNOWLEDGE["/dashboard"];
       return {
-        text: "En el módulo 'Control de Caja' puedes auditar el saldo activo, verificar inyecciones de capital, movimientos de compras/ventas y editar o eliminar registros de turno.",
-        redirectUrl: "/cajas"
+        text: `🧭 **Guía de Uso: ${modInfo.titulo}**\n\n${modInfo.guia}\n\n💡 **Frecuentes:** ${modInfo.faqs}`
       };
+    }
+
+    if (msgLower.includes("caja") || msgLower.includes("turno")) {
+      const info = MODULOS_KNOWLEDGE["/cajas"];
+      return { text: `💼 **Control de Caja:** ${info.guia}`, redirectUrl: "/cajas" };
     }
 
     if (msgLower.includes("factura") || msgLower.includes("dte")) {
-      return {
-        text: "Para emitir un Documento Tributario Electrónico (DTE), dirígete a 'Facturación DTE'. Selecciona el cliente, añade los productos del catálogo (se mostrará la existencia actual en bodega) y presiona 'Emitir Factura'.",
-        redirectUrl: "/facturas"
-      };
+      const info = MODULOS_KNOWLEDGE["/facturas"];
+      return { text: `🧾 **Facturación DTE:** ${info.guia}`, redirectUrl: "/facturas" };
     }
 
     if (msgLower.includes("bodega") || msgLower.includes("kardex") || msgLower.includes("stock") || msgLower.includes("existencia")) {
-      if (["bodeguero", "admin", "contador"].includes(r)) {
-        return {
-          text: "Puedes auditar las entradas, salidas y movimientos físicos en el 'Libro Kardex' o consultar la disponibilidad en tiempo real en la sección de 'Existencias'.",
-          redirectUrl: "/existencias"
-        };
-      }
-      return {
-        text: "Puedes consultar las existencias de productos en bodega directamente al seleccionar ítems en la facturación o en el catálogo de productos.",
-        redirectUrl: "/productos"
-      };
+      const info = MODULOS_KNOWLEDGE["/existencias"];
+      return { text: `📦 **Inventarios:** ${info.guia}`, redirectUrl: "/existencias" };
     }
 
     if (msgLower.includes("usuario") || msgLower.includes("rol") || msgLower.includes("permiso")) {
-      if (r === "admin") {
-        return {
-          text: "Como Administrador, puedes registrar nuevos colaboradores y definir sus roles (Contador, Auditor, Bodeguero, Cajera, Compras, Vendedor, Despachador) en la sección 'Gestión de Usuarios'.",
-          redirectUrl: "/usuarios"
-        };
-      }
-      return {
-        text: "La gestión de usuarios y asignación de roles está reservada para el Administrador de la empresa."
-      };
+      const info = MODULOS_KNOWLEDGE["/usuarios"];
+      return { text: `👥 **Usuarios y Roles:** ${info.guia}`, redirectUrl: "/usuarios" };
     }
 
-    if (msgLower.includes("gasto") || msgLower.includes("proveedor") || msgLower.includes("compra")) {
-      return {
-        text: "Puedes gestionar tus proveedores y crear Órdenes de Compra en el módulo 'Compras'. Los gastos operativos del día se registran en 'Gastos Operativos' dentro de Finanzas.",
-        redirectUrl: "/gastos"
-      };
+    if (msgLower.includes("gasto")) {
+      const info = MODULOS_KNOWLEDGE["/gastos"];
+      return { text: `💸 **Gastos Operativos:** ${info.guia}`, redirectUrl: "/gastos" };
+    }
+
+    if (msgLower.includes("compra") || msgLower.includes("proveedor")) {
+      const info = MODULOS_KNOWLEDGE["/ordenes-compra"];
+      return { text: `🛒 **Compras:** ${info.guia}`, redirectUrl: "/ordenes-compra" };
     }
 
     if (msgLower.includes("hola") || msgLower.includes("buenos dias") || msgLower.includes("buenas tardes") || msgLower.includes("buenas noches")) {
+      const modInfo = MODULOS_KNOWLEDGE[currentPath] || MODULOS_KNOWLEDGE["/dashboard"];
       return {
-        text: `¡Hola! Soy tu Avatar Asistente. Tu perfil activo es **${r.toUpperCase()}**. ¿En qué operación del sistema deseas que te guíe?`
+        text: `¡Hola! Soy tu Avatar Asistente. Tu perfil activo es **${r.toUpperCase()}**.\nActualmente te encuentras en **${modInfo.titulo}**.`
       };
     }
 
+    const modInfo = MODULOS_KNOWLEDGE[currentPath] || MODULOS_KNOWLEDGE["/dashboard"];
     return {
-      text: `Entendido. Como asistente de tu rol (${r.toUpperCase()}), puedo ayudarte con Facturación DTE, Inventarios, Cajas, Compras y Gestión de Usuarios. ¿Deseas navegar a algún módulo en específico?`
+      text: `Te encuentras en **${modInfo.titulo}**.\n\n${modInfo.guia}`
     };
   };
 
-  // 9. Enviar consulta a la IA (Gemini Backend con Fallback Inteligente)
+  // 11. Enviar consulta a la IA (Gemini Backend con Fallback Inteligente)
   const handleSendMessage = async (textToSend) => {
     const query = textToSend || inputText;
     if (!query.trim() || loading) return;
@@ -319,7 +409,7 @@ export default function AvatarWidget() {
       const res = await api.post('/api/v1/avatar/chat', {
         message: query,
         rol: role,
-        modulo: window.location.pathname
+        modulo: currentPath
       });
 
       const botReply = res.data.response || 'De acuerdo, continuemos.';
@@ -353,10 +443,11 @@ export default function AvatarWidget() {
   };
 
   const shortcuts = ROLE_SHORTCUTS[role] || ROLE_SHORTCUTS.admin;
+  const currentModInfo = MODULOS_KNOWLEDGE[currentPath] || MODULOS_KNOWLEDGE["/dashboard"];
 
   return (
     <div className="fixed bottom-5 right-5 z-50 font-sans">
-      {/* Botón Flotante del Avatar Unificado */}
+      {/* Botón Flotante del Avatar */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
@@ -377,9 +468,9 @@ export default function AvatarWidget() {
         </button>
       )}
 
-      {/* Ventana del Avatar Unificado */}
+      {/* Ventana del Avatar */}
       {isOpen && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-[92vw] sm:w-[420px] max-h-[620px] flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-200">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-[92vw] sm:w-[420px] max-h-[640px] flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-200">
           {/* Header */}
           <div className="bg-gradient-to-r from-indigo-700 to-indigo-900 text-white p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -391,7 +482,7 @@ export default function AvatarWidget() {
                   Avatar Asistente <Sparkles className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
                 </h3>
                 <p className="text-[11px] text-indigo-200 uppercase tracking-wider font-semibold">
-                  ROL ACTIVO: {role}
+                  ROL: {role} • {currentModInfo.titulo.split(' ')[1] || 'General'}
                 </p>
               </div>
             </div>
@@ -403,7 +494,7 @@ export default function AvatarWidget() {
             </button>
           </div>
 
-          {/* Barra de Diagnóstico de Hardware y Controles */}
+          {/* Barra de Controles y Diagnóstico */}
           <div className="bg-slate-800 text-slate-300 px-3 py-2 text-xs flex items-center justify-between gap-2 border-b border-slate-700">
             <div className="flex items-center gap-2 text-[11px]">
               {hasMic ? (
@@ -450,6 +541,19 @@ export default function AvatarWidget() {
                 <RotateCcw className="w-4 h-4" />
               </button>
             </div>
+          </div>
+
+          {/* Botón de Guía interactiva de esta página */}
+          <div className="bg-indigo-50 border-b border-indigo-100 p-2 flex justify-between items-center px-3">
+            <span className="text-[11px] text-indigo-900 font-semibold truncate">
+              📍 Módulo actual: {currentModInfo.titulo}
+            </span>
+            <button
+              onClick={handleGuiamePagina}
+              className="text-[11px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg shadow-sm transition-all flex items-center gap-1 shrink-0"
+            >
+              <Compass className="w-3.5 h-3.5" /> Guíame en esta página
+            </button>
           </div>
 
           {/* Historial de Mensajes */}
@@ -514,19 +618,19 @@ export default function AvatarWidget() {
             {loading && (
               <div className="flex items-center gap-2 text-xs text-slate-400 bg-white p-2.5 rounded-xl border border-slate-200 w-fit">
                 <Sparkles className="w-4 h-4 animate-spin text-indigo-600" />
-                <span>Pensando respuesta...</span>
+                <span>Analizando módulo...</span>
               </div>
             )}
             <div ref={chatEndRef} />
           </div>
 
           {/* Atajos Rápidos por Rol */}
-          <div className="p-2.5 bg-slate-100 border-t border-slate-200 flex flex-wrap gap-1.5">
+          <div className="p-2 bg-slate-100 border-t border-slate-200 flex flex-wrap gap-1">
             {shortcuts.map((sc, i) => (
               <button
                 key={i}
                 onClick={() => navigate(sc.action)}
-                className="text-[11px] font-semibold bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 px-2.5 py-1 rounded-lg border border-slate-200 transition-colors"
+                className="text-[10px] font-semibold bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 px-2 py-0.5 rounded-lg border border-slate-200 transition-colors"
               >
                 {sc.label}
               </button>
@@ -553,7 +657,7 @@ export default function AvatarWidget() {
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder={isListening ? 'Escuchando tu voz...' : 'Escribe tu duda del ERP...'}
+              placeholder={isListening ? 'Escuchando tu voz...' : `Consulta sobre ${currentModInfo.titulo.split(' ')[1] || 'este módulo'}...`}
               className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
 
