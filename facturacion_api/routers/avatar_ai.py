@@ -45,6 +45,9 @@ def es_consulta_erp(texto: str) -> bool:
     return False
 
 @router.post("/chat", response_model=ChatResponse)
+@router.post("/chat/", response_model=ChatResponse)
+@router.post("", response_model=ChatResponse)
+@router.post("/", response_model=ChatResponse)
 def avatar_chat(req: ChatRequest):
     msg = req.message.strip()
     rol = (req.rol or "usuario").lower()

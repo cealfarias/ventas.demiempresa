@@ -217,7 +217,95 @@ export default function AvatarWidget() {
     }
   };
 
-  // 9. Enviar consulta a la IA (Gemini Backend)
+  // Motor Inteligente Resiliente Client-Side (Fallback en caso de desconexión o retardo de API)
+  const processQueryClientSide = (query, currentRole) => {
+    const msgLower = (query || '').toLowerCase().trim();
+    const r = (currentRole || 'admin').toLowerCase();
+
+    const ERP_KEYWORDS = [
+      "factura", "dte", "caja", "cobro", "pago", "cliente", "proveedor", "bodega",
+      "kardex", "existencia", "producto", "stock", "gasto", "orden", "compra",
+      "cuenta", "cobrar", "pagar", "usuario", "rol", "sistema", "empresa",
+      "hacienda", "emisión", "despacho", "ruta", "inventario", "cierre", "apertura",
+      "financiamiento", "préstamo", "aporte", "impuesto", "nit", "nrc", "iva",
+      "ayuda", "hola", "buenos dias", "buenas tardes", "buenas noches", "gracias",
+      "opciones", "manual", "configuración", "certificación", "token", "sucursal",
+      "inicio", "dashboard", "sesión", "turno", "arqueo"
+    ];
+
+    const isErpQuery = ERP_KEYWORDS.some(kw => msgLower.includes(kw)) || msgLower.split(' ').length <= 3;
+
+    if (!isErpQuery) {
+      return {
+        text: "Soy tu asistente virtual especializado exclusivamente en el sistema de Facturación e Inventarios. Para consultas o soporte en temas externos a la plataforma, disponemos de un servicio de asistencia extendida con costo adicional. ¿En qué puedo ayudarte respecto a tus operaciones de ventas, compras o inventario hoy?",
+        isOffTopic: true
+      };
+    }
+
+    if (msgLower.includes("caja") || msgLower.includes("turno")) {
+      if (r === "cajera") {
+        return {
+          text: "Para registrar tus cobros de hoy, primero valida que el turno de caja esté abierto en el módulo 'Control de Caja'. Si requieres liquidez adicional para gastos o compras, puedes utilizar la función 'Inyectar Capital'.",
+          redirectUrl: "/cajas"
+        };
+      }
+      return {
+        text: "En el módulo 'Control de Caja' puedes auditar el saldo activo, verificar inyecciones de capital, movimientos de compras/ventas y editar o eliminar registros de turno.",
+        redirectUrl: "/cajas"
+      };
+    }
+
+    if (msgLower.includes("factura") || msgLower.includes("dte")) {
+      return {
+        text: "Para emitir un Documento Tributario Electrónico (DTE), dirígete a 'Facturación DTE'. Selecciona el cliente, añade los productos del catálogo (se mostrará la existencia actual en bodega) y presiona 'Emitir Factura'.",
+        redirectUrl: "/facturas"
+      };
+    }
+
+    if (msgLower.includes("bodega") || msgLower.includes("kardex") || msgLower.includes("stock") || msgLower.includes("existencia")) {
+      if (["bodeguero", "admin", "contador"].includes(r)) {
+        return {
+          text: "Puedes auditar las entradas, salidas y movimientos físicos en el 'Libro Kardex' o consultar la disponibilidad en tiempo real en la sección de 'Existencias'.",
+          redirectUrl: "/existencias"
+        };
+      }
+      return {
+        text: "Puedes consultar las existencias de productos en bodega directamente al seleccionar ítems en la facturación o en el catálogo de productos.",
+        redirectUrl: "/productos"
+      };
+    }
+
+    if (msgLower.includes("usuario") || msgLower.includes("rol") || msgLower.includes("permiso")) {
+      if (r === "admin") {
+        return {
+          text: "Como Administrador, puedes registrar nuevos colaboradores y definir sus roles (Contador, Auditor, Bodeguero, Cajera, Compras, Vendedor, Despachador) en la sección 'Gestión de Usuarios'.",
+          redirectUrl: "/usuarios"
+        };
+      }
+      return {
+        text: "La gestión de usuarios y asignación de roles está reservada para el Administrador de la empresa."
+      };
+    }
+
+    if (msgLower.includes("gasto") || msgLower.includes("proveedor") || msgLower.includes("compra")) {
+      return {
+        text: "Puedes gestionar tus proveedores y crear Órdenes de Compra en el módulo 'Compras'. Los gastos operativos del día se registran en 'Gastos Operativos' dentro de Finanzas.",
+        redirectUrl: "/gastos"
+      };
+    }
+
+    if (msgLower.includes("hola") || msgLower.includes("buenos dias") || msgLower.includes("buenas tardes") || msgLower.includes("buenas noches")) {
+      return {
+        text: `¡Hola! Soy tu Avatar Asistente. Tu perfil activo es **${r.toUpperCase()}**. ¿En qué operación del sistema deseas que te guíe?`
+      };
+    }
+
+    return {
+      text: `Entendido. Como asistente de tu rol (${r.toUpperCase()}), puedo ayudarte con Facturación DTE, Inventarios, Cajas, Compras y Gestión de Usuarios. ¿Deseas navegar a algún módulo en específico?`
+    };
+  };
+
+  // 9. Enviar consulta a la IA (Gemini Backend con Fallback Inteligente)
   const handleSendMessage = async (textToSend) => {
     const query = textToSend || inputText;
     if (!query.trim() || loading) return;
@@ -246,12 +334,19 @@ export default function AvatarWidget() {
 
       setMessages((prev) => [...prev, botMsg]);
       setLastInstruction(botReply);
-
       speakText(botReply);
     } catch (err) {
-      console.error(err);
-      const errMsg = { sender: 'bot', text: 'Ocurrió un inconveniente al consultar con el asistente.', isOffTopic: false };
-      setMessages((prev) => [...prev, errMsg]);
+      console.warn('Network or API fallback triggered:', err);
+      const fallback = processQueryClientSide(query, role);
+      const botMsg = {
+        sender: 'bot',
+        text: fallback.text,
+        isOffTopic: fallback.isOffTopic || false,
+        redirectUrl: fallback.redirectUrl
+      };
+      setMessages((prev) => [...prev, botMsg]);
+      setLastInstruction(fallback.text);
+      speakText(fallback.text);
     } finally {
       setLoading(false);
     }
