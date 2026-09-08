@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import engine
 from models import Base
 from routers import productos, clientes, facturas, auth, bodegas, kardex, proveedores, ordenes_compra, cuentas_pagar, cuentas_cobrar, configuracion_dte, dte, despachos, dashboard
-from routers import cajas, gastos
+from routers import cajas, gastos, usuarios, avatar_ai
 import uvicorn
 
 # Inicializar Tablas (Render / Local)
@@ -44,6 +44,8 @@ app.include_router(despachos.router, prefix="/api/v1/logistica")
 app.include_router(dashboard.router, prefix="/api/v1")
 app.include_router(cajas.router, prefix="/api/v1")
 app.include_router(gastos.router, prefix="/api/v1")
+app.include_router(usuarios.router, prefix="/api/v1")
+app.include_router(avatar_ai.router, prefix="/api/v1")
 
 @app.get("/")
 def read_root():

@@ -20,6 +20,8 @@ import Cajas from './pages/Cajas';
 import Gastos from './pages/Gastos';
 import CuentasCobrar from './pages/CuentasCobrar';
 import ConfiguracionDTE from './pages/ConfiguracionDTE';
+import Usuarios from './pages/Usuarios';
+import AvatarWidget from './components/AvatarWidget';
 
 import Dashboard from './pages/Dashboard';
 import Despachos from './pages/Despachos';
@@ -203,6 +205,7 @@ const Layout = ({ children }) => {
           {canSeeConfiguracion && (
             <SidebarSection label="Configuración" expanded={expanded}>
               <SidebarLink to="/configuracion-dte" icon={Settings} label="Configuración DTE" expanded={expanded} />
+              <SidebarLink to="/usuarios" icon={Users} label="Gestión de Usuarios" expanded={expanded} />
             </SidebarSection>
           )}
         </nav>
@@ -236,6 +239,9 @@ const Layout = ({ children }) => {
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
           {children}
         </div>
+
+        {/* Widget del Avatar IA Interactivo */}
+        <AvatarWidget />
       </main>
     </div>
   );
@@ -268,14 +274,15 @@ function App() {
                   <Route path="/proveedores" element={<Proveedores />} />
                   <Route path="/ordenes-compra" element={<OrdenesCompra />} />
                   <Route path="/cuentas-pagar" element={<CuentasPagar />} />
-            <Route path="/cajas" element={<Cajas />} />
-            <Route path="/gastos" element={<Gastos />} />
+                  <Route path="/cajas" element={<Cajas />} />
+                  <Route path="/gastos" element={<Gastos />} />
                   {/* Fase 3 — Ventas */}
                   <Route path="/clientes" element={<Clientes />} />
                   <Route path="/facturas" element={<Facturas />} />
                   <Route path="/cuentas-cobrar" element={<CuentasCobrar />} />
                   {/* Fase 4 — DTE */}
                   <Route path="/configuracion-dte" element={<ConfiguracionDTE />} />
+                  <Route path="/usuarios" element={<Usuarios />} />
                   {/* Fase 5 — Logística */}
                   <Route path="/despachos" element={<Despachos />} />
                 </Routes>
