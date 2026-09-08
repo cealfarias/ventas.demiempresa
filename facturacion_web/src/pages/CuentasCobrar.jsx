@@ -5,6 +5,12 @@ import { api } from '../services/api';
 const empresaId = () => localStorage.getItem('empresa_id') || '';
 const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
 
+const WhatsAppIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.461c-1.847 0-3.556-.492-5.031-1.353l-.36-.211-3.74.981.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c0-5.444 4.43-9.873 9.878-9.873 2.637 0 5.116 1.028 6.98 2.893 1.864 1.865 2.891 4.344 2.89 6.982 0 5.446-4.43 9.875-9.87 9.875m0-18.066c-4.516 0-8.192 3.676-8.192 8.191 0 1.794.577 3.456 1.554 4.814l-.657 2.4 2.457-.644a8.147 8.147 0 004.838 1.557c4.517 0 8.194-3.676 8.194-8.19 0-2.188-.853-4.246-2.404-5.797-1.55-1.551-3.608-2.405-5.79-2.405" />
+  </svg>
+);
+
 export default function CuentasCobrar() {
   const [cuentasRaw, setCuentasRaw] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -22,6 +28,34 @@ export default function CuentasCobrar() {
   const [cuentaActiva, setCuentaActiva] = useState(null);
   const [formPago, setFormPago] = useState({ monto: '', metodo_pago: 'efectivo', referencia: '', notas: '', fecha: '' });
   const [guardando, setGuardando] = useState(false);
+  const [modalAbonoExitoso, setModalAbonoExitoso] = useState(null);
+
+  const enviarWhatsAppEstadoCuenta = (c) => {
+    const lineasFacturas = (c.cuentas_pendientes || []).map(f => {
+      const diasAtraso = f.fecha_vencimiento && new Date(f.fecha_vencimiento) < new Date()
+        ? Math.ceil((new Date() - new Date(f.fecha_vencimiento)) / (1000 * 60 * 60 * 24))
+        : 0;
+      const est = diasAtraso > 0 ? `⚠️ (${diasAtraso} días de atraso)` : '✅ (Al día)';
+      return `• Factura N° ${f.factura_numero || 'S/N'}: ${fmt(f.monto_pendiente)} ${est}`;
+    }).join('\n');
+
+    const text = `Estimado/a *${c.cliente_nombre}*,\nLe compartimos su Estado de Cuenta:\n\n💰 *Saldo Total Pendiente:* ${fmt(c.saldo_pendiente_total)}\n\n📋 *Detalle de Facturas:*\n${lineasFacturas}\n\nAgradecemos su valiosa gestión de pago.`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  const enviarWhatsAppFactura = (clienteNombre, fact) => {
+    const diasAtraso = fact.fecha_vencimiento && new Date(fact.fecha_vencimiento) < new Date()
+      ? Math.ceil((new Date() - new Date(fact.fecha_vencimiento)) / (1000 * 60 * 60 * 24))
+      : 0;
+    const atrasoStr = diasAtraso > 0 ? `⚠️ Días de atraso: ${diasAtraso} días` : '✅ Factura al día';
+    const text = `Estimado/a *${clienteNombre}*,\nLe recordamos el saldo pendiente de la factura *N° ${fact.factura_numero || 'S/N'}*:\n\n💰 *Monto pendiente:* ${fmt(fact.monto_pendiente)}\n📅 *Fecha Vencimiento:* ${fact.fecha_vencimiento ? new Date(fact.fecha_vencimiento).toLocaleDateString() : 'N/A'}\n${atrasoStr}\n\nQuedamos a su disposición para cualquier consulta.`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  const enviarWhatsAppAbono = (info) => {
+    const text = `Hola *${info.clienteNombre}*, confirmamos la recepción de su abono de *${fmt(info.montoAbono)}* para la factura *N° ${info.facturaNumero || 'S/N'}*.\n\n📌 *Saldo pendiente de factura:* ${fmt(info.saldoFactura)}\n📌 *Saldo pendiente total del cliente:* ${fmt(info.saldoTotal)}\n\n¡Muchas gracias por su pago!`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+  };
   
   const cargar = async () => {
     setCargando(true);
@@ -125,8 +159,9 @@ export default function CuentasCobrar() {
   const registrarPago = async () => {
     setGuardando(true);
     try {
+      const montoCents = Math.round(parseFloat(formPago.monto) * 100);
       const payload = {
-        monto: Math.round(parseFloat(formPago.monto) * 100),
+        monto: montoCents,
         metodo_pago: formPago.metodo_pago,
         referencia: formPago.referencia,
         notas: formPago.notas,
@@ -134,8 +169,23 @@ export default function CuentasCobrar() {
         fecha: new Date(formPago.fecha).toISOString()
       };
       await api.post(`/api/v1/facturacion/cuentas-cobrar/${cuentaActiva.id}/pagar?empresa_id=${empresaId()}`, payload);
+      
+      const clienteNombre = cuentaActiva.cliente_nombre || clienteActivo?.cliente_nombre || 'Cliente';
+      const saldoFacturaNuevo = Math.max(0, cuentaActiva.monto_pendiente - montoCents);
+      const saldoTotalClienteActual = clienteActivo ? clienteActivo.saldo_pendiente_total : cuentaActiva.monto_pendiente;
+      const saldoTotalNuevo = Math.max(0, saldoTotalClienteActual - montoCents);
+
+      const infoAbono = {
+        clienteNombre,
+        facturaNumero: cuentaActiva.factura_numero,
+        montoAbono: montoCents,
+        saldoFactura: saldoFacturaNuevo,
+        saldoTotal: saldoTotalNuevo
+      };
+
       setModalAbierto(false);
-      cargar();
+      await cargar();
+      setModalAbonoExitoso(infoAbono);
       window.dispatchEvent(new CustomEvent("avatar:say", { detail: { text: "Cobro registrado correctamente." }}));
     } catch (e) { alert(e.response?.data?.detail || 'Error al registrar cobro'); }
     finally { setGuardando(false); }
@@ -388,7 +438,14 @@ export default function CuentasCobrar() {
                       {c.tiene_mora ? 'EN MORA' : 'AL DÍA'}
                     </span>
                   </td>
-                  <td className="px-5 py-4 flex justify-end gap-2">
+                  <td className="px-5 py-4 flex justify-end gap-2 items-center">
+                    <button
+                      onClick={() => enviarWhatsAppEstadoCuenta(c)}
+                      className="text-xs bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-100 font-medium flex items-center gap-1 border border-emerald-200"
+                      title="enviar por whatsap"
+                    >
+                      <WhatsAppIcon className="w-3.5 h-3.5 fill-emerald-600" /> WhatsApp
+                    </button>
                     <button onClick={() => imprimirEstadoCuentaCliente(c)} className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-medium flex items-center gap-1" title="Imprimir Estado de Cuenta PDF con fechas filtradas">
                       <Printer className="w-3.5 h-3.5" /> PDF
                     </button>
@@ -412,7 +469,16 @@ export default function CuentasCobrar() {
                 <h2 className="text-xl font-bold text-slate-800">Detalles de Facturas</h2>
                 <p className="text-sm text-slate-500 mt-1">Cliente: <span className="font-semibold text-slate-700">{clienteActivo.cliente_nombre}</span></p>
               </div>
-              <button onClick={() => setModalClienteAbierto(false)} className="text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full w-8 h-8 flex items-center justify-center">&times;</button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => enviarWhatsAppEstadoCuenta(clienteActivo)}
+                  className="text-xs bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-100 font-medium flex items-center gap-1 border border-emerald-200"
+                  title="enviar por whatsap"
+                >
+                  <WhatsAppIcon className="w-3.5 h-3.5 fill-emerald-600" /> WhatsApp Estado Cuenta
+                </button>
+                <button onClick={() => setModalClienteAbierto(false)} className="text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full w-8 h-8 flex items-center justify-center">&times;</button>
+              </div>
             </div>
 
             <table className="w-full text-left border-collapse">
@@ -423,7 +489,7 @@ export default function CuentasCobrar() {
                   <th className="px-4 py-3 text-right">Monto Orig.</th>
                   <th className="px-4 py-3 text-right">Pendiente</th>
                   <th className="px-4 py-3 text-center">Estado</th>
-                  <th className="px-4 py-3 text-right"></th>
+                  <th className="px-4 py-3 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -444,8 +510,15 @@ export default function CuentasCobrar() {
                            {esVencida ? 'VENCIDA' : 'VIGENTE'}
                          </span>
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <button onClick={() => abrirPago(fact)} className="text-xs bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-100 font-medium inline-flex items-center gap-1">
+                      <td className="px-4 py-3 text-right flex justify-end gap-1.5">
+                        <button
+                          onClick={() => enviarWhatsAppFactura(clienteActivo.cliente_nombre, fact)}
+                          className="text-xs bg-emerald-50 text-emerald-700 px-2.5 py-1.5 rounded-lg hover:bg-emerald-100 font-medium inline-flex items-center gap-1 border border-emerald-200"
+                          title="enviar por whatsap"
+                        >
+                          <WhatsAppIcon className="w-3.5 h-3.5 fill-emerald-600" />
+                        </button>
+                        <button onClick={() => abrirPago(fact)} className="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 font-medium inline-flex items-center gap-1 shadow-sm">
                           <DollarSign className="w-3.5 h-3.5" /> Aplicar Abono
                         </button>
                       </td>
@@ -493,6 +566,41 @@ export default function CuentasCobrar() {
               <button onClick={() => setModalAbierto(false)} className="flex-1 px-4 py-2.5 border rounded-xl font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
               <button onClick={registrarPago} disabled={guardando || !formPago.monto} className="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-xl font-medium disabled:opacity-50 hover:bg-emerald-700">
                 Confirmar Abono
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmación de Abono con botón WhatsApp (Momento 1) */}
+      {modalAbonoExitoso && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 text-center">
+            <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <DollarSign className="w-6 h-6" />
+            </div>
+            <h2 className="text-xl font-bold text-slate-800 mb-1">¡Abono Registrado!</h2>
+            <p className="text-sm text-slate-500 mb-4">
+              Se ha aplicado un abono de <span className="font-bold text-emerald-600">{fmt(modalAbonoExitoso.montoAbono)}</span> a la factura <span className="font-bold text-slate-700">{modalAbonoExitoso.facturaNumero || 'N/A'}</span>.
+            </p>
+            <div className="bg-slate-50 rounded-xl p-3 mb-6 text-left text-xs space-y-1 border border-slate-200">
+              <p className="text-slate-600"><strong>Cliente:</strong> {modalAbonoExitoso.clienteNombre}</p>
+              <p className="text-slate-600"><strong>Saldo pendiente factura:</strong> {fmt(modalAbonoExitoso.saldoFactura)}</p>
+              <p className="text-slate-600"><strong>Saldo pendiente total:</strong> {fmt(modalAbonoExitoso.saldoTotal)}</p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => enviarWhatsAppAbono(modalAbonoExitoso)}
+                className="w-full py-2.5 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 flex items-center justify-center gap-2 shadow-sm"
+                title="enviar por whatsap"
+              >
+                <WhatsAppIcon className="w-5 h-5 fill-current" /> Notificar Abono por WhatsApp
+              </button>
+              <button
+                onClick={() => setModalAbonoExitoso(null)}
+                className="w-full py-2 bg-slate-100 text-slate-600 rounded-xl font-medium hover:bg-slate-200"
+              >
+                Cerrar
               </button>
             </div>
           </div>
