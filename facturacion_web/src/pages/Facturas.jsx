@@ -65,6 +65,10 @@ const SearchableSelect = ({ value, options, onChange, placeholder = "Buscar...",
 };
 
 const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
+const fmtStock = (stock) => {
+  const n = Number(stock || 0);
+  return Number.isInteger(n) ? n.toString() : n.toFixed(2);
+};
 
 export default function Facturas() {
   
@@ -136,6 +140,17 @@ export default function Facturas() {
       setBodegas(resB.data);
     } catch (e) { console.error(e); }
     finally { setCargando(false); }
+  };
+
+  const cambiarBodega = async (bodegaId) => {
+    setForm(prev => ({ ...prev, bodega_salida_id: bodegaId }));
+    try {
+      const url = bodegaId 
+        ? `/api/v1/facturacion/productos/?empresa_id=${empresaId()}&bodega_id=${bodegaId}`
+        : `/api/v1/facturacion/productos/?empresa_id=${empresaId()}`;
+      const resP = await api.get(url);
+      setProductos(resP.data);
+    } catch (e) { console.error(e); }
   };
 
   useEffect(() => { cargar(); }, []);
@@ -316,7 +331,7 @@ export default function Facturas() {
               </div>
               <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase">Bodega de Salida (Inventario)</label>
-                <select value={form.bodega_salida_id} onChange={e => setForm({...form, bodega_salida_id: e.target.value})} className="w-full mt-1 px-3 py-2 border rounded-xl">
+                <select value={form.bodega_salida_id} onChange={e => cambiarBodega(e.target.value)} className="w-full mt-1 px-3 py-2 border rounded-xl">
                   <option value="">(Sin descontar inventario)</option>
                   {bodegas.map(b => <option key={b.id} value={b.id}>{b.nombre}</option>)}
                 </select>
@@ -375,7 +390,7 @@ export default function Facturas() {
                 <tr key={i} className="border-b border-slate-50">
                   <td className="py-2">
                     <SearchableSelect autoFocus={i === form.items.length - 1} value={it.producto_id}
-                      options={[{value: '', label: 'Seleccionar...'}, ...productos.map(p => ({value: p.id_producto, label: p.nombre}))]}
+                      options={[{value: '', label: 'Seleccionar...'}, ...productos.map(p => ({value: p.id_producto, label: `${p.nombre} (Exist: ${fmtStock(p.stock)})`}))]}
                       onChange={val => actualizarLinea(i, 'producto_id', val)}
                       className="w-full px-2 py-1.5 border rounded-lg"
                     />

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from database import get_db
 from routers.kardex import registrar_movimiento
-from models import Producto, Bodega
+from models import Producto, Bodega, StockBodega
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -29,8 +29,30 @@ class ProductoResponse(ProductoBase):
         from_attributes = True
 
 @router.get("/", response_model=List[ProductoResponse])
-def listar_productos(empresa_id: str, db: Session = Depends(get_db)):
-    return db.query(Producto).filter(Producto.empresa_id == empresa_id, Producto.activo == True).all()
+def listar_productos(empresa_id: str, bodega_id: Optional[int] = None, db: Session = Depends(get_db)):
+    bodega_target = None
+    if bodega_id:
+        bodega_target = db.query(Bodega).filter(Bodega.empresa_id == empresa_id, Bodega.id == bodega_id).first()
+    if not bodega_target:
+        bodega_target = db.query(Bodega).filter(Bodega.empresa_id == empresa_id, Bodega.es_principal == True).first()
+    if not bodega_target:
+        bodega_target = db.query(Bodega).filter(Bodega.empresa_id == empresa_id).first()
+
+    productos = db.query(Producto).filter(Producto.empresa_id == empresa_id, Producto.activo == True).all()
+
+    if bodega_target:
+        stocks_bodega = {
+            sb.producto_id: sb.stock_actual
+            for sb in db.query(StockBodega).filter(
+                StockBodega.empresa_id == empresa_id,
+                StockBodega.bodega_id == bodega_target.id
+            ).all()
+        }
+        for p in productos:
+            if p.id_producto in stocks_bodega:
+                p.stock = stocks_bodega[p.id_producto]
+
+    return productos
 
 @router.post("/", response_model=ProductoResponse, status_code=status.HTTP_201_CREATED)
 def crear_producto(empresa_id: str, producto: ProductoCreate, db: Session = Depends(get_db)):
