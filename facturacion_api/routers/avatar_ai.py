@@ -146,7 +146,18 @@ def avatar_chat(req: ChatRequest):
             is_off_topic=True
         )
 
-    msg_lower = msg.lower()
+    # Si pregunta qué puede hacer / funciones del avatar
+    if "qué puedes hacer" in msg_lower or "que puedes hacer" in msg_lower or "qué haces" in msg_lower or "que haces" in msg_lower or "funciones" in msg_lower or "sirves" in msg_lower:
+        ans = (
+            "🤖 **Funciones de tu Avatar Asistente:**\n\n"
+            "🧭 **Guía por Página**: Te explico paso a paso cómo operar cada uno de los 16 módulos del ERP mediante el botón 'Guíame en esta página'.\n"
+            "🎙️ **Voz Bidireccional**: Escucho tus consultas por micrófono y respondo en voz alta en español.\n"
+            "🔒 **Perfiles por Rol**: Adapto respuestas y atajos a tu rol (Admin, Cajera, Bodeguero, Contador, etc.).\n"
+            "🔇 **Controles de Audio**: Dispones de 'Silencio Total' (Mute), 'Repetir Instrucción' e 'Iniciar desde 0'.\n"
+            "🧾 **Soporte ERP**: Te guío en Facturación DTE, Cajas, Inyección de Capital, Kardex, Existencias, Gastos y Usuarios.\n"
+            "💡 **Enfoque ERP**: Atiendo consultas del sistema (asistencia externa aplica costo adicional)."
+        )
+        return ChatResponse(response=ans)
 
     # Si solicita guía explícita del módulo actual
     if "guia" in msg_lower or "cómo usar" in msg_lower or "esta página" in msg_lower or "esta pantalla" in msg_lower or "ayuda" in msg_lower:

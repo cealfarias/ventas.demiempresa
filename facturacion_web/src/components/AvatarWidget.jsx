@@ -94,34 +94,41 @@ const ROLE_SHORTCUTS = {
     { label: '💼 Turno de Caja', action: '/cajas' },
     { label: '🧾 Factura DTE', action: '/facturas' },
     { label: '📈 Inyectar Capital', action: '/cajas' },
+    { label: '❓ ¿Qué puedes hacer?', action: 'que_haces' },
   ],
   bodeguero: [
     { label: '📦 Existencias', action: '/existencias' },
     { label: '📋 Libro Kardex', action: '/kardex' },
-    { label: '📥 Órdenes de Compra', action: '/ordenes-compra' },
+    { label: '📥 Compras', action: '/ordenes-compra' },
+    { label: '❓ ¿Qué puedes hacer?', action: 'que_haces' },
   ],
   contador: [
     { label: '💳 Cuentas por Cobrar', action: '/cuentas-cobrar' },
     { label: '📄 Cuentas por Pagar', action: '/cuentas-pagar' },
     { label: '💵 Gastos Operativos', action: '/gastos' },
+    { label: '❓ ¿Qué puedes hacer?', action: 'que_haces' },
   ],
   encargado_compras: [
     { label: '🛒 Orden de Compra', action: '/ordenes-compra' },
     { label: '🚚 Proveedores', action: '/proveedores' },
     { label: '📄 Cuentas por Pagar', action: '/cuentas-pagar' },
+    { label: '❓ ¿Qué puedes hacer?', action: 'que_haces' },
   ],
   vendedor: [
     { label: '👥 Clientes', action: '/clientes' },
     { label: '📦 Existencias', action: '/existencias' },
     { label: '🧾 Facturación', action: '/facturas' },
+    { label: '❓ ¿Qué puedes hacer?', action: 'que_haces' },
   ],
   despachador: [
     { label: '🚚 Rutas y Entregas', action: '/despachos' },
+    { label: '❓ ¿Qué puedes hacer?', action: 'que_haces' },
   ],
   admin: [
     { label: '👥 Usuarios & Roles', action: '/usuarios' },
     { label: '⚙️ Configuración DTE', action: '/configuracion-dte' },
     { label: '📊 Dashboard', action: '/' },
+    { label: '❓ ¿Qué puedes hacer?', action: 'que_haces' },
   ],
 };
 
@@ -169,8 +176,18 @@ export default function AvatarWidget() {
     }
   };
 
-  // 3. Inicializar mensaje de bienvenida según horario y módulo actual
-  const initGreeting = () => {
+  // 3. Inicializar saludo con memoria de páginas visitadas (de-duplicación inteligente)
+  const initGreeting = (force = false) => {
+    const visitedKey = `avatar_visited_${currentPath}`;
+    const pageAlreadyVisited = sessionStorage.getItem(visitedKey) === 'true';
+
+    // Si la página ya fue visitada en esta sesión y no es un reset explícito ("Iniciar desde 0"), omitir el saludo repetitivo
+    if (pageAlreadyVisited && !force) {
+      return;
+    }
+
+    sessionStorage.setItem(visitedKey, 'true');
+
     const isFirstTime = localStorage.getItem('avatar_facturacion_greeted') !== 'true';
     const hour = new Date().getHours();
     const greetingTime = hour < 12 ? 'Buenos días' : (hour < 18 ? 'Buenas tardes' : 'Buenas noches');
@@ -178,7 +195,7 @@ export default function AvatarWidget() {
     const modInfo = MODULOS_KNOWLEDGE[currentPath] || MODULOS_KNOWLEDGE["/dashboard"];
     const roleUpper = role.toUpperCase();
 
-    const initialText = `¡${greetingTime}! Soy tu Avatar Asistente. Tu perfil es **${roleUpper}**.\nTe encuentras en **${modInfo.titulo}**.\n\nPresiona **'🧭 Guíame en esta página'** si deseas ver el paso a paso de este módulo.`;
+    const initialText = `¡${greetingTime}! Soy tu Avatar Asistente. Tu perfil es **${roleUpper}**.\nTe encuentras en **${modInfo.titulo}**.\n\nPresiona **'🧭 Guíame en esta página'** para un recorrido de este módulo.`;
 
     const greetingMsg = {
       sender: 'bot',
@@ -186,9 +203,14 @@ export default function AvatarWidget() {
       isOffTopic: false
     };
 
-    setMessages([greetingMsg]);
+    setMessages((prev) => {
+      const exists = prev.some((m) => m.text === initialText);
+      if (exists) return prev;
+      return [...prev, greetingMsg];
+    });
+
     setLastInstruction(initialText);
-    if (!isMuted) speakText(initialText);
+    if (!isMuted && !pageAlreadyVisited) speakText(initialText);
 
     if (isFirstTime) {
       localStorage.setItem('avatar_facturacion_greeted', 'true');
@@ -244,7 +266,7 @@ export default function AvatarWidget() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isOpen]);
 
-  // 5. Función de Guía Paso a Paso de la Página Actual
+  // 5. Guía Paso a Paso de la Página Actual
   const handleGuiamePagina = () => {
     const modInfo = MODULOS_KNOWLEDGE[currentPath] || MODULOS_KNOWLEDGE["/dashboard"];
     const guideText = `🧭 **Guía Paso a Paso: ${modInfo.titulo}**\n\n${modInfo.guia}\n\n💡 **Pregunta Frecuente:** ${modInfo.faqs}`;
@@ -269,10 +291,16 @@ export default function AvatarWidget() {
     }
   };
 
-  // 7. Iniciar desde 0
+  // 7. Iniciar desde 0 (Limpia marcas de visita y reinicia sesión)
   const handleResetSession = () => {
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-    initGreeting();
+    Object.keys(sessionStorage).forEach((key) => {
+      if (key.startsWith('avatar_visited_')) {
+        sessionStorage.removeItem(key);
+      }
+    });
+    setMessages([]);
+    initGreeting(true);
   };
 
   // 8. Repetir últimas instrucciones
@@ -333,7 +361,7 @@ export default function AvatarWidget() {
       "financiamiento", "préstamo", "aporte", "impuesto", "nit", "nrc", "iva",
       "ayuda", "hola", "buenos dias", "buenas tardes", "buenas noches", "gracias",
       "opciones", "manual", "configuración", "certificación", "token", "sucursal",
-      "inicio", "dashboard", "sesión", "turno", "arqueo", "guia", "como", "usar"
+      "inicio", "dashboard", "sesión", "turno", "arqueo", "guia", "como", "usar", "que haces", "sirves", "funciones"
     ];
 
     const isErpQuery = ERP_KEYWORDS.some(kw => msgLower.includes(kw)) || msgLower.split(' ').length <= 3;
@@ -342,6 +370,18 @@ export default function AvatarWidget() {
       return {
         text: "Soy tu asistente virtual especializado exclusivamente en el sistema de Facturación e Inventarios. Para consultas o soporte en temas externos a la plataforma, disponemos de un servicio de asistencia extendida con costo adicional. ¿En qué puedo ayudarte respecto a tus operaciones de ventas, compras o inventario hoy?",
         isOffTopic: true
+      };
+    }
+
+    if (msgLower.includes("qué puedes hacer") || msgLower.includes("que puedes hacer") || msgLower.includes("qué haces") || msgLower.includes("que haces") || msgLower.includes("funciones") || msgLower.includes("sirves")) {
+      return {
+        text: "🤖 **Funciones de tu Avatar Asistente:**\n\n" +
+              "🧭 **Guía por Página**: Te explico paso a paso cómo operar cada uno de los 16 módulos del ERP mediante el botón 'Guíame en esta página'.\n" +
+              "🎙️ **Voz Bidireccional**: Escucho tus consultas por micrófono y respondo en voz alta en español.\n" +
+              "🔒 **Perfiles por Rol**: Adapto respuestas y atajos a tu rol (Admin, Cajera, Bodeguero, Contador, etc.).\n" +
+              "🔇 **Controles de Audio**: Dispones de 'Silencio Total' (Mute), 'Repetir Instrucción' e 'Iniciar desde 0'.\n" +
+              "🧾 **Soporte ERP**: Te guío en Facturación DTE, Cajas, Inyección de Capital, Kardex, Existencias, Gastos y Usuarios.\n" +
+              "💡 **Enfoque ERP**: Atiendo consultas del sistema (asistencia externa aplica costo adicional)."
       };
     }
 
@@ -399,6 +439,15 @@ export default function AvatarWidget() {
   const handleSendMessage = async (textToSend) => {
     const query = textToSend || inputText;
     if (!query.trim() || loading) return;
+
+    if (query === 'que_haces') {
+      const fallback = processQueryClientSide('qué puedes hacer', role);
+      const botMsg = { sender: 'bot', text: fallback.text, isOffTopic: false };
+      setMessages((prev) => [...prev, botMsg]);
+      setLastInstruction(fallback.text);
+      speakText(fallback.text);
+      return;
+    }
 
     const userMsg = { sender: 'user', text: query };
     setMessages((prev) => [...prev, userMsg]);
@@ -629,7 +678,13 @@ export default function AvatarWidget() {
             {shortcuts.map((sc, i) => (
               <button
                 key={i}
-                onClick={() => navigate(sc.action)}
+                onClick={() => {
+                  if (sc.action === 'que_haces') {
+                    handleSendMessage('que_haces');
+                  } else {
+                    navigate(sc.action);
+                  }
+                }}
                 className="text-[10px] font-semibold bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 px-2 py-0.5 rounded-lg border border-slate-200 transition-colors"
               >
                 {sc.label}
