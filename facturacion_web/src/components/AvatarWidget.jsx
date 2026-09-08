@@ -176,17 +176,16 @@ export default function AvatarWidget() {
     }
   };
 
-  // 3. Inicializar saludo con memoria de páginas visitadas (de-duplicación inteligente)
+  // 3. Inicializar saludo (UN SOLO SALUDO POR SESIÓN - Cero saludos al cambiar de página)
   const initGreeting = (force = false) => {
-    const visitedKey = `avatar_visited_${currentPath}`;
-    const pageAlreadyVisited = sessionStorage.getItem(visitedKey) === 'true';
+    const sessionGreeted = sessionStorage.getItem('avatar_session_greeted') === 'true';
 
-    // Si la página ya fue visitada en esta sesión y no es un reset explícito ("Iniciar desde 0"), omitir el saludo repetitivo
-    if (pageAlreadyVisited && !force) {
+    // Si ya saludó en la sesión activa y no es un reset explícito ("Iniciar desde 0"), OMITIR EL SALUDO
+    if (sessionGreeted && !force) {
       return;
     }
 
-    sessionStorage.setItem(visitedKey, 'true');
+    sessionStorage.setItem('avatar_session_greeted', 'true');
 
     const isFirstTime = localStorage.getItem('avatar_facturacion_greeted') !== 'true';
     const hour = new Date().getHours();
@@ -195,7 +194,7 @@ export default function AvatarWidget() {
     const modInfo = MODULOS_KNOWLEDGE[currentPath] || MODULOS_KNOWLEDGE["/dashboard"];
     const roleUpper = role.toUpperCase();
 
-    const initialText = `¡${greetingTime}! Soy tu Avatar Asistente. Tu perfil es **${roleUpper}**.\nTe encuentras en **${modInfo.titulo}**.\n\nPresiona **'🧭 Guíame en esta página'** para un recorrido de este módulo.`;
+    const initialText = `¡${greetingTime}! Soy tu Avatar Asistente. Tu perfil es **${roleUpper}**.\nTe encuentras en **${modInfo.titulo}**.\n\nPresiona **'🧭 Guíame en esta página'** si deseas ver el paso a paso de este módulo.`;
 
     const greetingMsg = {
       sender: 'bot',
@@ -210,7 +209,7 @@ export default function AvatarWidget() {
     });
 
     setLastInstruction(initialText);
-    if (!isMuted && !pageAlreadyVisited) speakText(initialText);
+    if (!isMuted && !sessionGreeted) speakText(initialText);
 
     if (isFirstTime) {
       localStorage.setItem('avatar_facturacion_greeted', 'true');
@@ -230,11 +229,12 @@ export default function AvatarWidget() {
     }
   };
 
+  // Solo saludar al cargar por primera vez la sesión en el navegador
   useEffect(() => {
     initGreeting();
-  }, [role, currentPath]);
+  }, []);
 
-  // 4. Escuchar eventos globales 'avatar:say' emitidos por cualquier vista
+  // 4. Escuchar eventos globales 'avatar:say' emitidos por la app
   useEffect(() => {
     const handleAvatarSay = (e) => {
       const { text, options } = e.detail || {};
@@ -291,14 +291,10 @@ export default function AvatarWidget() {
     }
   };
 
-  // 7. Iniciar desde 0 (Limpia marcas de visita y reinicia sesión)
+  // 7. Iniciar desde 0 (Limpia marcas de sesión y saluda de nuevo)
   const handleResetSession = () => {
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-    Object.keys(sessionStorage).forEach((key) => {
-      if (key.startsWith('avatar_visited_')) {
-        sessionStorage.removeItem(key);
-      }
-    });
+    sessionStorage.removeItem('avatar_session_greeted');
     setMessages([]);
     initGreeting(true);
   };
@@ -354,7 +350,7 @@ export default function AvatarWidget() {
     const r = (currentRole || 'admin').toLowerCase();
 
     const ERP_KEYWORDS = [
-      "factura", "dte", "caja", "cobro", "pago", "cliente", "proveedor", "bodega",
+      "factura", "dte", "caja", "turno", "cobro", "pago", "cliente", "proveedor", "bodega",
       "kardex", "existencia", "producto", "stock", "gasto", "orden", "compra",
       "cuenta", "cobrar", "pagar", "usuario", "rol", "sistema", "empresa",
       "hacienda", "emisión", "despacho", "ruta", "inventario", "cierre", "apertura",
