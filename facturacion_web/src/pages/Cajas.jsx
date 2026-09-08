@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { api } from "../services/api";
-import { Wallet, Plus, Play, Square, RefreshCcw, Printer, History, DollarSign, TrendingUp, X } from "lucide-react";
+import { Wallet, Plus, Play, Square, RefreshCcw, Printer, History, DollarSign, TrendingUp, X, Pencil, Trash2 } from "lucide-react";
 
 const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
-const parseCents = (val) => Math.round(val * 100);
 
 export default function Cajas() {
   const [cajas, setCajas] = useState([]);
@@ -28,6 +27,11 @@ export default function Cajas() {
     notas: ""
   });
   const [guardandoInyeccion, setGuardandoInyeccion] = useState(false);
+
+  const [showEditarModal, setShowEditarModal] = useState(false);
+  const [editingMovimiento, setEditingMovimiento] = useState(null);
+  const [editarForm, setEditarForm] = useState({ monto: "", concepto: "", metodo_pago: "efectivo" });
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
 
   const empresaId = localStorage.getItem("empresa_id");
   const usuarioId = 1; // Simplificacion temporal
@@ -137,6 +141,56 @@ export default function Cajas() {
     }
   };
 
+  const abrirEditarMovimiento = (m) => {
+    setEditingMovimiento(m);
+    setEditarForm({
+      monto: (m.monto / 100).toFixed(2),
+      concepto: m.concepto,
+      metodo_pago: m.metodo_pago || "efectivo"
+    });
+    setShowEditarModal(true);
+  };
+
+  const guardarEdicionMovimiento = async () => {
+    if (!editingMovimiento) return;
+    if (!editarForm.monto || parseFloat(editarForm.monto) <= 0) {
+      alert("Ingrese un monto válido mayor a 0");
+      return;
+    }
+    if (!editarForm.concepto.trim()) {
+      alert("Ingrese un concepto válido");
+      return;
+    }
+
+    setGuardandoEdicion(true);
+    try {
+      await api.put(`/api/v1/cajas/movimientos/${editingMovimiento.id}?empresa_id=${empresaId}`, {
+        monto: parseFloat(editarForm.monto),
+        concepto: editarForm.concepto.trim(),
+        metodo_pago: editarForm.metodo_pago
+      });
+      setShowEditarModal(false);
+      setEditingMovimiento(null);
+      cargarSesion();
+      window.dispatchEvent(new CustomEvent("avatar:say", { detail: { text: "Movimiento actualizado correctamente." }}));
+    } catch (e) {
+      alert(e.response?.data?.detail || "Error al actualizar movimiento");
+    } finally {
+      setGuardandoEdicion(false);
+    }
+  };
+
+  const eliminarMovimiento = async (movId) => {
+    if (!window.confirm("¿Está seguro de eliminar este movimiento de caja? El saldo del turno se actualizará de inmediato.")) return;
+    try {
+      await api.delete(`/api/v1/cajas/movimientos/${movId}?empresa_id=${empresaId}`);
+      cargarSesion();
+      window.dispatchEvent(new CustomEvent("avatar:say", { detail: { text: "Movimiento eliminado exitosamente." }}));
+    } catch (e) {
+      alert(e.response?.data?.detail || "Error al eliminar movimiento");
+    }
+  };
+
   const crearCaja = async () => {
     const nombre = prompt("Nombre de la nueva caja (Ej: Caja Principal)");
     if (!nombre) return;
@@ -146,6 +200,32 @@ export default function Cajas() {
     } catch (e) {
       alert("Error al crear");
     }
+  };
+
+  const formatConcepto = (m) => {
+    const text = m.concepto || "";
+    let badge = { label: "MOVIMIENTO", color: "bg-slate-100 text-slate-700 border-slate-200" };
+
+    if (m.referencia_tipo === "financiamiento" || text.includes("Inyección") || text.includes("Financiamiento")) {
+      badge = { label: "FINANCIAMIENTO", color: "bg-purple-100 text-purple-700 border-purple-200" };
+    } else if (text.includes("FACTURA") || text.includes("Venta")) {
+      badge = { label: "VENTA", color: "bg-emerald-100 text-emerald-700 border-emerald-200" };
+    } else if (text.includes("OC-") || text.includes("Compra")) {
+      badge = { label: "COMPRA", color: "bg-amber-100 text-amber-700 border-amber-200" };
+    } else if (text.includes("Gasto")) {
+      badge = { label: "GASTO", color: "bg-rose-100 text-rose-700 border-rose-200" };
+    }
+
+    return (
+      <div className="flex flex-col gap-1 py-0.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border uppercase shrink-0 ${badge.color}`}>
+            {badge.label}
+          </span>
+          <span className="font-semibold text-slate-800 text-sm">{text}</span>
+        </div>
+      </div>
+    );
   };
   
   const imprimirArqueo = (sesion) => {
@@ -209,14 +289,14 @@ export default function Cajas() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto pb-24">
-      <div className="flex justify-between items-end mb-8">
+      <div className="flex justify-between items-end mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <Wallet className="w-6 h-6 text-emerald-600" /> Control de Caja
           </h1>
           <p className="text-sm text-slate-500 mt-1">Gestión de turnos y flujo de efectivo</p>
         </div>
-        <button onClick={crearCaja} className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 flex items-center gap-2 text-sm">
+        <button onClick={crearCaja} className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-medium hover:bg-emerald-700 flex items-center gap-2 text-sm shadow-sm transition-all">
           <Plus className="w-4 h-4" /> Nueva Caja
         </button>
       </div>
@@ -224,98 +304,155 @@ export default function Cajas() {
       <div className="flex gap-4 mb-6 border-b border-slate-200">
         <button 
           onClick={() => setActiveTab("actual")} 
-          className={`pb-2 px-2 font-medium ${activeTab === 'actual' ? 'text-emerald-600 border-b-2 border-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}>
+          className={`pb-2.5 px-3 font-semibold text-sm transition-colors ${activeTab === 'actual' ? 'text-emerald-600 border-b-2 border-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}>
           Turno Actual
         </button>
         <button 
           onClick={() => setActiveTab("historial")} 
-          className={`pb-2 px-2 font-medium flex items-center gap-1 ${activeTab === 'historial' ? 'text-emerald-600 border-b-2 border-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}>
+          className={`pb-2.5 px-3 font-semibold text-sm flex items-center gap-1.5 transition-colors ${activeTab === 'historial' ? 'text-emerald-600 border-b-2 border-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}>
           <History className="w-4 h-4" /> Historial de Turnos
         </button>
       </div>
 
       {activeTab === "actual" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-1 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-            <h3 className="font-bold text-slate-800 mb-4 border-b pb-2">Cajas Disponibles</h3>
-            {cajas.length === 0 ? <p className="text-slate-400 text-sm">No hay cajas creadas</p> : cajas.map(c => (
-              <div key={c.id} className="flex justify-between items-center p-3 hover:bg-slate-50 border-b border-slate-100 last:border-0">
-                <div>
-                  <p className="font-medium text-slate-700">{c.nombre}</p>
-                  {c.tiene_sesion_activa && <p className="text-xs text-emerald-600">En uso por {c.usuario_sesion_activa}</p>}
-                </div>
-                {!sesionActiva && !c.tiene_sesion_activa && (
-                  <button onClick={() => abrirCaja(c.id)} className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-medium flex items-center gap-1">
-                    <Play className="w-3 h-3" /> Abrir Turno
-                  </button>
-                )}
-              </div>
-            ))}
+        <div className="space-y-6">
+          {/* Cajas Registradas - Barra Compacta Superior */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+            <div className="flex justify-between items-center mb-2.5 pb-2 border-b border-slate-100">
+              <h3 className="font-bold text-slate-700 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                <Wallet className="w-4 h-4 text-emerald-600" /> Cajas Registradas en la Sucursal
+              </h3>
+            </div>
+            <div className="flex flex-wrap gap-2.5">
+              {cajas.length === 0 ? (
+                <p className="text-slate-400 text-xs italic">No hay cajas creadas</p>
+              ) : (
+                cajas.map(c => (
+                  <div key={c.id} className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl text-xs">
+                    <div>
+                      <span className="font-bold text-slate-800">{c.nombre}</span>
+                      {c.tiene_sesion_activa && <span className="ml-2 text-[10px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded-md">En Uso ({c.usuario_sesion_activa})</span>}
+                    </div>
+                    {!sesionActiva && !c.tiene_sesion_activa && (
+                      <button onClick={() => abrirCaja(c.id)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-2.5 py-1 rounded-lg text-xs flex items-center gap-1 transition-colors">
+                        <Play className="w-3 h-3" /> Abrir
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
-          <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          {/* Panel Principal a Ancho Completo (100%) */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
             {sesionActiva ? (
               <div>
-                <div className="flex justify-between items-start mb-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 border-b border-slate-100 pb-4">
                   <div>
-                    <h3 className="font-bold text-slate-800 text-xl">{sesionActiva.caja_nombre}</h3>
-                    <p className="text-sm text-emerald-600 font-medium">Turno Abierto</p>
+                    <h3 className="font-bold text-slate-800 text-2xl flex items-center gap-2">
+                      {sesionActiva.caja_nombre}
+                      <span className="text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-bold">Turno Abierto</span>
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1">Apertura: {new Date(sesionActiva.fecha_apertura).toLocaleString()}</p>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => setShowInyeccionModal(true)} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 flex items-center gap-2 text-sm shadow-sm">
+                    <button onClick={() => setShowInyeccionModal(true)} className="bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-indigo-700 flex items-center gap-2 text-sm shadow-md shadow-indigo-500/20 transition-all">
                       <TrendingUp className="w-4 h-4" /> Inyectar Capital
                     </button>
-                    <button onClick={() => setShowArqueoModal(true)} className="bg-red-50 text-red-600 px-4 py-2 rounded-lg font-medium hover:bg-red-100 flex items-center gap-2 text-sm">
+                    <button onClick={() => setShowArqueoModal(true)} className="bg-red-50 border border-red-200 text-red-600 px-4 py-2.5 rounded-xl font-semibold hover:bg-red-100 flex items-center gap-2 text-sm transition-all">
                       <Square className="w-4 h-4" /> Cerrar Turno
                     </button>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    <p className="text-xs text-slate-500 uppercase font-semibold">Inicial (Efectivo)</p>
-                    <p className="text-lg font-bold text-slate-700">{fmt(sesionActiva.saldo_inicial)}</p>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+                    <p className="text-xs text-slate-500 uppercase font-semibold">Fondo Inicial (Efectivo)</p>
+                    <p className="text-xl font-bold text-slate-700 mt-1">{fmt(sesionActiva.saldo_inicial)}</p>
                   </div>
-                  <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-                    <p className="text-xs text-emerald-700 uppercase font-semibold">Efectivo Total</p>
-                    <p className="text-xl font-bold text-emerald-700">{fmt(sesionActiva.total_efectivo)}</p>
+                  <div className="bg-emerald-50/70 p-4 rounded-2xl border border-emerald-200/70">
+                    <p className="text-xs text-emerald-700 uppercase font-semibold">Efectivo Total en Caja</p>
+                    <p className="text-2xl font-bold text-emerald-700 mt-1">{fmt(sesionActiva.total_efectivo)}</p>
                   </div>
-                  <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-                    <p className="text-xs text-indigo-700 uppercase font-semibold">Transferencias</p>
-                    <p className="text-xl font-bold text-indigo-700">{fmt(sesionActiva.total_transferencia)}</p>
+                  <div className="bg-indigo-50/70 p-4 rounded-2xl border border-indigo-200/70">
+                    <p className="text-xs text-indigo-700 uppercase font-semibold">Total Transferencias</p>
+                    <p className="text-2xl font-bold text-indigo-700 mt-1">{fmt(sesionActiva.total_transferencia)}</p>
                   </div>
-                  <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
-                    <p className="text-xs text-amber-700 uppercase font-semibold">Tarjetas</p>
-                    <p className="text-xl font-bold text-amber-700">{fmt(sesionActiva.total_tarjeta)}</p>
+                  <div className="bg-amber-50/70 p-4 rounded-2xl border border-amber-200/70">
+                    <p className="text-xs text-amber-700 uppercase font-semibold">Total Tarjetas</p>
+                    <p className="text-2xl font-bold text-amber-700 mt-1">{fmt(sesionActiva.total_tarjeta)}</p>
                   </div>
                 </div>
                 
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mt-6">
                   <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <h3 className="font-bold text-slate-800">Movimientos del Turno</h3>
-                    <button onClick={cargarSesion} className="text-slate-400 hover:text-indigo-600"><RefreshCcw className="w-4 h-4" /></button>
+                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                      Movimientos del Turno
+                      <span className="text-xs font-semibold text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full">{movimientos.length}</span>
+                    </h3>
+                    <button onClick={cargarSesion} className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-200 transition-colors" title="Actualizar">
+                      <RefreshCcw className="w-4 h-4" />
+                    </button>
                   </div>
-                  <div style={{maxHeight: '300px', overflowY: 'auto'}}>
+                  <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase">
-                          <th className="px-6 py-3">Fecha</th>
-                          <th className="px-6 py-3">Concepto</th>
-                          <th className="px-6 py-3">Método</th>
-                          <th className="px-6 py-3 text-right">Ingreso</th>
-                          <th className="px-6 py-3 text-right">Egreso</th>
+                        <tr className="border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase bg-slate-50">
+                          <th className="px-5 py-3.5 w-24">Hora</th>
+                          <th className="px-5 py-3.5">Concepto / Transacción</th>
+                          <th className="px-5 py-3.5 w-28">Método</th>
+                          <th className="px-5 py-3.5 w-32 text-right">Ingreso</th>
+                          <th className="px-5 py-3.5 w-32 text-right">Egreso</th>
+                          <th className="px-5 py-3.5 w-24 text-right">Acciones</th>
                         </tr>
                       </thead>
-                      <tbody>
-                        {movimientos.map(m => (
-                          <tr key={m.id} className="border-b border-slate-50 hover:bg-slate-50">
-                            <td className="px-6 py-3 text-sm text-slate-600">{new Date(m.fecha).toLocaleTimeString()}</td>
-                            <td className="px-6 py-3 text-sm font-medium text-slate-700">{m.concepto}</td>
-                            <td className="px-6 py-3 text-sm text-slate-500 capitalize">{m.metodo_pago}</td>
-                            <td className="px-6 py-3 text-sm font-bold text-emerald-600 text-right">{m.tipo === "ingreso" ? fmt(m.monto) : ""}</td>
-                            <td className="px-6 py-3 text-sm font-bold text-red-500 text-right">{m.tipo === "egreso" ? fmt(m.monto) : ""}</td>
+                      <tbody className="divide-y divide-slate-100">
+                        {movimientos.length === 0 ? (
+                          <tr>
+                            <td colSpan="6" className="text-center py-10 text-slate-400 text-sm">
+                              No hay movimientos registrados en este turno.
+                            </td>
                           </tr>
-                        ))}
+                        ) : (
+                          movimientos.map(m => (
+                            <tr key={m.id} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="px-5 py-3.5 text-xs text-slate-500 font-medium whitespace-nowrap">
+                                {new Date(m.fecha).toLocaleTimeString()}
+                              </td>
+                              <td className="px-5 py-3.5">
+                                {formatConcepto(m)}
+                              </td>
+                              <td className="px-5 py-3.5 text-xs text-slate-600 font-semibold capitalize whitespace-nowrap">
+                                {m.metodo_pago}
+                              </td>
+                              <td className="px-5 py-3.5 text-sm font-bold text-emerald-600 text-right whitespace-nowrap">
+                                {m.tipo === "ingreso" ? fmt(m.monto) : ""}
+                              </td>
+                              <td className="px-5 py-3.5 text-sm font-bold text-red-500 text-right whitespace-nowrap">
+                                {m.tipo === "egreso" ? fmt(m.monto) : ""}
+                              </td>
+                              <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                                <div className="flex justify-end gap-1">
+                                  <button 
+                                    onClick={() => abrirEditarMovimiento(m)} 
+                                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" 
+                                    title="Editar Movimiento"
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </button>
+                                  <button 
+                                    onClick={() => eliminarMovimiento(m.id)} 
+                                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" 
+                                    title="Eliminar Movimiento"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -323,9 +460,9 @@ export default function Cajas() {
               </div>
             ) : (
               <div className="text-center py-20">
-                <Wallet className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                <p className="text-slate-500 font-medium">No tienes un turno de caja abierto.</p>
-                <p className="text-slate-400 text-sm mt-1">Abre una caja en el panel lateral para empezar a cobrar.</p>
+                <Wallet className="w-12 h-12 text-slate-300 mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-bold text-slate-700">No hay un turno de caja abierto</h3>
+                <p className="text-slate-500 text-sm mt-1">Selecciona una caja registrada arriba para abrir turno e iniciar operaciones.</p>
               </div>
             )}
           </div>
@@ -335,61 +472,64 @@ export default function Cajas() {
       {activeTab === "historial" && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
           <h3 className="font-bold text-slate-800 mb-4 border-b pb-2">Historial de Turnos Cerrados</h3>
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase">
-                <th className="px-4 py-3">Caja</th>
-                <th className="px-4 py-3">Usuario</th>
-                <th className="px-4 py-3">Apertura</th>
-                <th className="px-4 py-3">Cierre</th>
-                <th className="px-4 py-3 text-right">Total Sistema</th>
-                <th className="px-4 py-3 text-right">Diferencia</th>
-                <th className="px-4 py-3 text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {historial.length === 0 ? (
-                <tr><td colSpan="7" className="text-center py-8 text-slate-400">No hay turnos cerrados</td></tr>
-              ) : (
-                historial.map(h => (
-                  <tr key={h.sesion_id} className="border-b border-slate-50 hover:bg-slate-50">
-                    <td className="px-4 py-3 text-sm font-medium text-slate-700">{h.caja_nombre}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{h.usuario}</td>
-                    <td className="px-4 py-3 text-sm text-slate-500">{new Date(h.fecha_apertura).toLocaleString()}</td>
-                    <td className="px-4 py-3 text-sm text-slate-500">{new Date(h.fecha_cierre).toLocaleString()}</td>
-                    <td className="px-4 py-3 text-sm font-bold text-slate-700 text-right">{fmt(h.saldo_calculado)}</td>
-                    <td className={`px-4 py-3 text-sm font-bold text-right ${h.diferencia < 0 ? 'text-red-500' : h.diferencia > 0 ? 'text-emerald-500' : 'text-slate-500'}`}>
-                      {fmt(h.diferencia)}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <button onClick={() => imprimirArqueo(h)} className="text-indigo-600 hover:text-indigo-800">
-                        <Printer className="w-4 h-4 mx-auto" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase bg-slate-50">
+                  <th className="px-4 py-3">Caja</th>
+                  <th className="px-4 py-3">Usuario</th>
+                  <th className="px-4 py-3">Apertura</th>
+                  <th className="px-4 py-3">Cierre</th>
+                  <th className="px-4 py-3 text-right">Total Sistema</th>
+                  <th className="px-4 py-3 text-right">Diferencia</th>
+                  <th className="px-4 py-3 text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {historial.length === 0 ? (
+                  <tr><td colSpan="7" className="text-center py-8 text-slate-400">No hay turnos cerrados</td></tr>
+                ) : (
+                  historial.map(h => (
+                    <tr key={h.sesion_id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-3 text-sm font-medium text-slate-700">{h.caja_nombre}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{h.usuario}</td>
+                      <td className="px-4 py-3 text-sm text-slate-500">{new Date(h.fecha_apertura).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-sm text-slate-500">{new Date(h.fecha_cierre).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-sm font-bold text-slate-700 text-right">{fmt(h.saldo_calculado)}</td>
+                      <td className={`px-4 py-3 text-sm font-bold text-right ${h.diferencia < 0 ? 'text-red-500' : h.diferencia > 0 ? 'text-emerald-500' : 'text-slate-500'}`}>
+                        {fmt(h.diferencia)}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <button onClick={() => imprimirArqueo(h)} className="text-indigo-600 hover:text-indigo-800 p-1">
+                          <Printer className="w-4 h-4 mx-auto" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
+      {/* Modal Arqueo */}
       {showArqueoModal && sesionActiva && (
-        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex justify-between items-center mb-6 border-b pb-3">
               <h2 className="text-xl font-bold text-slate-800">Arqueo de Caja - Cierre de Turno</h2>
-              <button onClick={() => setShowArqueoModal(false)} className="text-slate-400 hover:text-slate-600">&times;</button>
+              <button onClick={() => setShowArqueoModal(false)} className="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
                 <h3 className="font-semibold text-emerald-700 mb-3 border-b pb-1">Billetes</h3>
                 <div className="space-y-2">
                   {['100', '50', '20', '10', '5', '1'].map(b => (
                     <div key={`b${b}`} className="flex items-center justify-between">
                       <span className="text-sm font-medium text-slate-600">Billete ${b}</span>
-                      <input type="number" min="0" className="border border-slate-200 rounded px-2 py-1 w-24 text-right"
+                      <input type="number" min="0" className="border border-slate-200 rounded-xl px-2 py-1 w-24 text-right text-sm"
                         value={arqueoData[`b${b}`] || ''} 
                         onChange={(e) => setArqueoData({...arqueoData, [`b${b}`]: parseInt(e.target.value) || 0})}
                       />
@@ -403,7 +543,7 @@ export default function Cajas() {
                   {[ {l: '$1', k: 'm1'}, {l: '$0.25', k: 'm025'}, {l: '$0.10', k: 'm010'}, {l: '$0.05', k: 'm005'}, {l: '$0.01', k: 'm001'} ].map(m => (
                     <div key={m.k} className="flex items-center justify-between">
                       <span className="text-sm font-medium text-slate-600">Moneda {m.l}</span>
-                      <input type="number" min="0" className="border border-slate-200 rounded px-2 py-1 w-24 text-right"
+                      <input type="number" min="0" className="border border-slate-200 rounded-xl px-2 py-1 w-24 text-right text-sm"
                         value={arqueoData[m.k] || ''} 
                         onChange={(e) => setArqueoData({...arqueoData, [m.k]: parseInt(e.target.value) || 0})}
                       />
@@ -413,17 +553,17 @@ export default function Cajas() {
               </div>
             </div>
 
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-6">
               <div className="flex justify-between items-center mb-2">
-                <span className="font-medium text-slate-600">Total Físico Calculado:</span>
+                <span className="font-medium text-slate-600 text-sm">Total Físico Calculado:</span>
                 <span className="text-xl font-bold text-slate-800">${calculateTotalArqueo().toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center mb-2">
-                <span className="font-medium text-slate-600">Total Efectivo Sistema:</span>
+                <span className="font-medium text-slate-600 text-sm">Total Efectivo Sistema:</span>
                 <span className="text-xl font-bold text-slate-800">{fmt(sesionActiva.total_efectivo)}</span>
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-slate-200">
-                <span className="font-medium text-slate-600">Diferencia:</span>
+                <span className="font-medium text-slate-600 text-sm">Diferencia:</span>
                 <span className={`text-xl font-bold ${Math.round(calculateTotalArqueo()*100) - sesionActiva.total_efectivo < 0 ? 'text-red-500' : Math.round(calculateTotalArqueo()*100) - sesionActiva.total_efectivo > 0 ? 'text-emerald-500' : 'text-slate-800'}`}>
                   {fmt(Math.round(calculateTotalArqueo()*100) - sesionActiva.total_efectivo)}
                 </span>
@@ -431,10 +571,10 @@ export default function Cajas() {
             </div>
 
             <div className="flex justify-end gap-3">
-              <button onClick={() => setShowArqueoModal(false)} className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg">
+              <button onClick={() => setShowArqueoModal(false)} className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-xl text-sm">
                 Cancelar
               </button>
-              <button onClick={confirmarCierre} className="px-4 py-2 bg-emerald-600 text-white font-medium hover:bg-emerald-700 rounded-lg">
+              <button onClick={confirmarCierre} className="px-4 py-2 bg-emerald-600 text-white font-medium hover:bg-emerald-700 rounded-xl text-sm">
                 Confirmar y Cerrar Turno
               </button>
             </div>
@@ -442,6 +582,7 @@ export default function Cajas() {
         </div>
       )}
 
+      {/* Modal Inyectar Capital */}
       {showInyeccionModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200">
@@ -549,6 +690,80 @@ export default function Cajas() {
                 className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl font-medium text-sm hover:bg-indigo-700 disabled:opacity-50 shadow-md shadow-indigo-500/20"
               >
                 {guardandoInyeccion ? "Registrando..." : "Registrar Inyección"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Movimiento */}
+      {showEditarModal && editingMovimiento && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100 mb-4">
+              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-indigo-600" /> Editar Movimiento de Caja
+              </h2>
+              <button onClick={() => setShowEditarModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Concepto / Descripción *</label>
+                <input 
+                  type="text" 
+                  value={editarForm.concepto}
+                  onChange={e => setEditarForm({ ...editarForm, concepto: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Monto ($) *</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">$</span>
+                    <input 
+                      type="number" 
+                      step="any"
+                      min="0.01"
+                      value={editarForm.monto}
+                      onChange={e => setEditarForm({ ...editarForm, monto: e.target.value })}
+                      className="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Método de Pago</label>
+                  <select 
+                    value={editarForm.metodo_pago} 
+                    onChange={e => setEditarForm({ ...editarForm, metodo_pago: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="efectivo">Efectivo</option>
+                    <option value="transferencia">Transferencia</option>
+                    <option value="tarjeta">Tarjeta</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button 
+                onClick={() => setShowEditarModal(false)}
+                className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl font-medium text-sm hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={guardarEdicionMovimiento}
+                disabled={guardandoEdicion || !editarForm.monto || !editarForm.concepto.trim()}
+                className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl font-medium text-sm hover:bg-indigo-700 disabled:opacity-50 shadow-md shadow-indigo-500/20"
+              >
+                {guardandoEdicion ? "Guardando..." : "Guardar Cambios"}
               </button>
             </div>
           </div>

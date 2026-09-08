@@ -214,4 +214,42 @@ def inyectar_capital(sesion_id: int, empresa_id: str, usuario_id: int, data: Iny
 
     return {"mensaje": "Inyección de capital registrada exitosamente", "movimiento_id": mov.id}
 
+class EditarMovimientoSchema(BaseModel):
+    monto: float
+    concepto: str
+    metodo_pago: str = "efectivo"
+
+@router.put("/movimientos/{movimiento_id}")
+def editar_movimiento(movimiento_id: int, empresa_id: str, data: EditarMovimientoSchema, db: Session = Depends(get_db)):
+    mov = db.query(MovimientoCaja).join(SesionCaja).join(Caja).filter(
+        MovimientoCaja.id == movimiento_id,
+        Caja.empresa_id == empresa_id
+    ).first()
+    if not mov:
+        raise HTTPException(status_code=404, detail="Movimiento no encontrado")
+
+    if data.monto <= 0:
+        raise HTTPException(status_code=400, detail="El monto debe ser mayor a 0")
+
+    mov.monto = int(round(data.monto * 100))
+    mov.concepto = data.concepto
+    mov.metodo_pago = data.metodo_pago
+    db.commit()
+    db.refresh(mov)
+    return {"mensaje": "Movimiento actualizado exitosamente", "id": mov.id}
+
+@router.delete("/movimientos/{movimiento_id}")
+def eliminar_movimiento(movimiento_id: int, empresa_id: str, db: Session = Depends(get_db)):
+    mov = db.query(MovimientoCaja).join(SesionCaja).join(Caja).filter(
+        MovimientoCaja.id == movimiento_id,
+        Caja.empresa_id == empresa_id
+    ).first()
+    if not mov:
+        raise HTTPException(status_code=404, detail="Movimiento no encontrado")
+
+    db.delete(mov)
+    db.commit()
+    return {"mensaje": "Movimiento eliminado exitosamente"}
+
+
 
