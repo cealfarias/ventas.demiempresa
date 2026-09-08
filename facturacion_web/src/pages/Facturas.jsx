@@ -51,10 +51,15 @@ const SearchableSelect = ({ value, options, onChange, placeholder = "Buscar...",
             {filtered.map(o => (
               <div 
                 key={o.value} 
-                className="px-2 py-1.5 hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer text-sm rounded line-clamp-1"
+                className="px-2.5 py-1.5 hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer text-sm rounded flex justify-between items-center gap-2"
                 onClick={() => { onChange(o.value); setOpen(false); }}
               >
-                {o.label}
+                <span className="truncate font-medium">{o.label}</span>
+                {o.subLabel && (
+                  <span className={`text-xs px-2 py-0.5 rounded-md font-semibold shrink-0 ${o.subLabelColor || 'bg-slate-100 text-slate-600'}`}>
+                    {o.subLabel}
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -390,7 +395,12 @@ export default function Facturas() {
                 <tr key={i} className="border-b border-slate-50">
                   <td className="py-2">
                     <SearchableSelect autoFocus={i === form.items.length - 1} value={it.producto_id}
-                      options={[{value: '', label: 'Seleccionar...'}, ...productos.map(p => ({value: p.id_producto, label: `${p.nombre} (Exist: ${fmtStock(p.stock)})`}))]}
+                      options={[{value: '', label: 'Seleccionar...'}, ...productos.map(p => ({
+                        value: p.id_producto, 
+                        label: p.nombre, 
+                        subLabel: `Exist: ${fmtStock(p.stock)}`,
+                        subLabelColor: Number(p.stock) > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-600 border border-red-200'
+                      }))]}
                       onChange={val => actualizarLinea(i, 'producto_id', val)}
                       className="w-full px-2 py-1.5 border rounded-lg"
                     />
