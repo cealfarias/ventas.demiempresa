@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Receipt, Plus, Search, FileText, CheckCircle2, DollarSign, XCircle, FileOutput } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Receipt, Plus, Search, FileText, CheckCircle2, DollarSign, XCircle, FileOutput, Lock, Wallet, AlertTriangle } from 'lucide-react';
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
@@ -114,6 +115,7 @@ export default function Facturas() {
     }
   }, []);
 
+  const navigate = useNavigate();
   const [facturas, setFacturas] = useState([]);
   const [paginaActual, setPaginaActual] = useState(1);
   const [itemsPorPagina] = useState(15);
@@ -122,6 +124,8 @@ export default function Facturas() {
   const [editandoId, setEditandoId] = useState(null);
   const [modalVuelto, setModalVuelto] = useState(false);
   const [efectivoRecibido, setEfectivoRecibido] = useState("");
+  const [cajaActiva, setCajaActiva] = useState(true);
+  const [showModalCajaRequerida, setShowModalCajaRequerida] = useState(false);
 
   const [clientes, setClientes] = useState([]);
   const [productos, setProductos] = useState([]);
@@ -133,16 +137,20 @@ export default function Facturas() {
   const cargar = async () => {
     setCargando(true);
     try {
-      const [resF, resC, resP, resB] = await Promise.all([
+      const [resF, resC, resP, resB, resCaja] = await Promise.all([
         api.get(`/api/v1/facturacion/facturas/?empresa_id=${empresaId()}`),
         api.get(`/api/v1/facturacion/clientes/?empresa_id=${empresaId()}`),
         api.get(`/api/v1/facturacion/productos/?empresa_id=${empresaId()}`),
-        api.get(`/api/v1/almacen/bodegas/?empresa_id=${empresaId()}`)
+        api.get(`/api/v1/almacen/bodegas/?empresa_id=${empresaId()}`),
+        api.get(`/api/v1/cajas/sesion-activa?empresa_id=${empresaId()}&usuario_id=1`).catch(() => ({ data: { activa: true } }))
       ]);
       setFacturas(resF.data);
       setClientes(resC.data);
       setProductos(resP.data);
       setBodegas(resB.data);
+      if (resCaja && resCaja.data) {
+        setCajaActiva(resCaja.data.activa);
+      }
     } catch (e) { console.error(e); }
     finally { setCargando(false); }
   };
@@ -202,6 +210,10 @@ export default function Facturas() {
 
   
   const intentarGuardar = () => {
+    if (!cajaActiva) {
+      setShowModalCajaRequerida(true);
+      return;
+    }
     if (form.condicion_operacion === "CONTADO" && form.metodo_pago === "efectivo") {
       setEfectivoRecibido((total/100).toFixed(2));
       setModalVuelto(true);
@@ -436,6 +448,10 @@ export default function Facturas() {
 
   
   const iniciarNuevaFactura = () => {
+    if (!cajaActiva) {
+      setShowModalCajaRequerida(true);
+      return;
+    }
     const clienteDefault = clientes.find(c => c.es_predeterminado);
     setForm({
       cliente_id: clienteDefault ? clienteDefault.id_cliente : "",
@@ -475,6 +491,26 @@ export default function Facturas() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
+      {!cajaActiva && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+              <Lock className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-bold text-amber-900 text-sm">Turno de Caja Inactivo</h4>
+              <p className="text-xs text-amber-700 mt-0.5">Se requiere la apertura previa de su turno de caja para proceder con la facturación y cobranza.</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => navigate('/cajas')} 
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs rounded-xl flex items-center gap-1.5 shrink-0 transition-colors shadow-sm"
+          >
+            <Wallet className="w-4 h-4" /> Aperturar Caja
+          </button>
+        </div>
+      )}
+
       <div className="flex justify-between items-start mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Receipt className="w-6 h-6 text-indigo-600" /> Facturas DTE</h1>
@@ -573,6 +609,34 @@ export default function Facturas() {
           </div>
         )}
         </>
+      )}
+
+      {showModalCajaRequerida && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-7 w-full max-w-md shadow-2xl border border-slate-100 text-center">
+            <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-200 shadow-inner">
+              <Lock className="w-8 h-8" />
+            </div>
+            <h2 className="text-xl font-bold text-slate-800 mb-2">Control Operativo de Caja Requerido</h2>
+            <p className="text-sm text-slate-600 mb-6 leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left">
+              Estimado usuario: Para proceder con la emisión y cobro de documentos de venta, es necesario disponer de un turno de caja activo. Por favor, realice la apertura de su turno de caja antes de iniciar la facturación.
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowModalCajaRequerida(false)} 
+                className="flex-1 px-4 py-3 border border-slate-200 rounded-xl text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={() => { setShowModalCajaRequerida(false); navigate('/cajas'); }} 
+                className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2"
+              >
+                <Wallet className="w-4 h-4" /> Aperturar Caja Ahora
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

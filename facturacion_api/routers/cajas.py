@@ -170,3 +170,48 @@ def listar_movimientos(sesion_id: int, empresa_id: str, db: Session = Depends(ge
         })
     return res
 
+class InyeccionCapitalSchema(BaseModel):
+    monto: float
+    tipo_financiamiento: str # "aporte_socio" | "prestamo_sin_interes" | "prestamo_con_interes"
+    acreedor: str
+    tasa_interes: Optional[float] = 0.0
+    metodo_pago: str = "efectivo" # "efectivo" | "transferencia"
+    notas: Optional[str] = ""
+
+@router.post("/sesiones/{sesion_id}/inyectar-capital")
+def inyectar_capital(sesion_id: int, empresa_id: str, usuario_id: int, data: InyeccionCapitalSchema, db: Session = Depends(get_db)):
+    sesion = db.query(SesionCaja).join(Caja).filter(SesionCaja.id == sesion_id, Caja.empresa_id == empresa_id).first()
+    if not sesion or sesion.estado != "abierta":
+        raise HTTPException(status_code=400, detail="Sesión de caja no válida o cerrada")
+
+    if data.monto <= 0:
+        raise HTTPException(status_code=400, detail="El monto a inyectar debe ser mayor a 0")
+
+    tipo_labels = {
+        "aporte_socio": "Aporte de Socios (0% Interés)",
+        "prestamo_sin_interes": "Préstamo Sin Interés",
+        "prestamo_con_interes": f"Préstamo Con Interés ({data.tasa_interes or 0}%)"
+    }
+    label = tipo_labels.get(data.tipo_financiamiento, "Financiamiento")
+    concepto = f"Inyección de Capital: {label} - {data.acreedor}"
+    if data.notas:
+        concepto += f" ({data.notas})"
+
+    monto_centavos = int(round(data.monto * 100))
+
+    mov = MovimientoCaja(
+        sesion_caja_id=sesion_id,
+        tipo="ingreso",
+        metodo_pago=data.metodo_pago,
+        monto=monto_centavos,
+        concepto=concepto,
+        referencia_tipo="financiamiento",
+        usuario_id=usuario_id
+    )
+    db.add(mov)
+    db.commit()
+    db.refresh(mov)
+
+    return {"mensaje": "Inyección de capital registrada exitosamente", "movimiento_id": mov.id}
+
+

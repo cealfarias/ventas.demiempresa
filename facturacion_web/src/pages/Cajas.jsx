@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { api } from "../services/api";
-import { Wallet, Plus, Play, Square, RefreshCcw, Printer, History } from "lucide-react";
+import { Wallet, Plus, Play, Square, RefreshCcw, Printer, History, DollarSign, TrendingUp, X } from "lucide-react";
 
 const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
 const parseCents = (val) => Math.round(val * 100);
@@ -17,6 +17,17 @@ export default function Cajas() {
     b100: 0, b50: 0, b20: 0, b10: 0, b5: 0, b1: 0,
     m1: 0, m025: 0, m010: 0, m005: 0, m001: 0
   });
+
+  const [showInyeccionModal, setShowInyeccionModal] = useState(false);
+  const [inyeccionForm, setInyeccionForm] = useState({
+    monto: "",
+    tipo_financiamiento: "aporte_socio",
+    acreedor: "",
+    tasa_interes: "",
+    metodo_pago: "efectivo",
+    notas: ""
+  });
+  const [guardandoInyeccion, setGuardandoInyeccion] = useState(false);
 
   const empresaId = localStorage.getItem("empresa_id");
   const usuarioId = 1; // Simplificacion temporal
@@ -91,6 +102,38 @@ export default function Cajas() {
       window.dispatchEvent(new CustomEvent("avatar:say", { detail: { text: "Turno cerrado y arqueo registrado correctamente." }}));
     } catch (e) {
       window.dispatchEvent(new CustomEvent("avatar:say", { detail: { text: e.response?.data?.detail || "Error al cerrar" }}));
+    }
+  };
+
+  const guardarInyeccion = async () => {
+    if (!inyeccionForm.monto || parseFloat(inyeccionForm.monto) <= 0) {
+      alert("Ingrese un monto válido mayor a 0");
+      return;
+    }
+    if (!inyeccionForm.acreedor.trim()) {
+      alert("Ingrese la fuente u origen de los fondos (Ej. Socio, Banco, Financiera)");
+      return;
+    }
+
+    setGuardandoInyeccion(true);
+    try {
+      await api.post(`/api/v1/cajas/sesiones/${sesionActiva.sesion_id}/inyectar-capital?empresa_id=${empresaId}&usuario_id=${usuarioId}`, {
+        monto: parseFloat(inyeccionForm.monto),
+        tipo_financiamiento: inyeccionForm.tipo_financiamiento,
+        acreedor: inyeccionForm.acreedor.trim(),
+        tasa_interes: inyeccionForm.tasa_interes ? parseFloat(inyeccionForm.tasa_interes) : 0,
+        metodo_pago: inyeccionForm.metodo_pago,
+        notas: inyeccionForm.notas
+      });
+
+      setShowInyeccionModal(false);
+      setInyeccionForm({ monto: "", tipo_financiamiento: "aporte_socio", acreedor: "", tasa_interes: "", metodo_pago: "efectivo", notas: "" });
+      cargarSesion();
+      window.dispatchEvent(new CustomEvent("avatar:say", { detail: { text: "Inyección de capital registrada correctamente en caja." }}));
+    } catch (e) {
+      alert(e.response?.data?.detail || "Error al registrar la inyección de capital");
+    } finally {
+      setGuardandoInyeccion(false);
     }
   };
 
@@ -218,9 +261,14 @@ export default function Cajas() {
                     <h3 className="font-bold text-slate-800 text-xl">{sesionActiva.caja_nombre}</h3>
                     <p className="text-sm text-emerald-600 font-medium">Turno Abierto</p>
                   </div>
-                  <button onClick={() => setShowArqueoModal(true)} className="bg-red-50 text-red-600 px-4 py-2 rounded-lg font-medium hover:bg-red-100 flex items-center gap-2 text-sm">
-                    <Square className="w-4 h-4" /> Cerrar Turno
-                  </button>
+                  <div className="flex gap-2">
+                    <button onClick={() => setShowInyeccionModal(true)} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 flex items-center gap-2 text-sm shadow-sm">
+                      <TrendingUp className="w-4 h-4" /> Inyectar Capital
+                    </button>
+                    <button onClick={() => setShowArqueoModal(true)} className="bg-red-50 text-red-600 px-4 py-2 rounded-lg font-medium hover:bg-red-100 flex items-center gap-2 text-sm">
+                      <Square className="w-4 h-4" /> Cerrar Turno
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -388,6 +436,119 @@ export default function Cajas() {
               </button>
               <button onClick={confirmarCierre} className="px-4 py-2 bg-emerald-600 text-white font-medium hover:bg-emerald-700 rounded-lg">
                 Confirmar y Cerrar Turno
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showInyeccionModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100 mb-5">
+              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-indigo-600" /> Inyección de Capital / Financiamiento
+              </h2>
+              <button onClick={() => setShowInyeccionModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Origen / Categoría de Fondos</label>
+                <select 
+                  value={inyeccionForm.tipo_financiamiento} 
+                  onChange={e => setInyeccionForm({ ...inyeccionForm, tipo_financiamiento: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="aporte_socio">Aporte de Socios / Capital (0% Interés)</option>
+                  <option value="prestamo_sin_interes">Préstamo Sin Interés</option>
+                  <option value="prestamo_con_interes">Préstamo Con Interés</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Fuente / Socio / Acreedor *</label>
+                <input 
+                  type="text" 
+                  placeholder="Ej: Socio Juan Pérez / Banco Agrícola"
+                  value={inyeccionForm.acreedor}
+                  onChange={e => setInyeccionForm({ ...inyeccionForm, acreedor: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Monto Inyectado ($) *</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">$</span>
+                    <input 
+                      type="number" 
+                      step="any"
+                      min="0.01"
+                      placeholder="0.00"
+                      value={inyeccionForm.monto}
+                      onChange={e => setInyeccionForm({ ...inyeccionForm, monto: e.target.value })}
+                      className="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Método de Depósito</label>
+                  <select 
+                    value={inyeccionForm.metodo_pago} 
+                    onChange={e => setInyeccionForm({ ...inyeccionForm, metodo_pago: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="efectivo">Efectivo (Caja)</option>
+                    <option value="transferencia">Transferencia (Banco)</option>
+                  </select>
+                </div>
+              </div>
+
+              {inyeccionForm.tipo_financiamiento === 'prestamo_con_interes' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Tasa de Interés Anual (%)</label>
+                  <input 
+                    type="number" 
+                    step="any"
+                    min="0"
+                    placeholder="Ej: 5.5"
+                    value={inyeccionForm.tasa_interes}
+                    onChange={e => setInyeccionForm({ ...inyeccionForm, tasa_interes: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Notas / Justificación</label>
+                <textarea 
+                  rows={2}
+                  placeholder="Detalles sobre el préstamo o destino de los fondos para compras..."
+                  value={inyeccionForm.notas}
+                  onChange={e => setInyeccionForm({ ...inyeccionForm, notas: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button 
+                onClick={() => setShowInyeccionModal(false)}
+                className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl font-medium text-sm hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={guardarInyeccion}
+                disabled={guardandoInyeccion || !inyeccionForm.monto || !inyeccionForm.acreedor.trim()}
+                className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl font-medium text-sm hover:bg-indigo-700 disabled:opacity-50 shadow-md shadow-indigo-500/20"
+              >
+                {guardandoInyeccion ? "Registrando..." : "Registrar Inyección"}
               </button>
             </div>
           </div>
