@@ -76,6 +76,12 @@ const fmtStock = (stock) => {
   return Number.isInteger(n) ? n.toString() : n.toFixed(2);
 };
 
+const WhatsAppIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.461c-1.847 0-3.556-.492-5.031-1.353l-.36-.211-3.74.981.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c0-5.444 4.43-9.873 9.878-9.873 2.637 0 5.116 1.028 6.98 2.893 1.864 1.865 2.891 4.344 2.89 6.982 0 5.446-4.43 9.875-9.87 9.875m0-18.066c-4.516 0-8.192 3.676-8.192 8.191 0 1.794.577 3.456 1.554 4.814l-.657 2.4 2.457-.644a8.147 8.147 0 004.838 1.557c4.517 0 8.194-3.676 8.194-8.19 0-2.188-.853-4.246-2.404-5.797-1.55-1.551-3.608-2.405-5.79-2.405" />
+  </svg>
+);
+
 export default function Facturas() {
   
   useEffect(() => {
@@ -578,7 +584,20 @@ export default function Facturas() {
                         <XCircle className="w-4 h-4" />
                       </button>
                     )}
-                    <a href={`${import.meta.env.VITE_API_URL || 'https://ventas-demiempresa.onrender.com'}/api/v1/facturacion/facturas/${f.id}/imprimir?empresa_id=${empresaId()}`} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-indigo-600 inline-flex items-center p-1"><FileOutput className="w-4 h-4" /></a>
+                    <button
+                      onClick={() => {
+                        const baseUrl = import.meta.env.VITE_API_URL || 'https://ventas-demiempresa.onrender.com';
+                        const pdfUrl = `${baseUrl}/api/v1/facturacion/facturas/${f.id}/imprimir?empresa_id=${empresaId()}`;
+                        const texto = `Hola, le comparto la factura N° ${f.numero} por un total de ${fmt(f.total)}:\n\n📄 Ver PDF: ${pdfUrl}`;
+                        const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
+                        window.open(waUrl, '_blank');
+                      }}
+                      className="text-emerald-600 hover:text-emerald-700 hover:scale-110 transition-transform inline-flex items-center p-1"
+                      title="enviar por whatsap"
+                    >
+                      <WhatsAppIcon className="w-4 h-4" />
+                    </button>
+                    <a href={`${import.meta.env.VITE_API_URL || 'https://ventas-demiempresa.onrender.com'}/api/v1/facturacion/facturas/${f.id}/imprimir?empresa_id=${empresaId()}`} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-indigo-600 inline-flex items-center p-1" title="Ver / Imprimir PDF"><FileOutput className="w-4 h-4" /></a>
                   </td>
                 </tr>
               ))}
