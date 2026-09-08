@@ -139,6 +139,13 @@ def avatar_chat(req: ChatRequest):
     if not msg:
         return ChatResponse(response="¿En qué te puedo colaborar en este momento?")
 
+    msg_lower = msg.lower()
+
+    # Frase personalizada para Mario y Janeth
+    if "mario" in msg_lower or "janeth" in msg_lower or "abrazando" in msg_lower:
+        ans = "Hola Mario, hoy no andas abrazando a nadie, mejor tráeme a la Janeth 😄"
+        return ChatResponse(response=ans)
+
     # Verificar si está fuera de ámbito
     if not es_consulta_erp(msg):
         return ChatResponse(
