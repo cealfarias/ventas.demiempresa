@@ -51,6 +51,7 @@ export default function AvatarWidget() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [lastInstruction, setLastInstruction] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const navigate = useNavigate();
   const chatEndRef = useRef(null);
@@ -68,38 +69,95 @@ export default function AvatarWidget() {
     }
   }, []);
 
-  // 2. Inicializar mensaje de bienvenida según Rol
+  // 2. Función Text-to-Speech (Hablar)
+  const speakText = (text) => {
+    if (isMuted || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel(); // Cancelar lo anterior
+      const cleanText = text.replace(/[*_#`]/g, '');
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = 'es-ES';
+      utterance.rate = 1.0;
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // 3. Inicializar mensaje de bienvenida según tiempo y rol
   const initGreeting = () => {
+    const isFirstTime = localStorage.getItem('avatar_facturacion_greeted') !== 'true';
+    const hour = new Date().getHours();
+    const greetingTime = hour < 12 ? 'Buenos días' : (hour < 18 ? 'Buenas tardes' : 'Buenas noches');
+
+    const roleUpper = role.toUpperCase();
+    const initialText = `¡${greetingTime}! Soy tu Avatar Asistente. Tu perfil autenticado es **${roleUpper}**. Estoy aquí para orientarte en tus actividades del ERP.`;
+
     const greetingMsg = {
       sender: 'bot',
-      text: `¡Hola! Soy tu Avatar Asistente. Tu perfil autenticado es **${role.toUpperCase()}**. Estoy aquí para orientarte en tus actividades operativas.`,
+      text: initialText,
       isOffTopic: false
     };
+
     setMessages([greetingMsg]);
-    setLastInstruction(greetingMsg.text);
-    if (!isMuted) speakText(greetingMsg.text);
+    setLastInstruction(initialText);
+    if (!isMuted) speakText(initialText);
+
+    if (isFirstTime) {
+      localStorage.setItem('avatar_facturacion_greeted', 'true');
+      setTimeout(() => {
+        const tipMsg = {
+          sender: 'bot',
+          text: 'Te recomiendo revisar primero la Configuración DTE para validar tu certificado de Hacienda.',
+          options: [
+            { label: 'Ir a Configuración DTE', action: 'navigate:config-dte' }
+          ],
+          isOffTopic: false
+        };
+        setMessages((prev) => [...prev, tipMsg]);
+        setLastInstruction(tipMsg.text);
+        if (!isMuted) speakText(tipMsg.text);
+      }, 5000);
+    }
   };
 
   useEffect(() => {
     initGreeting();
   }, [role]);
 
+  // 4. Escuchar eventos globales 'avatar:say' emitidos por cualquier vista
   useEffect(() => {
+    const handleAvatarSay = (e) => {
+      const { text, options } = e.detail || {};
+      if (text) {
+        const botMsg = {
+          sender: 'bot',
+          text,
+          options: options || [],
+          isOffTopic: false
+        };
+        setMessages((prev) => [...prev, botMsg]);
+        setLastInstruction(text);
+        if (!isMuted) speakText(text);
+
+        if (!isOpen) {
+          setUnreadCount((count) => count + 1);
+        }
+      }
+    };
+
+    window.addEventListener('avatar:say', handleAvatarSay);
+    return () => window.removeEventListener('avatar:say', handleAvatarSay);
+  }, [isMuted, isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setUnreadCount(0);
+    }
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, isOpen]);
 
-  // 3. Función Text-to-Speech (Hablar)
-  const speakText = (text) => {
-    if (isMuted || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel(); // Cancelar lo anterior
-    const cleanText = text.replace(/[*_#`]/g, '');
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = 'es-ES';
-    utterance.rate = 1.0;
-    window.speechSynthesis.speak(utterance);
-  };
-
-  // 4. Mute Total (Silencio Total)
+  // 5. Mute Total (Silencio Total)
   const handleToggleMute = () => {
     const newMuted = !isMuted;
     setIsMuted(newMuted);
@@ -108,20 +166,20 @@ export default function AvatarWidget() {
     }
   };
 
-  // 5. Iniciar desde 0
+  // 6. Iniciar desde 0
   const handleResetSession = () => {
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     initGreeting();
   };
 
-  // 6. Repetir últimas instrucciones
+  // 7. Repetir últimas instrucciones
   const handleRepeatLast = () => {
     if (lastInstruction) {
       speakText(lastInstruction);
     }
   };
 
-  // 7. Speech-to-Text (Escuchar micrófono)
+  // 8. Speech-to-Text (Escuchar micrófono)
   const handleToggleMic = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -146,7 +204,6 @@ export default function AvatarWidget() {
         const transcript = event.results[0][0].transcript;
         setInputText(transcript);
         setIsListening(false);
-        // Auto enviar voz transcrita
         handleSendMessage(transcript);
       };
       recognition.onerror = () => setIsListening(false);
@@ -160,7 +217,7 @@ export default function AvatarWidget() {
     }
   };
 
-  // 8. Enviar consulta a la IA (Gemini Backend)
+  // 9. Enviar consulta a la IA (Gemini Backend)
   const handleSendMessage = async (textToSend) => {
     const query = textToSend || inputText;
     if (!query.trim() || loading) return;
@@ -190,7 +247,6 @@ export default function AvatarWidget() {
       setMessages((prev) => [...prev, botMsg]);
       setLastInstruction(botReply);
 
-      // Reproducción de Voz
       speakText(botReply);
     } catch (err) {
       console.error(err);
@@ -205,25 +261,31 @@ export default function AvatarWidget() {
 
   return (
     <div className="fixed bottom-5 right-5 z-50 font-sans">
-      {/* Botón Flotante del Avatar */}
+      {/* Botón Flotante del Avatar Unificado */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white p-3.5 rounded-full shadow-2xl flex items-center gap-3 transition-all hover:scale-105 border-2 border-indigo-400 group"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white p-3.5 rounded-full shadow-2xl flex items-center gap-3 transition-all hover:scale-105 border-2 border-indigo-400 group relative"
           title="Abrir Avatar Asistente IA"
         >
           <div className="relative">
             <Bot className="w-7 h-7 animate-pulse" />
             <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-indigo-600" />
           </div>
-          <span className="font-bold text-sm pr-1 hidden sm:inline">Avatar IA ({role})</span>
+          <span className="font-bold text-sm pr-1 hidden sm:inline">Avatar IA ({role.toUpperCase()})</span>
+
+          {unreadCount > 0 && (
+            <span className="absolute -top-2 -left-2 bg-rose-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-md animate-bounce">
+              {unreadCount}
+            </span>
+          )}
         </button>
       )}
 
-      {/* Ventana del Avatar */}
+      {/* Ventana del Avatar Unificado */}
       {isOpen && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-[92vw] sm:w-[420px] max-h-[620px] flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-200">
-          {/* Header del Avatar */}
+          {/* Header */}
           <div className="bg-gradient-to-r from-indigo-700 to-indigo-900 text-white p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/20">
@@ -234,7 +296,7 @@ export default function AvatarWidget() {
                   Avatar Asistente <Sparkles className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
                 </h3>
                 <p className="text-[11px] text-indigo-200 uppercase tracking-wider font-semibold">
-                  Rol Activo: {role}
+                  ROL ACTIVO: {role}
                 </p>
               </div>
             </div>
@@ -248,7 +310,6 @@ export default function AvatarWidget() {
 
           {/* Barra de Diagnóstico de Hardware y Controles */}
           <div className="bg-slate-800 text-slate-300 px-3 py-2 text-xs flex items-center justify-between gap-2 border-b border-slate-700">
-            {/* Badges Hardware */}
             <div className="flex items-center gap-2 text-[11px]">
               {hasMic ? (
                 <span className="text-emerald-400 font-medium flex items-center gap-1" title="Micrófono activo">
@@ -271,7 +332,6 @@ export default function AvatarWidget() {
               )}
             </div>
 
-            {/* Acciones Rápidas de Audio */}
             <div className="flex items-center gap-1">
               <button
                 onClick={handleToggleMute}
@@ -319,6 +379,31 @@ export default function AvatarWidget() {
                     </div>
                   )}
                   <p className="whitespace-pre-line">{m.text}</p>
+
+                  {/* Opciones interactivas */}
+                  {m.options && m.options.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2 border-t border-slate-100">
+                      {m.options.map((opt, optIdx) => (
+                        <button
+                          key={optIdx}
+                          onClick={() => {
+                            if (opt.action) {
+                              if (opt.action === 'navigate:config-dte' || opt.action === '/configuracion-dte') {
+                                navigate('/configuracion-dte');
+                              } else if (opt.action.startsWith('navigate:')) {
+                                navigate('/' + opt.action.replace('navigate:', ''));
+                              } else {
+                                navigate(opt.action);
+                              }
+                            }
+                          }}
+                          className="text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg border border-indigo-200 transition-colors flex items-center gap-1"
+                        >
+                          {opt.label} <ExternalLink className="w-3 h-3" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
                   {m.redirectUrl && (
                     <button

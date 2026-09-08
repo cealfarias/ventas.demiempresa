@@ -51,6 +51,7 @@ class ResetPasswordSchema(BaseModel):
 
 # ================= ENDPOINTS =================
 
+@router.get("/", response_model=List[UsuarioOutSchema])
 @router.get("", response_model=List[UsuarioOutSchema])
 def listar_usuarios(
     db: Session = Depends(get_db),
@@ -67,6 +68,7 @@ def listar_usuarios(
     usuarios = db.query(Usuario).order_by(Usuario.id.desc()).all()
     return usuarios
 
+@router.post("/", response_model=UsuarioOutSchema)
 @router.post("", response_model=UsuarioOutSchema)
 def crear_usuario(
     data: CrearUsuarioSchema,

@@ -28,48 +28,6 @@ import Despachos from './pages/Despachos';
 import Kardex from './pages/Kardex';
 import { api } from './services/api';
 
-const AvatarTrigger = () => {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const isFirstTime = localStorage.getItem('avatar_facturacion_greeted') !== 'true';
-    if (isFirstTime) {
-      localStorage.setItem('avatar_facturacion_greeted', 'true');
-      
-      const hour = new Date().getHours();
-      const greeting = hour < 12 ? 'Buenos días' : (hour < 18 ? 'Buenas tardes' : 'Buenas noches');
-      
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('avatar:say', {
-          detail: {
-            text: `¡${greeting}! Bienvenido al módulo de Facturación e Inventarios. Soy tu asistente virtual y estoy aquí para ayudarte.`,
-            highlightId: null,
-            options: []
-          }
-        }));
-      }, 1000);
-      
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('avatar:say', {
-          detail: {
-            text: 'Te recomiendo revisar primero la Configuración DTE para validar tu certificado de Hacienda.',
-            highlightId: null,
-            options: [
-              { label: 'Ir a Configuración', action: 'navigate:config-dte' },
-              { label: 'Explorar por mi cuenta', action: null }
-            ]
-          }
-        }));
-      }, 10000);
-    }
-    
-    const handleNav = () => navigate('/configuracion-dte');
-    window.addEventListener('navigate:config-dte', handleNav);
-    return () => window.removeEventListener('navigate:config-dte', handleNav);
-  }, [navigate]);
-  return null;
-};
-
 const NombreEmpresa = () => {
   const [nombre, setNombre] = useState(localStorage.getItem('empresa_nombre') || 'Mi Empresa');
   useEffect(() => {
@@ -261,7 +219,6 @@ function App() {
           <Route path="/*" element={
             <PrivateRoute>
               <Layout>
-                <AvatarTrigger />
                 <Routes>
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/dashboard" element={<Dashboard />} />
