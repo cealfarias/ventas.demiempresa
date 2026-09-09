@@ -22,6 +22,8 @@ import CuentasCobrar from './pages/CuentasCobrar';
 import ConfiguracionDTE from './pages/ConfiguracionDTE';
 import Usuarios from './pages/Usuarios';
 import AvatarWidget from './components/AvatarWidget';
+import Acreedores from './pages/Acreedores';
+import Aportantes from './pages/Aportantes';
 
 import Dashboard from './pages/Dashboard';
 import Despachos from './pages/Despachos';
@@ -135,6 +137,8 @@ const Layout = ({ children }) => {
           <SidebarSection label="Finanzas" expanded={expanded}>
             <SidebarLink to="/cajas" icon={Wallet} label="Control de Caja" expanded={expanded} />
             <SidebarLink to="/gastos" icon={DollarSign} label="Gastos Operativos" expanded={expanded} />
+            <SidebarLink to="/acreedores" icon={CreditCard} label="Acreedores (Préstamos)" expanded={expanded} />
+            <SidebarLink to="/aportantes" icon={Users} label="Aportantes (Sin Interés)" expanded={expanded} />
           </SidebarSection>
 
           {canSeeCompras && (
@@ -233,6 +237,8 @@ function App() {
                   <Route path="/cuentas-pagar" element={<CuentasPagar />} />
                   <Route path="/cajas" element={<Cajas />} />
                   <Route path="/gastos" element={<Gastos />} />
+                  <Route path="/acreedores" element={<Acreedores />} />
+                  <Route path="/aportantes" element={<Aportantes />} />
                   {/* Fase 3 — Ventas */}
                   <Route path="/clientes" element={<Clientes />} />
                   <Route path="/facturas" element={<Facturas />} />

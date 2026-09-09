@@ -569,3 +569,99 @@ class Gasto(Base):
     categoria = relationship("CategoriaGasto", back_populates="gastos")
     sesion = relationship("SesionCaja")
 
+
+# ==========================================
+# MÓDULO DE ACREEDORES Y APORTANTES (FINANZAS)
+# ==========================================
+
+class Acreedor(Base):
+    __tablename__ = "acreedores"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    empresa_id = Column(String, index=True, nullable=False)
+    
+    nombre = Column(String(200), nullable=False)
+    contacto_telefono = Column(String(50), nullable=True)
+    dui_nit = Column(String(50), nullable=True)
+    email = Column(String(100), nullable=True)
+    notas = Column(Text, nullable=True)
+    
+    tasa_interes_anual = Column(Float, default=0.0) # porcentaje, ej: 12.0
+    saldo_capital = Column(Integer, default=0) # centavos
+    saldo_interes = Column(Integer, default=0) # centavos
+    
+    activo = Column(Boolean, default=True)
+    fecha_registro = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
+
+    movimientos = relationship("MovimientoAcreedor", back_populates="acreedor", cascade="all, delete-orphan")
+
+
+class MovimientoAcreedor(Base):
+    __tablename__ = "movimientos_acreedores"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    acreedor_id = Column(Integer, ForeignKey("acreedores.id"), nullable=False)
+    empresa_id = Column(String, index=True, nullable=False)
+    
+    # PRESTAMO_RECIBIDO | PAGO_CAPITAL | PAGO_INTERES | PAGO_MIXTO
+    tipo = Column(String(30), nullable=False)
+    
+    monto_capital = Column(Integer, default=0) # centavos
+    monto_interes = Column(Integer, default=0) # centavos
+    monto_total = Column(Integer, default=0)   # centavos
+    
+    metodo_pago = Column(String(50), default="efectivo")
+    referencia = Column(String(100), nullable=True)
+    notas = Column(Text, nullable=True)
+    
+    fecha = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+
+    acreedor = relationship("Acreedor", back_populates="movimientos")
+    usuario = relationship("Usuario")
+
+
+class Aportante(Base):
+    __tablename__ = "aportantes"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    empresa_id = Column(String, index=True, nullable=False)
+    
+    nombre = Column(String(200), nullable=False)
+    tipo_relacion = Column(String(50), default="Socio") # Socio | Inversionista | Familiar | Apoyo
+    contacto_telefono = Column(String(50), nullable=True)
+    dui_nit = Column(String(50), nullable=True)
+    email = Column(String(100), nullable=True)
+    notas = Column(Text, nullable=True)
+    
+    total_aportado = Column(Integer, default=0) # centavos
+    total_devuelto = Column(Integer, default=0) # centavos
+    saldo_pendiente = Column(Integer, default=0) # centavos
+    
+    activo = Column(Boolean, default=True)
+    fecha_registro = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
+
+    movimientos = relationship("MovimientoAportante", back_populates="aportante", cascade="all, delete-orphan")
+
+
+class MovimientoAportante(Base):
+    __tablename__ = "movimientos_aportantes"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    aportante_id = Column(Integer, ForeignKey("aportantes.id"), nullable=False)
+    empresa_id = Column(String, index=True, nullable=False)
+    
+    # APORTE_RECIBIDO | DEVOLUCION_CAPITAL
+    tipo = Column(String(30), nullable=False)
+    monto = Column(Integer, nullable=False) # centavos
+    
+    metodo_pago = Column(String(50), default="efectivo")
+    referencia = Column(String(100), nullable=True)
+    notas = Column(Text, nullable=True)
+    
+    fecha = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+
+    aportante = relationship("Aportante", back_populates="movimientos")
+    usuario = relationship("Usuario")
+
