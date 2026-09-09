@@ -125,6 +125,8 @@ export default function Facturas() {
   const [facturas, setFacturas] = useState([]);
   const [paginaActual, setPaginaActual] = useState(1);
   const [itemsPorPagina] = useState(15);
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroFecha, setFiltroFecha] = useState('');
   const [cargando, setCargando] = useState(true);
   const [vista, setVista] = useState('lista'); // lista | nueva
   const [editandoId, setEditandoId] = useState(null);
@@ -132,6 +134,31 @@ export default function Facturas() {
   const [efectivoRecibido, setEfectivoRecibido] = useState("");
   const [cajaActiva, setCajaActiva] = useState(true);
   const [showModalCajaRequerida, setShowModalCajaRequerida] = useState(false);
+
+  const facturasFiltradas = facturas.filter(f => {
+    const term = busqueda.toLowerCase().trim();
+    const matchNumero = f.numero ? String(f.numero).toLowerCase().includes(term) : false;
+    const matchCliente = f.cliente_nombre ? f.cliente_nombre.toLowerCase().includes(term) : false;
+    const matchTipoDoc = f.tipo_doc ? f.tipo_doc.toLowerCase().includes(term) : false;
+    
+    let matchFechaStr = false;
+    if (f.fecha_emision) {
+      const fechaObj = new Date(f.fecha_emision);
+      const fechaLocalStr = fechaObj.toLocaleString().toLowerCase();
+      const fechaIsoStr = fechaObj.toISOString().slice(0, 10);
+      matchFechaStr = fechaLocalStr.includes(term) || fechaIsoStr.includes(term);
+    }
+
+    const matchesBusqueda = !term || matchNumero || matchCliente || matchTipoDoc || matchFechaStr;
+
+    let matchesFechaPicker = true;
+    if (filtroFecha && f.fecha_emision) {
+      const fechaIso = new Date(f.fecha_emision).toISOString().slice(0, 10);
+      matchesFechaPicker = fechaIso === filtroFecha;
+    }
+
+    return matchesBusqueda && matchesFechaPicker;
+  });
 
   const [clientes, setClientes] = useState([]);
   const [productos, setProductos] = useState([]);
@@ -527,12 +554,77 @@ export default function Facturas() {
         </button>
       </div>
 
+      {/* BARRA DE BÚSQUEDA INTELIGENTE Y FILTRO DE FECHA */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="relative flex-1 w-full">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={busqueda}
+            onChange={(e) => { setBusqueda(e.target.value); setPaginaActual(1); }}
+            placeholder="Buscar por número de factura, cliente o fecha..."
+            className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+          />
+          {busqueda && (
+            <button
+              onClick={() => { setBusqueda(''); setPaginaActual(1); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs bg-slate-200 hover:bg-slate-300 rounded-full w-5 h-5 flex items-center justify-center"
+              title="Limpiar búsqueda"
+            >
+              &times;
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 w-full md:w-auto shrink-0">
+          <div className="relative flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            <span className="text-xs font-semibold text-slate-500 mr-2 uppercase shrink-0">Fecha:</span>
+            <input
+              type="date"
+              value={filtroFecha}
+              onChange={(e) => { setFiltroFecha(e.target.value); setPaginaActual(1); }}
+              className="bg-transparent text-sm font-medium text-slate-700 outline-none cursor-pointer"
+            />
+            {filtroFecha && (
+              <button
+                onClick={() => { setFiltroFecha(''); setPaginaActual(1); }}
+                className="ml-2 text-slate-400 hover:text-slate-600 text-xs bg-slate-200 hover:bg-slate-300 rounded-full w-4 h-4 flex items-center justify-center shrink-0"
+                title="Limpiar fecha"
+              >
+                &times;
+              </button>
+            )}
+          </div>
+
+          {(busqueda || filtroFecha) && (
+            <button
+              onClick={() => { setBusqueda(''); setFiltroFecha(''); setPaginaActual(1); }}
+              className="px-3 py-2 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors shrink-0"
+            >
+              Limpiar Filtros
+            </button>
+          )}
+        </div>
+      </div>
+
       {cargando ? (
         <div className="text-center py-20 text-slate-400">Cargando facturas...</div>
       ) : facturas.length === 0 ? (
         <div className="text-center py-20 text-slate-400">
           <Receipt className="w-12 h-12 mx-auto mb-3 opacity-30" />
           <p className="font-medium">No hay facturas emitidas</p>
+        </div>
+      ) : facturasFiltradas.length === 0 ? (
+        <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+          <Search className="w-12 h-12 mx-auto mb-3 text-slate-300 opacity-50" />
+          <p className="font-semibold text-slate-700">No se encontraron facturas</p>
+          <p className="text-sm text-slate-400 mt-1">No hay resultados para la búsqueda realizada.</p>
+          <button
+            onClick={() => { setBusqueda(''); setFiltroFecha(''); setPaginaActual(1); }}
+            className="mt-4 px-4 py-2 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-xl hover:bg-indigo-100 transition-colors"
+          >
+            Restablecer Filtros
+          </button>
         </div>
       ) : (
         <>
@@ -549,7 +641,7 @@ export default function Facturas() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {[...facturas]
+              {[...facturasFiltradas]
                 .sort((a, b) => b.id - a.id)
                 .slice((paginaActual - 1) * itemsPorPagina, paginaActual * itemsPorPagina)
                 .map(f => (
@@ -604,10 +696,10 @@ export default function Facturas() {
             </tbody>
           </table>
         </div>
-        {facturas.length > itemsPorPagina && (
+        {facturasFiltradas.length > itemsPorPagina && (
           <div className="flex items-center justify-between px-5 py-3 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
             <span className="text-sm text-slate-500">
-              Mostrando {Math.min((paginaActual - 1) * itemsPorPagina + 1, facturas.length)} a {Math.min(paginaActual * itemsPorPagina, facturas.length)} de {facturas.length}
+              Mostrando {Math.min((paginaActual - 1) * itemsPorPagina + 1, facturasFiltradas.length)} a {Math.min(paginaActual * itemsPorPagina, facturasFiltradas.length)} de {facturasFiltradas.length} {facturasFiltradas.length !== facturas.length ? `(filtradas de ${facturas.length} total)` : ''}
             </span>
             <div className="flex gap-1">
               <button 
@@ -618,8 +710,8 @@ export default function Facturas() {
                 Anterior
               </button>
               <button 
-                onClick={() => setPaginaActual(Math.min(Math.ceil(facturas.length / itemsPorPagina), paginaActual + 1))}
-                disabled={paginaActual >= Math.ceil(facturas.length / itemsPorPagina)}
+                onClick={() => setPaginaActual(Math.min(Math.ceil(facturasFiltradas.length / itemsPorPagina), paginaActual + 1))}
+                disabled={paginaActual >= Math.ceil(facturasFiltradas.length / itemsPorPagina)}
                 className="px-3 py-1 text-sm font-medium border rounded-md disabled:opacity-50"
               >
                 Siguiente
