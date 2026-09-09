@@ -16,11 +16,8 @@ app = FastAPI(
 # Habilitar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173", 
-        "https://ventas.demiempresa.online",
-        "https://ventas-demiempresa.vercel.app"
-    ],
+    allow_origins=["*"],
+    allow_origin_regex=".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

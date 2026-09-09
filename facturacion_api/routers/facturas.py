@@ -80,6 +80,28 @@ def _generar_numero_factura(db: Session, empresa_id: str, tipo_doc: str) -> str:
 
 from datetime import datetime, timedelta, timezone
 
+def _convertir_factura_response(f: Factura, db: Session) -> FacturaResponse:
+    items = []
+    for d in db.query(ItemFactura).filter(ItemFactura.factura_id == f.id).all():
+        items.append(ItemFacturaResponse(
+            id=d.id, producto_id=d.producto_id,
+            producto_nombre=d.producto.nombre if d.producto else "",
+            cantidad=d.cantidad, precio_unitario=d.precio_unitario,
+            subtotal=d.subtotal
+        ))
+    return FacturaResponse(
+        id=f.id, empresa_id=f.empresa_id, numero=f.numero,
+        cliente_id=f.cliente_id, cliente_nombre=f.cliente.nombre if f.cliente else "",
+        bodega_salida_id=f.bodega_salida_id,
+        tipo_doc=f.tipo_doc, condicion_operacion=f.condicion_operacion,
+        subtotal=f.subtotal, iva=f.iva, total=f.total,
+        estado=f.estado, estado_dte=f.estado_dte,
+        codigo_generacion=f.codigo_generacion, sello_recepcion=f.sello_recepcion,
+        fecha_emision=f.fecha_emision, items=items
+    )
+
+
+@router.get("", response_model=List[FacturaResponse])
 @router.get("/", response_model=List[FacturaResponse])
 def listar_facturas(
     empresa_id: str, 
@@ -113,30 +135,10 @@ def listar_facturas(
         query = query.filter(Factura.fecha_emision >= hoy_sv)
 
     facturas = query.order_by(Factura.fecha_emision.desc()).limit(300).all()
-    
-    resultado = []
-    for f in facturas:
-        items = []
-        for d in db.query(ItemFactura).filter(ItemFactura.factura_id == f.id).all():
-            items.append(ItemFacturaResponse(
-                id=d.id, producto_id=d.producto_id,
-                producto_nombre=d.producto.nombre if d.producto else "",
-                cantidad=d.cantidad, precio_unitario=d.precio_unitario,
-                subtotal=d.subtotal
-            ))
-        resultado.append(FacturaResponse(
-            id=f.id, empresa_id=f.empresa_id, numero=f.numero,
-            cliente_id=f.cliente_id, cliente_nombre=f.cliente.nombre if f.cliente else "",
-            bodega_salida_id=f.bodega_salida_id,
-            tipo_doc=f.tipo_doc, condicion_operacion=f.condicion_operacion,
-            subtotal=f.subtotal, iva=f.iva, total=f.total,
-            estado=f.estado, estado_dte=f.estado_dte,
-            codigo_generacion=f.codigo_generacion, sello_recepcion=f.sello_recepcion,
-            fecha_emision=f.fecha_emision, items=items
-        ))
-    return resultado
+    return [_convertir_factura_response(f, db) for f in facturas]
 
 
+@router.post("", response_model=FacturaResponse, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=FacturaResponse, status_code=status.HTTP_201_CREATED)
 def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Session = Depends(get_db)):
     cliente = db.query(Cliente).filter(Cliente.id_cliente == data.cliente_id, Cliente.empresa_id == empresa_id).first()
@@ -168,8 +170,6 @@ def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Ses
         import pytz
         tz = pytz.timezone("America/El_Salvador")
         if "T" in data.fecha_emision:
-            # Viene fecha y hora: YYYY-MM-DDTHH:MM
-            # Quitar segundos si los trae
             fecha_str = data.fecha_emision[:16]
             fecha_req = datetime.strptime(fecha_str, "%Y-%m-%dT%H:%M")
             f.fecha_emision = tz.localize(fecha_req)
@@ -203,14 +203,13 @@ def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Ses
                     producto_id=item.producto_id,
                     tipo_movimiento="SALIDA_VENTA",
                     cantidad=item.cantidad,
-                    costo_unitario=0, # Podríamos leer el costo promedio actual y asignarlo
+                    costo_unitario=0,
                     referencia_tipo="factura",
                     referencia_id=f.id,
                     usuario_id=usuario_id,
                     notas=f"Venta con {f.tipo_doc} {f.numero}"
                 )
             except Exception as e:
-                # Si hay falta de stock saltará un HTTP 400 desde registrar_movimiento
                 raise HTTPException(status_code=400, detail=str(e))
 
     # 3. Generar Cuenta por Cobrar si es al crédito
@@ -242,7 +241,6 @@ def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Ses
 
     if data.entrega_domicilio:
         from models import Despacho, DetalleDespacho
-        # Buscar o generar numero de despacho
         ultimo_despacho = db.query(Despacho).filter(Despacho.empresa_id == empresa_id).order_by(Despacho.id.desc()).first()
         if ultimo_despacho and ultimo_despacho.numero.startswith("DESP-2026-"):
             num = int(ultimo_despacho.numero.split("-")[-1]) + 1
@@ -275,7 +273,7 @@ def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Ses
 
     db.commit()
     db.refresh(f)
-    return listar_facturas(empresa_id, db)[0]
+    return _convertir_factura_response(f, db)
 
 
 @router.put("/{factura_id}", response_model=FacturaResponse)
