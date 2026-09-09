@@ -33,7 +33,7 @@ export default function Acreedores() {
   const cargar = async () => {
     setCargando(true);
     try {
-      const res = await api.get(`/api/v1/finanzas/acreedores/?empresa_id=${empresaId()}`);
+      const res = await api.get(`/api/v1/finanzas/acreedores?empresa_id=${empresaId()}`);
       setAcreedores(res.data);
     } catch (e) { console.error(e); }
     finally { setCargando(false); }
@@ -73,7 +73,7 @@ export default function Acreedores() {
       if (acreedorEditando) {
         await api.put(`/api/v1/finanzas/acreedores/${acreedorEditando.id}?empresa_id=${empresaId()}`, payload);
       } else {
-        await api.post(`/api/v1/finanzas/acreedores/?empresa_id=${empresaId()}`, payload);
+        await api.post(`/api/v1/finanzas/acreedores?empresa_id=${empresaId()}`, payload);
       }
       setModalAcreedor(false);
       cargar();

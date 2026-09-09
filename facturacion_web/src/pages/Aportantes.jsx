@@ -31,7 +31,7 @@ export default function Aportantes() {
   const cargar = async () => {
     setCargando(true);
     try {
-      const res = await api.get(`/api/v1/finanzas/aportantes/?empresa_id=${empresaId()}`);
+      const res = await api.get(`/api/v1/finanzas/aportantes?empresa_id=${empresaId()}`);
       setAportantes(res.data);
     } catch (e) {
       console.error(e);
@@ -73,7 +73,7 @@ export default function Aportantes() {
       if (aportanteEditando) {
         await api.put(`/api/v1/finanzas/aportantes/${aportanteEditando.id}?empresa_id=${empresaId()}`, payload);
       } else {
-        await api.post(`/api/v1/finanzas/aportantes/?empresa_id=${empresaId()}`, payload);
+        await api.post(`/api/v1/finanzas/aportantes?empresa_id=${empresaId()}`, payload);
       }
       setModalAportante(false);
       cargar();

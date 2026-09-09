@@ -88,36 +88,38 @@ class PagarCuotaRequest(BaseModel):
 
 # ── Endpoints de Acreedores ───────────────────────────────────────────────────
 
+def obtener_acreedor_response(a: Acreedor, db: Session) -> AcreedorResponse:
+    movs = db.query(MovimientoAcreedor).filter(MovimientoAcreedor.acreedor_id == a.id).all()
+    anio_actual = datetime.now().year
+    intereses_anio = sum(m.monto_interes for m in movs if m.fecha and m.fecha.year == anio_actual)
+    total_pagado = sum(m.monto_total for m in movs if m.tipo in ["PAGO_CAPITAL", "PAGO_INTERES", "PAGO_MIXTO"])
+    
+    return AcreedorResponse(
+        id=a.id,
+        empresa_id=a.empresa_id,
+        nombre=a.nombre,
+        contacto_telefono=a.contacto_telefono,
+        dui_nit=a.dui_nit,
+        email=a.email,
+        notas=a.notas,
+        tasa_interes_anual=a.tasa_interes_anual or 0.0,
+        saldo_capital=a.saldo_capital or 0,
+        saldo_interes=a.saldo_interes or 0,
+        intereses_pagados_anio=intereses_anio,
+        total_pagado_historico=total_pagado,
+        activo=a.activo,
+        fecha_registro=a.fecha_registro
+    )
+
+
+@router.get("", response_model=List[AcreedorResponse])
 @router.get("/", response_model=List[AcreedorResponse])
 def listar_acreedores(empresa_id: str, db: Session = Depends(get_db)):
     acreedores = db.query(Acreedor).filter(Acreedor.empresa_id == empresa_id, Acreedor.activo == True).order_by(Acreedor.nombre).all()
-    anio_actual = datetime.now().year
-    
-    resultado = []
-    for a in acreedores:
-        movs = db.query(MovimientoAcreedor).filter(MovimientoAcreedor.acreedor_id == a.id).all()
-        intereses_anio = sum(m.monto_interes for m in movs if m.fecha and m.fecha.year == anio_actual)
-        total_pagado = sum(m.monto_total for m in movs if m.tipo in ["PAGO_CAPITAL", "PAGO_INTERES", "PAGO_MIXTO"])
-        
-        resultado.append(AcreedorResponse(
-            id=a.id,
-            empresa_id=a.empresa_id,
-            nombre=a.nombre,
-            contacto_telefono=a.contacto_telefono,
-            dui_nit=a.dui_nit,
-            email=a.email,
-            notas=a.notas,
-            tasa_interes_anual=a.tasa_interes_anual or 0.0,
-            saldo_capital=a.saldo_capital or 0,
-            saldo_interes=a.saldo_interes or 0,
-            intereses_pagados_anio=intereses_anio,
-            total_pagado_historico=total_pagado,
-            activo=a.activo,
-            fecha_registro=a.fecha_registro
-        ))
-    return resultado
+    return [obtener_acreedor_response(a, db) for a in acreedores]
 
 
+@router.post("", response_model=AcreedorResponse, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=AcreedorResponse, status_code=status.HTTP_201_CREATED)
 def crear_acreedor(empresa_id: str, data: AcreedorCreate, db: Session = Depends(get_db)):
     a = Acreedor(
@@ -148,7 +150,7 @@ def crear_acreedor(empresa_id: str, data: AcreedorCreate, db: Session = Depends(
         db.add(mov)
         db.commit()
 
-    return listar_acreedores(empresa_id, db)[-1]
+    return obtener_acreedor_response(a, db)
 
 
 @router.put("/{acreedor_id}", response_model=AcreedorResponse)
@@ -166,7 +168,7 @@ def actualizar_acreedor(acreedor_id: int, empresa_id: str, data: AcreedorCreate,
     
     db.commit()
     db.refresh(a)
-    return [x for x in listar_acreedores(empresa_id, db) if x.id == a.id][0]
+    return obtener_acreedor_response(a, db)
 
 
 @router.get("/{acreedor_id}/movimientos", response_model=List[MovimientoAcreedorResponse])

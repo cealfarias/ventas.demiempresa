@@ -61,12 +61,14 @@ class AportanteResponse(BaseModel):
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
+@router.get("", response_model=List[AportanteResponse])
 @router.get("/", response_model=List[AportanteResponse])
 def listar_aportantes(empresa_id: str, db: Session = Depends(get_db)):
     aportantes = db.query(Aportante).filter(Aportante.empresa_id == empresa_id, Aportante.activo == True).order_by(Aportante.nombre).all()
     return aportantes
 
 
+@router.post("", response_model=AportanteResponse, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=AportanteResponse, status_code=status.HTTP_201_CREATED)
 def crear_aportante(empresa_id: str, data: AportanteCreate, db: Session = Depends(get_db)):
     ap = Aportante(
