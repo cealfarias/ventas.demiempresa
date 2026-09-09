@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { api } from "../services/api";
-import { Wallet, Plus, Play, Square, RefreshCcw, Printer, History, DollarSign, TrendingUp, X, Pencil, Trash2 } from "lucide-react";
+import { Wallet, Plus, Play, Square, RefreshCcw, Printer, History, DollarSign, TrendingUp, X, Pencil, Trash2, Eye } from "lucide-react";
 
-const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
+const fmt = (cents) => `$${((cents || 0) / 100).toFixed(2)}`;
 
 export default function Cajas() {
   const [cajas, setCajas] = useState([]);
@@ -10,6 +10,10 @@ export default function Cajas() {
   const [movimientos, setMovimientos] = useState([]);
   const [historial, setHistorial] = useState([]);
   const [activeTab, setActiveTab] = useState("actual"); // 'actual' | 'historial'
+  
+  const [selectedTurnoDetalle, setSelectedTurnoDetalle] = useState(null);
+  const [movimientosTurnoDetalle, setMovimientosTurnoDetalle] = useState([]);
+  const [cargandoDetalle, setCargandoDetalle] = useState(false);
   
   const [showArqueoModal, setShowArqueoModal] = useState(false);
   const [arqueoData, setArqueoData] = useState({
@@ -55,6 +59,20 @@ export default function Cajas() {
   const cargarHistorial = async () => {
     const res = await api.get(`/api/v1/cajas/historial?empresa_id=${empresaId}`);
     setHistorial(res.data);
+  };
+
+  const abrirDetalleTurno = async (turno) => {
+    setSelectedTurnoDetalle(turno);
+    setCargandoDetalle(true);
+    try {
+      const res = await api.get(`/api/v1/cajas/sesiones/${turno.sesion_id}/movimientos?empresa_id=${empresaId}`);
+      setMovimientosTurnoDetalle(res.data);
+    } catch (e) {
+      console.error(e);
+      setMovimientosTurnoDetalle([]);
+    } finally {
+      setCargandoDetalle(false);
+    }
   };
 
   useEffect(() => {
@@ -500,15 +518,143 @@ export default function Cajas() {
                         {fmt(h.diferencia)}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <button onClick={() => imprimirArqueo(h)} className="text-indigo-600 hover:text-indigo-800 p-1">
-                          <Printer className="w-4 h-4 mx-auto" />
-                        </button>
+                        <div className="flex items-center justify-center gap-1">
+                          <button 
+                            onClick={() => abrirDetalleTurno(h)} 
+                            className="p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors"
+                            title="Ver Auditoría de Turno"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => imprimirArqueo(h)} 
+                            className="p-1.5 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+                            title="Imprimir Ticket de Arqueo"
+                          >
+                            <Printer className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Detalle de Turno Cerrado */}
+      {selectedTurnoDetalle && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex justify-between items-center mb-6 border-b pb-3">
+              <div>
+                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-indigo-600" />
+                  Auditoría de Turno #{selectedTurnoDetalle.sesion_id} - {selectedTurnoDetalle.caja_nombre}
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Cajero: <span className="font-semibold text-slate-700">{selectedTurnoDetalle.usuario}</span> | 
+                  Apertura: {new Date(selectedTurnoDetalle.fecha_apertura).toLocaleString()} | 
+                  Cierre: {selectedTurnoDetalle.fecha_cierre ? new Date(selectedTurnoDetalle.fecha_cierre).toLocaleString() : 'N/A'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => imprimirArqueo(selectedTurnoDetalle)} 
+                  className="bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-xl font-semibold hover:bg-indigo-100 flex items-center gap-1.5 text-xs transition-colors"
+                >
+                  <Printer className="w-4 h-4" /> Imprimir Ticket
+                </button>
+                <button 
+                  onClick={() => setSelectedTurnoDetalle(null)} 
+                  className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Resumen de Cifras */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                <span className="text-[11px] text-slate-500 uppercase font-semibold">Fondo Inicial</span>
+                <p className="text-lg font-bold text-slate-700 mt-0.5">{fmt(selectedTurnoDetalle.saldo_inicial)}</p>
+              </div>
+              <div className="bg-emerald-50/70 p-3.5 rounded-2xl border border-emerald-200/70">
+                <span className="text-[11px] text-emerald-700 uppercase font-semibold">Total Efectivo</span>
+                <p className="text-lg font-bold text-emerald-700 mt-0.5">{fmt(selectedTurnoDetalle.total_efectivo || selectedTurnoDetalle.saldo_calculado)}</p>
+              </div>
+              <div className="bg-indigo-50/70 p-3.5 rounded-2xl border border-indigo-200/70">
+                <span className="text-[11px] text-indigo-700 uppercase font-semibold">Transferencias</span>
+                <p className="text-lg font-bold text-indigo-700 mt-0.5">{fmt(selectedTurnoDetalle.total_transferencia)}</p>
+              </div>
+              <div className="bg-amber-50/70 p-3.5 rounded-2xl border border-amber-200/70">
+                <span className="text-[11px] text-amber-700 uppercase font-semibold">Tarjetas</span>
+                <p className="text-lg font-bold text-amber-700 mt-0.5">{fmt(selectedTurnoDetalle.total_tarjeta)}</p>
+              </div>
+            </div>
+
+            {/* Estado Arqueo y Diferencia */}
+            {selectedTurnoDetalle.diferencia !== undefined && selectedTurnoDetalle.diferencia !== null && (
+              <div className={`p-4 rounded-2xl mb-6 border flex items-center justify-between ${
+                selectedTurnoDetalle.diferencia === 0 
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                  : selectedTurnoDetalle.diferencia < 0 
+                  ? 'bg-rose-50 border-rose-200 text-rose-800' 
+                  : 'bg-amber-50 border-amber-200 text-amber-800'
+              }`}>
+                <div>
+                  <span className="text-xs uppercase font-bold tracking-wider">Resultado de Arqueo Físico</span>
+                  <p className="text-sm font-semibold mt-0.5">
+                    {selectedTurnoDetalle.diferencia === 0 
+                      ? 'Arqueo Cuadrado Perfecto ($0.00 de diferencia)' 
+                      : selectedTurnoDetalle.diferencia < 0 
+                      ? `Faltante en Caja de ${fmt(Math.abs(selectedTurnoDetalle.diferencia))}` 
+                      : `Sobrante en Caja de ${fmt(selectedTurnoDetalle.diferencia)}`}
+                  </p>
+                </div>
+                <span className="text-xl font-extrabold">{fmt(selectedTurnoDetalle.diferencia)}</span>
+              </div>
+            )}
+
+            {/* Tabla de Movimientos del Turno */}
+            <div className="border border-slate-200 rounded-2xl overflow-hidden">
+              <div className="p-3 bg-slate-50 border-b border-slate-200 font-bold text-slate-700 text-sm flex justify-between items-center">
+                <span>Movimientos del Turno ({movimientosTurnoDetalle.length})</span>
+              </div>
+              {cargandoDetalle ? (
+                <p className="text-center py-8 text-slate-400 text-sm">Cargando movimientos...</p>
+              ) : movimientosTurnoDetalle.length === 0 ? (
+                <p className="text-center py-8 text-slate-400 text-sm">No se registraron movimientos en este turno.</p>
+              ) : (
+                <div className="max-h-60 overflow-y-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 uppercase text-slate-500 bg-slate-50">
+                        <th className="px-4 py-2.5">Hora</th>
+                        <th className="px-4 py-2.5">Concepto</th>
+                        <th className="px-4 py-2.5">Método</th>
+                        <th className="px-4 py-2.5 text-right">Ingreso</th>
+                        <th className="px-4 py-2.5 text-right">Egreso</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {movimientosTurnoDetalle.map(m => (
+                        <tr key={m.id} className="hover:bg-slate-50">
+                          <td className="px-4 py-2.5 whitespace-nowrap text-slate-500">{new Date(m.fecha).toLocaleTimeString()}</td>
+                          <td className="px-4 py-2.5 font-medium text-slate-700">{formatConcepto(m)}</td>
+                          <td className="px-4 py-2.5 capitalize text-slate-600">{m.metodo_pago}</td>
+                          <td className="px-4 py-2.5 text-right font-bold text-emerald-600">{m.tipo === "ingreso" ? fmt(m.monto) : ""}</td>
+                          <td className="px-4 py-2.5 text-right font-bold text-rose-600">{m.tipo === "egreso" ? fmt(m.monto) : ""}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

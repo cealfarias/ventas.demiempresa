@@ -25,7 +25,7 @@ def listar_cajas(empresa_id: str, db: Session = Depends(get_db)):
             "activa": c.activa,
             "tiene_sesion_activa": sesion_activa is not None,
             "sesion_activa_id": sesion_activa.id if sesion_activa else None,
-            "usuario_sesion_activa": sesion_activa.usuario.nombre if sesion_activa else None
+            "usuario_sesion_activa": (sesion_activa.usuario.username if sesion_activa and sesion_activa.usuario else None)
         })
     return res
 
@@ -134,14 +134,23 @@ def historial_cajas(empresa_id: str, db: Session = Depends(get_db)):
         egresos = sum(m.monto for m in movimientos if m.tipo == "egreso")
         saldo_calculado = s.saldo_inicial + ingresos - egresos
         
+        total_efectivo = s.saldo_inicial + sum(m.monto for m in movimientos if m.tipo == "ingreso" and m.metodo_pago == "efectivo") - sum(m.monto for m in movimientos if m.tipo == "egreso" and m.metodo_pago == "efectivo")
+        total_transferencia = sum(m.monto for m in movimientos if m.tipo == "ingreso" and m.metodo_pago == "transferencia") - sum(m.monto for m in movimientos if m.tipo == "egreso" and m.metodo_pago == "transferencia")
+        total_tarjeta = sum(m.monto for m in movimientos if m.tipo == "ingreso" and m.metodo_pago == "tarjeta") - sum(m.monto for m in movimientos if m.tipo == "egreso" and m.metodo_pago == "tarjeta")
+        
         res.append({
             "sesion_id": s.id,
-            "caja_nombre": s.caja.nombre,
-            "usuario": s.usuario.nombre if s.usuario else "Desconocido",
+            "caja_nombre": s.caja.nombre if s.caja else "Caja",
+            "usuario": s.usuario.username if s.usuario else "Desconocido",
             "fecha_apertura": s.fecha_apertura,
             "fecha_cierre": s.fecha_cierre,
             "saldo_inicial": s.saldo_inicial,
             "saldo_calculado": saldo_calculado,
+            "total_efectivo": total_efectivo,
+            "total_transferencia": total_transferencia,
+            "total_tarjeta": total_tarjeta,
+            "ingresos": ingresos,
+            "egresos": egresos,
             "diferencia": s.diferencia,
             "detalle_arqueo": s.detalle_arqueo,
             "notas": s.notas
