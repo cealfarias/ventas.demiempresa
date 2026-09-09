@@ -271,6 +271,28 @@ export default function Facturas() {
 
     if (!form.cliente_id) return window.dispatchEvent(new CustomEvent('avatar:say', { detail: { text: 'Seleccione un cliente', options: [{label:'Aceptar', action:null}] }}));
     if (form.items.length === 0) return window.dispatchEvent(new CustomEvent('avatar:say', { detail: { text: 'Agregue al menos un producto', options: [{label:'Aceptar', action:null}] }}));
+
+    const clienteSel = clientes.find(c => String(c.id_cliente) === String(form.cliente_id));
+    if (form.condicion_operacion === 'CREDITO' && clienteSel) {
+      const limite = clienteSel.limite_credito || 0;
+      const saldoAct = clienteSel.saldo_pendiente || 0;
+      if (limite <= 0) {
+        return window.dispatchEvent(new CustomEvent('avatar:say', {
+          detail: {
+            text: `El cliente "${clienteSel.nombre}" no tiene línea de crédito autorizada (Límite: $0.00). Por favor seleccione venta al Contado o asigne un límite de crédito en el módulo de Clientes.`,
+            options: [{ label: 'Aceptar', action: null }]
+          }
+        }));
+      }
+      if ((saldoAct + total) > limite) {
+        return window.dispatchEvent(new CustomEvent('avatar:say', {
+          detail: {
+            text: `Límite de crédito excedido para "${clienteSel.nombre}". Límite autorizado: $${(limite/100).toFixed(2)}, Saldo con esta venta: $${((saldoAct + total)/100).toFixed(2)}.`,
+            options: [{ label: 'Aceptar', action: null }]
+          }
+        }));
+      }
+    }
     
     setGuardando(true);
     try {

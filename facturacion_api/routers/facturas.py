@@ -209,13 +209,18 @@ def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Ses
 
     # 3. Generar Cuenta por Cobrar si es al crédito
     if data.condicion_operacion == "CREDITO":
-        if cliente.limite_credito and cliente.limite_credito > 0:
-            nuevo_saldo = (cliente.saldo_pendiente or 0) + data.total
-            if nuevo_saldo > cliente.limite_credito:
-                raise HTTPException(
-                    status_code=400, 
-                    detail=f"Limite de credito excedido. Limite: ${cliente.limite_credito/100:.2f}, Nuevo Saldo: ${nuevo_saldo/100:.2f}"
-                )
+        limite = cliente.limite_credito or 0
+        if limite <= 0:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"El cliente '{cliente.nombre}' no tiene línea de crédito autorizada (Límite: $0.00). Por favor seleccione venta al Contado o asigne un límite de crédito al cliente."
+            )
+        nuevo_saldo = (cliente.saldo_pendiente or 0) + data.total
+        if nuevo_saldo > limite:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Límite de crédito excedido para el cliente '{cliente.nombre}'. Límite autorizado: ${limite/100:.2f}, Saldo resultante con esta venta: ${nuevo_saldo/100:.2f}"
+            )
         cxc = CuentaPorCobrar(
             empresa_id=empresa_id,
             cliente_id=data.cliente_id,
