@@ -81,15 +81,32 @@ def _generar_numero_factura(db: Session, empresa_id: str, tipo_doc: str) -> str:
 from datetime import datetime, timedelta, timezone
 
 @router.get("/", response_model=List[FacturaResponse])
-def listar_facturas(empresa_id: str, db: Session = Depends(get_db)):
-    # El Salvador is UTC-6
-    tz_sv = timezone(timedelta(hours=-6))
-    hoy_sv = datetime.now(tz_sv).replace(hour=0, minute=0, second=0, microsecond=0)
-    
-    facturas = db.query(Factura).filter(
-        Factura.empresa_id == empresa_id,
-        Factura.fecha_emision >= hoy_sv
-    ).order_by(Factura.fecha_emision.desc()).limit(150).all()
+def listar_facturas(
+    empresa_id: str, 
+    busqueda: Optional[str] = None, 
+    fecha: Optional[str] = None, 
+    db: Session = Depends(get_db)
+):
+    query = db.query(Factura).filter(Factura.empresa_id == empresa_id)
+
+    if fecha:
+        try:
+            dt = datetime.strptime(fecha, "%Y-%m-%d")
+            inicio = dt.replace(hour=0, minute=0, second=0, microsecond=0)
+            fin = dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+            query = query.filter(Factura.fecha_emision >= inicio, Factura.fecha_emision <= fin)
+        except Exception:
+            pass
+
+    if busqueda:
+        term = f"%{busqueda.strip()}%"
+        query = query.join(Cliente, Factura.cliente_id == Cliente.id_cliente, isouter=True).filter(
+            (Factura.numero.ilike(term)) |
+            (Cliente.nombre.ilike(term)) |
+            (Factura.tipo_doc.ilike(term))
+        )
+
+    facturas = query.order_by(Factura.fecha_emision.desc()).limit(300).all()
     
     resultado = []
     for f in facturas:

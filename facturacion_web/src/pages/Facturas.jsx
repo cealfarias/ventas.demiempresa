@@ -167,11 +167,15 @@ export default function Facturas() {
   const [form, setForm] = useState({ cliente_id: '', bodega_salida_id: '', tipo_doc: 'FACTURA', condicion_operacion: 'CONTADO', metodo_pago: 'efectivo', dias_credito: 30, items: [] });
   const [guardando, setGuardando] = useState(false);
 
-  const cargar = async () => {
+  const cargar = async (b = busqueda, f = filtroFecha) => {
     setCargando(true);
     try {
+      let urlFacturas = `/api/v1/facturacion/facturas/?empresa_id=${empresaId()}`;
+      if (b) urlFacturas += `&busqueda=${encodeURIComponent(b)}`;
+      if (f) urlFacturas += `&fecha=${encodeURIComponent(f)}`;
+
       const [resF, resC, resP, resB, resCaja] = await Promise.all([
-        api.get(`/api/v1/facturacion/facturas/?empresa_id=${empresaId()}`),
+        api.get(urlFacturas),
         api.get(`/api/v1/facturacion/clientes/?empresa_id=${empresaId()}`),
         api.get(`/api/v1/facturacion/productos/?empresa_id=${empresaId()}`),
         api.get(`/api/v1/almacen/bodegas/?empresa_id=${empresaId()}`),
@@ -187,6 +191,13 @@ export default function Facturas() {
     } catch (e) { console.error(e); }
     finally { setCargando(false); }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      cargar(busqueda, filtroFecha);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [busqueda, filtroFecha]);
 
   const cambiarBodega = async (bodegaId) => {
     setForm(prev => ({ ...prev, bodega_salida_id: bodegaId }));
