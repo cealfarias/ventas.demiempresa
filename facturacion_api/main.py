@@ -47,7 +47,9 @@ app.include_router(gastos.router, prefix="/api/v1")
 app.include_router(usuarios.router, prefix="/api/v1")
 app.include_router(avatar_ai.router, prefix="/api/v1")
 app.include_router(acreedores.router, prefix="/api/v1")
+app.include_router(acreedores.router, prefix="/api/v1/finanzas")
 app.include_router(aportantes.router, prefix="/api/v1")
+app.include_router(aportantes.router, prefix="/api/v1/finanzas")
 
 @app.get("/")
 def read_root():

@@ -8,7 +8,7 @@ from datetime import datetime
 import pytz
 
 TIMEZONE = pytz.timezone("America/El_Salvador")
-router = APIRouter(prefix="/finanzas/aportantes", tags=["Aportantes y Apoyo Financiero"])
+router = APIRouter(prefix="/aportantes", tags=["Aportantes y Apoyo Financiero"])
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
 

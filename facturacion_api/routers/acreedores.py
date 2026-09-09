@@ -8,7 +8,7 @@ from datetime import datetime
 import pytz
 
 TIMEZONE = pytz.timezone("America/El_Salvador")
-router = APIRouter(prefix="/finanzas/acreedores", tags=["Acreedores y Préstamos"])
+router = APIRouter(prefix="/acreedores", tags=["Acreedores y Préstamos"])
 
 # Helper para sumar meses a una fecha
 def add_months(dt: datetime, months: int) -> datetime:

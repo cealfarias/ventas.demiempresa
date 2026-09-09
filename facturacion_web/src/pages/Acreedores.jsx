@@ -33,7 +33,12 @@ export default function Acreedores() {
   const cargar = async () => {
     setCargando(true);
     try {
-      const res = await api.get(`/api/v1/finanzas/acreedores?empresa_id=${empresaId()}`);
+      let res;
+      try {
+        res = await api.get(`/api/v1/finanzas/acreedores?empresa_id=${empresaId()}`);
+      } catch (err) {
+        res = await api.get(`/api/v1/acreedores?empresa_id=${empresaId()}`);
+      }
       setAcreedores(res.data);
     } catch (e) { console.error(e); }
     finally { setCargando(false); }
@@ -71,9 +76,17 @@ export default function Acreedores() {
         saldo_capital: Math.round(parseFloat(formAcreedor.saldo_capital || 0) * 100)
       };
       if (acreedorEditando) {
-        await api.put(`/api/v1/finanzas/acreedores/${acreedorEditando.id}?empresa_id=${empresaId()}`, payload);
+        try {
+          await api.put(`/api/v1/finanzas/acreedores/${acreedorEditando.id}?empresa_id=${empresaId()}`, payload);
+        } catch (err) {
+          await api.put(`/api/v1/acreedores/${acreedorEditando.id}?empresa_id=${empresaId()}`, payload);
+        }
       } else {
-        await api.post(`/api/v1/finanzas/acreedores?empresa_id=${empresaId()}`, payload);
+        try {
+          await api.post(`/api/v1/finanzas/acreedores?empresa_id=${empresaId()}`, payload);
+        } catch (err) {
+          await api.post(`/api/v1/acreedores?empresa_id=${empresaId()}`, payload);
+        }
       }
       setModalAcreedor(false);
       cargar();
