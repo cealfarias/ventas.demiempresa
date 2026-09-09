@@ -106,6 +106,12 @@ def listar_facturas(
             (Factura.tipo_doc.ilike(term))
         )
 
+    # Si NO hay filtro de fecha ni búsqueda, cargar únicamente las facturas de HOY por rendimiento
+    if not fecha and not busqueda:
+        tz_sv = timezone(timedelta(hours=-6))
+        hoy_sv = datetime.now(tz_sv).replace(hour=0, minute=0, second=0, microsecond=0)
+        query = query.filter(Factura.fecha_emision >= hoy_sv)
+
     facturas = query.order_by(Factura.fecha_emision.desc()).limit(300).all()
     
     resultado = []
