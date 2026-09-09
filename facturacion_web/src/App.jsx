@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate, us
 import {
   LayoutDashboard, Receipt, Package, Users, Settings, LogOut, Menu,
   Warehouse, BarChart3, ChevronDown, ChevronRight, Truck, ShoppingCart, CreditCard, BookOpen
-, Wallet, DollarSign } from 'lucide-react';
+, Wallet, DollarSign, Calculator } from 'lucide-react';
 import Productos from './pages/Productos';
 import Login from './pages/Login';
 import Registro from './pages/Registro';
@@ -24,6 +24,7 @@ import Usuarios from './pages/Usuarios';
 import AvatarWidget from './components/AvatarWidget';
 import Acreedores from './pages/Acreedores';
 import Aportantes from './pages/Aportantes';
+import PagoPrestamos from './pages/PagoPrestamos';
 
 import Dashboard from './pages/Dashboard';
 import Despachos from './pages/Despachos';
@@ -138,6 +139,7 @@ const Layout = ({ children }) => {
             <SidebarLink to="/cajas" icon={Wallet} label="Control de Caja" expanded={expanded} />
             <SidebarLink to="/gastos" icon={DollarSign} label="Gastos Operativos" expanded={expanded} />
             <SidebarLink to="/acreedores" icon={CreditCard} label="Acreedores (Préstamos)" expanded={expanded} />
+            <SidebarLink to="/pago-prestamos" icon={Calculator} label="Pago de Préstamos" expanded={expanded} />
             <SidebarLink to="/aportantes" icon={Users} label="Aportantes (Sin Interés)" expanded={expanded} />
           </SidebarSection>
 
@@ -238,6 +240,7 @@ function App() {
                   <Route path="/cajas" element={<Cajas />} />
                   <Route path="/gastos" element={<Gastos />} />
                   <Route path="/acreedores" element={<Acreedores />} />
+                  <Route path="/pago-prestamos" element={<PagoPrestamos />} />
                   <Route path="/aportantes" element={<Aportantes />} />
                   {/* Fase 3 — Ventas */}
                   <Route path="/clientes" element={<Clientes />} />

@@ -665,3 +665,55 @@ class MovimientoAportante(Base):
     aportante = relationship("Aportante", back_populates="movimientos")
     usuario = relationship("Usuario")
 
+
+class PrestamoAcreedor(Base):
+    __tablename__ = "prestamos_acreedores"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    acreedor_id = Column(Integer, ForeignKey("acreedores.id"), nullable=False)
+    empresa_id = Column(String, index=True, nullable=False)
+
+    monto_prestamo = Column(Integer, nullable=False)       # centavos
+    tasa_interes_anual = Column(Float, nullable=False)     # Ej: 12.0 (%)
+    plazo_meses = Column(Integer, nullable=False)          # Ej: 12 (meses)
+    tipo_amortizacion = Column(String(30), nullable=False) # saldos_frances | interes_simple
+    fecha_desembolso = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
+    
+    monto_cuota_mensual = Column(Integer, default=0)       # centavos (cuota estimada)
+    saldo_pendiente = Column(Integer, nullable=False)       # centavos
+    estado = Column(String(20), default="activo")          # activo | liquidado
+    notas = Column(Text, nullable=True)
+
+    acreedor = relationship("Acreedor")
+    cuotas = relationship("CuotaAmortizacion", back_populates="prestamo", cascade="all, delete-orphan", order_by="CuotaAmortizacion.numero_cuota")
+
+
+class CuotaAmortizacion(Base):
+    __tablename__ = "cuotas_amortizacion"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    prestamo_id = Column(Integer, ForeignKey("prestamos_acreedores.id"), nullable=False)
+    empresa_id = Column(String, index=True, nullable=False)
+
+    numero_cuota = Column(Integer, nullable=False)
+    fecha_vencimiento = Column(DateTime(timezone=True), nullable=False)
+
+    # Valores teóricos proyectados
+    monto_cuota_teorica = Column(Integer, nullable=False)    # centavos
+    monto_capital_teorico = Column(Integer, nullable=False)  # centavos
+    monto_interes_teorico = Column(Integer, nullable=False)  # centavos
+    saldo_teorico = Column(Integer, nullable=False)          # centavos
+
+    # Registro de pago real
+    estado = Column(String(20), default="pendiente")         # pendiente | pagado
+    fecha_pago_real = Column(DateTime(timezone=True), nullable=True)
+    monto_pagado_real = Column(Integer, nullable=True)       # centavos
+    metodo_pago = Column(String(50), nullable=True)
+    referencia = Column(String(100), nullable=True)
+    notas = Column(Text, nullable=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+
+    prestamo = relationship("PrestamoAcreedor", back_populates="cuotas")
+    usuario = relationship("Usuario")
+
+
