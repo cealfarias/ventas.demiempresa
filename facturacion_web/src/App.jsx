@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate, us
 import {
   LayoutDashboard, Receipt, Package, Users, Settings, LogOut, Menu,
   Warehouse, BarChart3, ChevronDown, ChevronRight, Truck, ShoppingCart, CreditCard, BookOpen
-, Wallet, DollarSign, Calculator, ShieldCheck } from 'lucide-react';
+, Wallet, DollarSign, Calculator, ShieldCheck, UserCheck } from 'lucide-react';
 import Productos from './pages/Productos';
 import Login from './pages/Login';
 import Registro from './pages/Registro';
@@ -29,6 +29,7 @@ import BackupRecovery from './pages/BackupRecovery';
 
 import Dashboard from './pages/Dashboard';
 import Despachos from './pages/Despachos';
+import Vendedores from './pages/Vendedores';
 import Kardex from './pages/Kardex';
 import { api } from './services/api';
 
@@ -163,6 +164,7 @@ const Layout = ({ children }) => {
           
           {canSeeLogistica && (
             <SidebarSection label="Logística" expanded={expanded}>
+              <SidebarLink to="/vendedores" icon={UserCheck} label="Vendedores" expanded={expanded} />
               <SidebarLink to="/despachos" icon={Truck} label="Rutas y Entregas" expanded={expanded} />
             </SidebarSection>
           )}
@@ -254,6 +256,7 @@ function App() {
                   <Route path="/backup-recovery" element={<BackupRecovery />} />
                   {/* Fase 5 — Logística */}
                   <Route path="/despachos" element={<Despachos />} />
+                  <Route path="/vendedores" element={<Vendedores />} />
                 </Routes>
               </Layout>
             </PrivateRoute>

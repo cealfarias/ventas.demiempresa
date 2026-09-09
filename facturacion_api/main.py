@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine
 from models import Base
-from routers import productos, clientes, facturas, auth, bodegas, kardex, proveedores, ordenes_compra, cuentas_pagar, cuentas_cobrar, configuracion_dte, dte, despachos, dashboard
+from routers import productos, clientes, facturas, auth, bodegas, kardex, proveedores, ordenes_compra, cuentas_pagar, cuentas_cobrar, configuracion_dte, dte, despachos, dashboard, vendedores
 from routers import cajas, gastos, usuarios, avatar_ai, acreedores, aportantes, backup
 import uvicorn
 
@@ -38,6 +38,8 @@ app.include_router(configuracion_dte.router, prefix="/api/v1/configuracion")
 app.include_router(dte.router, prefix="/api/v1/facturacion")
 
 app.include_router(despachos.router, prefix="/api/v1/logistica")
+app.include_router(vendedores.router, prefix="/api/v1/logistica")
+app.include_router(vendedores.router, prefix="/api/v1/facturacion")
 app.include_router(dashboard.router, prefix="/api/v1")
 app.include_router(cajas.router, prefix="/api/v1")
 app.include_router(gastos.router, prefix="/api/v1")

@@ -161,10 +161,11 @@ export default function Facturas() {
   });
 
   const [clientes, setClientes] = useState([]);
+  const [vendedores, setVendedores] = useState([]);
   const [productos, setProductos] = useState([]);
   const [bodegas, setBodegas] = useState([]);
   
-  const [form, setForm] = useState({ cliente_id: '', bodega_salida_id: '', tipo_doc: 'FACTURA', condicion_operacion: 'CONTADO', metodo_pago: 'efectivo', dias_credito: 30, items: [] });
+  const [form, setForm] = useState({ cliente_id: '', vendedor_id: '', bodega_salida_id: '', tipo_doc: 'FACTURA', condicion_operacion: 'CONTADO', metodo_pago: 'efectivo', dias_credito: 30, items: [] });
   const [guardando, setGuardando] = useState(false);
 
   const reqIdRef = React.useRef(0);
@@ -177,12 +178,13 @@ export default function Facturas() {
       if (b) urlFacturas += `&busqueda=${encodeURIComponent(b)}`;
       if (f) urlFacturas += `&fecha=${encodeURIComponent(f)}`;
 
-      const [resF, resC, resP, resB, resCaja] = await Promise.all([
+      const [resF, resC, resP, resB, resCaja, resV] = await Promise.all([
         api.get(urlFacturas),
         api.get(`/api/v1/facturacion/clientes/?empresa_id=${empresaId()}`),
         api.get(`/api/v1/facturacion/productos/?empresa_id=${empresaId()}`),
         api.get(`/api/v1/almacen/bodegas/?empresa_id=${empresaId()}`),
-        api.get(`/api/v1/cajas/sesion-activa?empresa_id=${empresaId()}&usuario_id=1`).catch(() => ({ data: { activa: true } }))
+        api.get(`/api/v1/cajas/sesion-activa?empresa_id=${empresaId()}&usuario_id=1`).catch(() => ({ data: { activa: true } })),
+        api.get(`/api/v1/logistica/vendedores/?empresa_id=${empresaId()}&solo_activos=true`).catch(() => ({ data: [] }))
       ]);
 
       if (currentReqId === reqIdRef.current) {
@@ -190,6 +192,7 @@ export default function Facturas() {
         setClientes(resC.data);
         setProductos(resP.data);
         setBodegas(resB.data);
+        setVendedores(resV.data || []);
         if (resCaja && resCaja.data) {
           setCajaActiva(resCaja.data.activa);
         }
@@ -244,6 +247,7 @@ export default function Facturas() {
     // Populate form with existing data
     setForm({
       cliente_id: fac.cliente_id || '',
+      vendedor_id: fac.vendedor_id || '',
       bodega_salida_id: '', // Not strictly tracked in list view, user must reselect if they want to deduct
       tipo_doc: fac.tipo_doc || 'FACTURA',
       condicion_operacion: fac.condicion_operacion || 'CONTADO',
@@ -308,6 +312,7 @@ export default function Facturas() {
     try {
       const payload = {
         ...form,
+        vendedor_id: form.vendedor_id ? parseInt(form.vendedor_id) : null,
         bodega_salida_id: form.bodega_salida_id ? parseInt(form.bodega_salida_id) : null,
         subtotal: subtotal,
         iva: iva,
@@ -400,13 +405,30 @@ export default function Facturas() {
         </h1>
 
         <div className="bg-white p-6 rounded-2xl shadow-sm border mb-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase">Cliente</label>
+                <label className="text-xs font-semibold text-slate-500 uppercase">Cliente *</label>
                 <SearchableSelect 
                   value={form.cliente_id}
                   options={[{value: '', label: 'Seleccione...'}, ...clientes.map(c => ({value: c.id_cliente, label: c.nombre}))]}
                   onChange={val => setForm({...form, cliente_id: val})}
+                  className="w-full mt-1 px-3 py-2 border rounded-xl"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase">Vendedor</label>
+                <SearchableSelect 
+                  value={form.vendedor_id}
+                  options={[
+                    {value: '', label: '(Sin Vendedor Asignado)'}, 
+                    ...vendedores.map(v => ({
+                      value: v.id, 
+                      label: v.codigo ? `${v.codigo} - ${v.nombre}` : v.nombre,
+                      subLabel: v.porcentaje_comision ? `${v.porcentaje_comision}% com.` : null
+                    }))
+                  ]}
+                  onChange={val => setForm({...form, vendedor_id: val})}
+                  placeholder="Seleccionar vendedor..."
                   className="w-full mt-1 px-3 py-2 border rounded-xl"
                 />
               </div>
@@ -531,6 +553,7 @@ export default function Facturas() {
     const clienteDefault = clientes.find(c => c.es_predeterminado);
     setForm({
       cliente_id: clienteDefault ? clienteDefault.id_cliente : "",
+      vendedor_id: "",
       bodega_salida_id: "",
       tipo_doc: "FACTURA",
       condicion_operacion: "CONTADO",
@@ -690,7 +713,15 @@ export default function Facturas() {
                 .map(f => (
                 <tr key={f.id} className={`hover:bg-slate-50 ${f.estado === "anulada" ? "bg-red-50/75" : ""}`}>
                   <td className="px-5 py-4 font-medium text-slate-800">{f.numero}</td>
-                  <td className="px-5 py-4 text-sm text-slate-600">{f.fecha_emision ? new Date(f.fecha_emision).toLocaleString() : ''}</td><td className="px-5 py-4 text-sm text-slate-600">{f.cliente_nombre}</td>
+                  <td className="px-5 py-4 text-sm text-slate-600">{f.fecha_emision ? new Date(f.fecha_emision).toLocaleString() : ''}</td>
+                  <td className="px-5 py-4 text-sm text-slate-600">
+                    <div className="font-semibold text-slate-800">{f.cliente_nombre}</div>
+                    {f.vendedor_nombre && (
+                      <div className="text-[11px] text-indigo-600 font-medium mt-0.5 flex items-center gap-1">
+                        <span className="text-slate-400">Vendedor:</span> {f.vendedor_nombre}
+                      </div>
+                    )}
+                  </td>
                   <td className="px-5 py-4 text-sm">
                     <div>{f.tipo_doc}</div>
                     <div className="text-xs text-slate-400">{f.condicion_operacion}</div>

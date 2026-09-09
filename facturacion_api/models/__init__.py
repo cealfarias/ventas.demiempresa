@@ -109,6 +109,7 @@ class Factura(Base):
     numero = Column(String(30), nullable=False)
     cliente_id = Column(Integer, ForeignKey("clientes.id_cliente"), nullable=False)
     bodega_salida_id = Column(Integer, ForeignKey("bodegas.id"), nullable=True)
+    vendedor_id = Column(Integer, ForeignKey("vendedores.id"), nullable=True)
     
     # Documento y DTE
     tipo_doc = Column(String(20), default="FACTURA") # FACTURA | CCF | EXPORTACION
@@ -130,6 +131,7 @@ class Factura(Base):
     estado = Column(String(20), default="emitida") # emitida, anulada
     
     cliente = relationship("Cliente", back_populates="facturas")
+    vendedor = relationship("Vendedor", back_populates="facturas")
     items = relationship("ItemFactura", back_populates="factura", cascade="all, delete-orphan")
     bodega_salida = relationship("Bodega")
     cuentas_cobrar = relationship("CuentaPorCobrar", back_populates="factura")
@@ -486,6 +488,30 @@ class DetalleDespacho(Base):
     
     despacho = relationship("Despacho", back_populates="detalles")
     factura = relationship("Factura")
+
+
+# ==========================================
+# MÓDULO DE VENDEDORES (LOGÍSTICA / COMERCIAL)
+# ==========================================
+
+class Vendedor(Base):
+    __tablename__ = "vendedores"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    empresa_id = Column(String, index=True, nullable=False)
+
+    codigo = Column(String(50), nullable=True) # VEN-001
+    nombre = Column(String(200), nullable=False)
+    telefono = Column(String(50), nullable=True)
+    email = Column(String(100), nullable=True)
+    dui = Column(String(20), nullable=True)
+    direccion = Column(String(300), nullable=True)
+    porcentaje_comision = Column(Float, default=0.0)
+    activo = Column(Boolean, default=True)
+    fecha_creacion = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
+
+    facturas = relationship("Factura", back_populates="vendedor")
+
 
 # ==========================================
 # MÓDULO DE CAJA Y GASTOS

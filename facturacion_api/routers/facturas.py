@@ -23,6 +23,7 @@ class ItemFacturaCreate(BaseModel):
 class FacturaCreate(BaseModel):
     cliente_id: int
     bodega_salida_id: Optional[int] = None
+    vendedor_id: Optional[int] = None
     
     tipo_doc: str = "FACTURA" # FACTURA | CCF | EXPORTACION
     condicion_operacion: str = "CONTADO" # CONTADO | CREDITO
@@ -51,6 +52,8 @@ class FacturaResponse(BaseModel):
     cliente_id: int
     cliente_nombre: str
     bodega_salida_id: Optional[int] = None
+    vendedor_id: Optional[int] = None
+    vendedor_nombre: Optional[str] = None
     tipo_doc: str
     condicion_operacion: str
     subtotal: int
@@ -89,10 +92,13 @@ def _convertir_factura_response(f: Factura, db: Session) -> FacturaResponse:
             cantidad=d.cantidad, precio_unitario=d.precio_unitario,
             subtotal=d.subtotal
         ))
+    vendedor_nom = f.vendedor.nombre if f.vendedor else None
     return FacturaResponse(
         id=f.id, empresa_id=f.empresa_id, numero=f.numero,
         cliente_id=f.cliente_id, cliente_nombre=f.cliente.nombre if f.cliente else "",
         bodega_salida_id=f.bodega_salida_id,
+        vendedor_id=f.vendedor_id,
+        vendedor_nombre=vendedor_nom,
         tipo_doc=f.tipo_doc, condicion_operacion=f.condicion_operacion,
         subtotal=f.subtotal, iva=f.iva, total=f.total,
         estado=f.estado, estado_dte=f.estado_dte,
@@ -159,6 +165,7 @@ def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Ses
         numero=numero,
         cliente_id=data.cliente_id,
         bodega_salida_id=data.bodega_salida_id,
+        vendedor_id=data.vendedor_id,
         tipo_doc=data.tipo_doc,
         condicion_operacion=data.condicion_operacion,
         subtotal=data.subtotal,
@@ -343,6 +350,7 @@ def actualizar_factura(factura_id: int, empresa_id: str, usuario_id: int, data: 
 
     f.cliente_id = data.cliente_id
     f.bodega_salida_id = data.bodega_salida_id
+    f.vendedor_id = data.vendedor_id
     f.tipo_doc = data.tipo_doc
     f.condicion_operacion = data.condicion_operacion
     f.dias_credito = data.dias_credito
