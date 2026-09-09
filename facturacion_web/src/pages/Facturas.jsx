@@ -167,7 +167,10 @@ export default function Facturas() {
   const [form, setForm] = useState({ cliente_id: '', bodega_salida_id: '', tipo_doc: 'FACTURA', condicion_operacion: 'CONTADO', metodo_pago: 'efectivo', dias_credito: 30, items: [] });
   const [guardando, setGuardando] = useState(false);
 
+  const reqIdRef = React.useRef(0);
+
   const cargar = async (b = busqueda, f = filtroFecha) => {
+    const currentReqId = ++reqIdRef.current;
     setCargando(true);
     try {
       let urlFacturas = `/api/v1/facturacion/facturas/?empresa_id=${empresaId()}`;
@@ -181,21 +184,28 @@ export default function Facturas() {
         api.get(`/api/v1/almacen/bodegas/?empresa_id=${empresaId()}`),
         api.get(`/api/v1/cajas/sesion-activa?empresa_id=${empresaId()}&usuario_id=1`).catch(() => ({ data: { activa: true } }))
       ]);
-      setFacturas(resF.data);
-      setClientes(resC.data);
-      setProductos(resP.data);
-      setBodegas(resB.data);
-      if (resCaja && resCaja.data) {
-        setCajaActiva(resCaja.data.activa);
+
+      if (currentReqId === reqIdRef.current) {
+        setFacturas(resF.data);
+        setClientes(resC.data);
+        setProductos(resP.data);
+        setBodegas(resB.data);
+        if (resCaja && resCaja.data) {
+          setCajaActiva(resCaja.data.activa);
+        }
       }
     } catch (e) { console.error(e); }
-    finally { setCargando(false); }
+    finally {
+      if (currentReqId === reqIdRef.current) {
+        setCargando(false);
+      }
+    }
   };
 
   useEffect(() => {
     const timer = setTimeout(() => {
       cargar(busqueda, filtroFecha);
-    }, 300);
+    }, 250);
     return () => clearTimeout(timer);
   }, [busqueda, filtroFecha]);
 
