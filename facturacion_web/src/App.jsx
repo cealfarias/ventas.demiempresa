@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate, us
 import {
   LayoutDashboard, Receipt, Package, Users, Settings, LogOut, Menu,
   Warehouse, BarChart3, ChevronDown, ChevronRight, Truck, ShoppingCart, CreditCard, BookOpen
-, Wallet, DollarSign, Calculator } from 'lucide-react';
+, Wallet, DollarSign, Calculator, ShieldCheck } from 'lucide-react';
 import Productos from './pages/Productos';
 import Login from './pages/Login';
 import Registro from './pages/Registro';
@@ -25,6 +25,7 @@ import AvatarWidget from './components/AvatarWidget';
 import Acreedores from './pages/Acreedores';
 import Aportantes from './pages/Aportantes';
 import PagoPrestamos from './pages/PagoPrestamos';
+import BackupRecovery from './pages/BackupRecovery';
 
 import Dashboard from './pages/Dashboard';
 import Despachos from './pages/Despachos';
@@ -170,6 +171,7 @@ const Layout = ({ children }) => {
             <SidebarSection label="Configuración" expanded={expanded}>
               <SidebarLink to="/configuracion-dte" icon={Settings} label="Configuración DTE" expanded={expanded} />
               <SidebarLink to="/usuarios" icon={Users} label="Gestión de Usuarios" expanded={expanded} />
+              <SidebarLink to="/backup-recovery" icon={ShieldCheck} label="Backup y Restauración" expanded={expanded} />
             </SidebarSection>
           )}
         </nav>
@@ -249,6 +251,7 @@ function App() {
                   {/* Fase 4 — DTE */}
                   <Route path="/configuracion-dte" element={<ConfiguracionDTE />} />
                   <Route path="/usuarios" element={<Usuarios />} />
+                  <Route path="/backup-recovery" element={<BackupRecovery />} />
                   {/* Fase 5 — Logística */}
                   <Route path="/despachos" element={<Despachos />} />
                 </Routes>
