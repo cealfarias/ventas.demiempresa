@@ -309,54 +309,13 @@ def actualizar_factura(factura_id: int, empresa_id: str, usuario_id: int, data: 
                 notas=f"Reversion por edicion Fac. {f.id}", usuario_id=usuario_id
             )
 
-    # Actualizar datos de factura
-    cxc = db.query(CuentaPorCobrar).filter(CuentaPorCobrar.factura_id == f.id).first()
-    if data.condicion_operacion == "CREDITO":
-        if not cxc:
-            limite = cliente.limite_credito or 0
-            if limite <= 0:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"El cliente '{cliente.nombre}' no tiene línea de crédito autorizada (Límite: $0.00)."
-                )
-            dias_val = int(data.dias_credito) if data.dias_credito and int(data.dias_credito) > 0 else 30
-            fecha_base = f.fecha_emision if f.fecha_emision else datetime.now(TIMEZONE)
-            cxc = CuentaPorCobrar(
-                empresa_id=empresa_id,
-                cliente_id=data.cliente_id,
-                factura_id=f.id,
-                fecha_vencimiento=fecha_base + timedelta(days=dias_val),
-                monto_original=data.total,
-                monto_pendiente=data.total,
-                estado="pendiente"
-            )
-            db.add(cxc)
-            cliente.saldo_pendiente = (cliente.saldo_pendiente or 0) + data.total
-        else:
-            if f.cliente_id != data.cliente_id:
-                cliente_anterior = db.query(Cliente).filter(Cliente.id_cliente == f.cliente_id, Cliente.empresa_id == empresa_id).first()
-                if cliente_anterior:
-                    cliente_anterior.saldo_pendiente = max(0, (cliente_anterior.saldo_pendiente or 0) - cxc.monto_pendiente)
-                cxc.cliente_id = data.cliente_id
-                cliente.saldo_pendiente = (cliente.saldo_pendiente or 0) + cxc.monto_pendiente
-            
-            if f.total != data.total:
-                diferencia = data.total - f.total
-                cxc.monto_original = data.total
-                cxc.monto_pendiente = max(0, cxc.monto_pendiente + diferencia)
-                cliente.saldo_pendiente = max(0, (cliente.saldo_pendiente or 0) + diferencia)
-    else:
-        if cxc:
-            cliente_afectado = cliente if f.cliente_id == data.cliente_id else (db.query(Cliente).filter(Cliente.id_cliente == f.cliente_id, Cliente.empresa_id == empresa_id).first() or cliente)
-            cliente_afectado.saldo_pendiente = max(0, (cliente_afectado.saldo_pendiente or 0) - cxc.monto_pendiente)
-            db.delete(cxc)
-
+    # Actualizar campos basicos de la factura
     f.cliente_id = data.cliente_id
     f.bodega_salida_id = data.bodega_salida_id
     f.vendedor_id = data.vendedor_id
     f.tipo_doc = data.tipo_doc
     f.condicion_operacion = data.condicion_operacion
-    f.dias_credito = data.dias_credito
+    f.dias_credito = data.dias_credito if data.dias_credito is not None else 30
     f.entrega_domicilio = data.entrega_domicilio
     f.subtotal = data.subtotal
     f.iva = data.iva
@@ -377,6 +336,51 @@ def actualizar_factura(factura_id: int, empresa_id: str, usuario_id: int, data: 
                 f.fecha_emision = ahora
             else:
                 f.fecha_emision = tz.localize(datetime.combine(fecha_req, datetime.min.time()))
+
+    # Actualizar datos de Cuenta por Cobrar
+    cxc = db.query(CuentaPorCobrar).filter(CuentaPorCobrar.factura_id == f.id).first()
+    if data.condicion_operacion == "CREDITO":
+        dias_val = int(data.dias_credito) if data.dias_credito is not None and int(data.dias_credito) >= 0 else 30
+        fecha_base = f.fecha_emision if f.fecha_emision else datetime.now(TIMEZONE)
+        nueva_venc = fecha_base + timedelta(days=dias_val)
+
+        if not cxc:
+            limite = cliente.limite_credito or 0
+            if limite <= 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"El cliente '{cliente.nombre}' no tiene línea de crédito autorizada (Límite: $0.00)."
+                )
+            cxc = CuentaPorCobrar(
+                empresa_id=empresa_id,
+                cliente_id=data.cliente_id,
+                factura_id=f.id,
+                fecha_vencimiento=nueva_venc,
+                monto_original=data.total,
+                monto_pendiente=data.total,
+                estado="pendiente"
+            )
+            db.add(cxc)
+            cliente.saldo_pendiente = (cliente.saldo_pendiente or 0) + data.total
+        else:
+            cxc.fecha_vencimiento = nueva_venc
+            if f.cliente_id != data.cliente_id:
+                cliente_anterior = db.query(Cliente).filter(Cliente.id_cliente == f.cliente_id, Cliente.empresa_id == empresa_id).first()
+                if cliente_anterior:
+                    cliente_anterior.saldo_pendiente = max(0, (cliente_anterior.saldo_pendiente or 0) - cxc.monto_pendiente)
+                cxc.cliente_id = data.cliente_id
+                cliente.saldo_pendiente = (cliente.saldo_pendiente or 0) + cxc.monto_pendiente
+            
+            if f.total != data.total:
+                diferencia = data.total - f.total
+                cxc.monto_original = data.total
+                cxc.monto_pendiente = max(0, cxc.monto_pendiente + diferencia)
+                cliente.saldo_pendiente = max(0, (cliente.saldo_pendiente or 0) + diferencia)
+    else:
+        if cxc:
+            cliente_afectado = cliente if f.cliente_id == data.cliente_id else (db.query(Cliente).filter(Cliente.id_cliente == f.cliente_id, Cliente.empresa_id == empresa_id).first() or cliente)
+            cliente_afectado.saldo_pendiente = max(0, (cliente_afectado.saldo_pendiente or 0) - cxc.monto_pendiente)
+            db.delete(cxc)
 
     # Borrar items anteriores
     db.query(ItemFactura).filter(ItemFactura.factura_id == f.id).delete()

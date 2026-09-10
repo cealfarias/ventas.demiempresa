@@ -251,7 +251,7 @@ export default function Facturas() {
       bodega_salida_id: '', // Not strictly tracked in list view, user must reselect if they want to deduct
       tipo_doc: fac.tipo_doc || 'FACTURA',
       condicion_operacion: fac.condicion_operacion || 'CONTADO',
-      dias_credito: 30,
+      dias_credito: (fac.dias_credito !== undefined && fac.dias_credito !== null) ? fac.dias_credito : 30,
       entrega_domicilio: false,
       incluye_iva: false,
       fecha_emision: fac.fecha_emision ? (new Date(new Date(fac.fecha_emision).getTime() - new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : (new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000)).toISOString().slice(0, 16),
@@ -312,6 +312,7 @@ export default function Facturas() {
     try {
       const payload = {
         ...form,
+        dias_credito: (form.dias_credito !== undefined && form.dias_credito !== '') ? parseInt(form.dias_credito) : 30,
         vendedor_id: form.vendedor_id ? parseInt(form.vendedor_id) : null,
         bodega_salida_id: form.bodega_salida_id ? parseInt(form.bodega_salida_id) : null,
         subtotal: subtotal,
