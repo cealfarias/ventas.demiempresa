@@ -4,6 +4,7 @@ import { Receipt, Plus, Search, FileText, CheckCircle2, DollarSign, XCircle, Fil
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
+const usuarioId = () => localStorage.getItem('usuario_id') || '1';
 
 // Componente de búsqueda inteligente
 const SearchableSelect = ({ value, options, onChange, placeholder = "Buscar...", className="w-full px-3 py-2 border rounded-xl", autoFocus = false }) => {
@@ -183,7 +184,7 @@ export default function Facturas() {
         api.get(`/api/v1/facturacion/clientes/?empresa_id=${empresaId()}`),
         api.get(`/api/v1/facturacion/productos/?empresa_id=${empresaId()}`),
         api.get(`/api/v1/almacen/bodegas/?empresa_id=${empresaId()}`),
-        api.get(`/api/v1/cajas/sesion-activa?empresa_id=${empresaId()}&usuario_id=1`).catch(() => ({ data: { activa: true } })),
+        api.get(`/api/v1/cajas/sesion-activa?empresa_id=${empresaId()}&usuario_id=${usuarioId()}`).catch(() => ({ data: { activa: true } })),
         api.get(`/api/v1/logistica/vendedores/?empresa_id=${empresaId()}&solo_activos=true`).catch(() => ({ data: [] }))
       ]);
 
@@ -325,9 +326,9 @@ export default function Facturas() {
         }))
       };
       if (editandoId) {
-        await api.put(`/api/v1/facturacion/facturas/${editandoId}?empresa_id=${empresaId()}&usuario_id=1`, payload);
+        await api.put(`/api/v1/facturacion/facturas/${editandoId}?empresa_id=${empresaId()}&usuario_id=${usuarioId()}`, payload);
       } else {
-        await api.post(`/api/v1/facturacion/facturas/?empresa_id=${empresaId()}&usuario_id=1`, payload);
+        await api.post(`/api/v1/facturacion/facturas/?empresa_id=${empresaId()}&usuario_id=${usuarioId()}`, payload);
       }
       setVista('lista'); setEditandoId(null);
       cargar();
@@ -571,7 +572,7 @@ export default function Facturas() {
   const anularFactura = async (id) => {
     if (!window.confirm("¿Está seguro de anular esta factura? Esta acción revertirá los saldos y el inventario, y no se puede deshacer.")) return;
     try {
-      await api.put(`/api/v1/facturacion/facturas/${id}/anular?empresa_id=${empresaId()}&usuario_id=1`);
+      await api.put(`/api/v1/facturacion/facturas/${id}/anular?empresa_id=${empresaId()}&usuario_id=${usuarioId()}`);
       window.dispatchEvent(new CustomEvent("avatar:say", { detail: { text: "Factura anulada exitosamente.", options: [{label:"Aceptar", action:null}] }}));
       cargar();
     } catch (e) {

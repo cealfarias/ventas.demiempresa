@@ -3,6 +3,7 @@ import { CreditCard, DollarSign, Printer, User, ChevronRight, Calendar } from 'l
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
+const usuarioId = () => localStorage.getItem('usuario_id') ? parseInt(localStorage.getItem('usuario_id')) : 1;
 const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
 
 const WhatsAppIcon = ({ className = "w-4 h-4" }) => (
@@ -198,7 +199,7 @@ export default function CuentasCobrar() {
         metodo_pago: formPago.metodo_pago,
         referencia: formPago.referencia,
         notas: formPago.notas,
-        usuario_id: 1,
+        usuario_id: usuarioId(),
         fecha: new Date(formPago.fecha).toISOString()
       };
       await api.post(`/api/v1/facturacion/cuentas-cobrar/${cuentaActiva.id}/pagar?empresa_id=${empresaId()}`, payload);

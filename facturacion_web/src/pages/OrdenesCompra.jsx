@@ -32,6 +32,7 @@ const selectStylesSmall = {
 };
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
+const usuarioId = () => localStorage.getItem('usuario_id') ? parseInt(localStorage.getItem('usuario_id')) : 1;
 const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
 
 export default function OrdenesCompra() {
@@ -139,9 +140,9 @@ export default function OrdenesCompra() {
       };
         let res;
         if (editandoId) {
-          res = await api.put(`/api/v1/compras/ordenes-compra/${editandoId}?empresa_id=${empresaId()}&usuario_id=1`, payload);
+          res = await api.put(`/api/v1/compras/ordenes-compra/${editandoId}?empresa_id=${empresaId()}&usuario_id=${usuarioId()}`, payload);
         } else {
-          res = await api.post(`/api/v1/compras/ordenes-compra/?empresa_id=${empresaId()}&usuario_id=1`, payload);
+          res = await api.post(`/api/v1/compras/ordenes-compra/?empresa_id=${empresaId()}&usuario_id=${usuarioId()}`, payload);
         }
         
         if (mostrarDte && dteJson) {
@@ -186,7 +187,7 @@ export default function OrdenesCompra() {
       const payload = {
         empresa_id: empresaId(),
         bodega_destino_id: recepcion.bodega_destino_id,
-        usuario_id: 1,
+        usuario_id: usuarioId(),
         crear_cuenta_pagar: recepcion.crear_cuenta_pagar,
         dias_credito: recepcion.dias_credito,
         detalles: recepcion.detalles.map(d => ({ 

@@ -4,6 +4,7 @@ import { BarChart3, Search, Filter, RefreshCw, TrendingUp, TrendingDown, Warehou
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
+const usuarioId = () => localStorage.getItem('usuario_id') ? parseInt(localStorage.getItem('usuario_id')) : 1;
 const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
 
 export default function Existencias() {
@@ -59,7 +60,7 @@ export default function Existencias() {
         tipo_movimiento: form.tipo_movimiento,
         cantidad: parseFloat(form.cantidad),
         costo_unitario: form.costo_unitario ? parseFloat(form.costo_unitario) : 0,
-        usuario_id: 1,
+        usuario_id: usuarioId(),
         notas: form.notas
       };
       await api.post('/api/v1/almacen/kardex/ajuste', payload);

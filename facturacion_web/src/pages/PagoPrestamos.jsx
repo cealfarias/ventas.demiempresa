@@ -3,6 +3,7 @@ import { Calendar, CreditCard, DollarSign, Plus, CheckCircle, Clock, AlertCircle
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
+const usuarioId = () => localStorage.getItem('usuario_id') ? parseInt(localStorage.getItem('usuario_id')) : 1;
 const fmt = (cents) => `$${((cents || 0) / 100).toFixed(2)}`;
 
 export default function PagoPrestamos() {
@@ -99,7 +100,7 @@ export default function PagoPrestamos() {
         notas: formPrestamo.notas
       };
 
-      const res = await api.post(`/api/v1/finanzas/acreedores/prestamos?empresa_id=${empresaId()}&usuario_id=1`, payload);
+      const res = await api.post(`/api/v1/finanzas/acreedores/prestamos?empresa_id=${empresaId()}&usuario_id=${usuarioId()}`, payload);
       setModalNuevoPrestamo(false);
       await cargarDatosIniciales();
       setPrestamoSeleccionadoId(res.data.id);
@@ -126,7 +127,7 @@ export default function PagoPrestamos() {
         notas: formPago.notas
       };
       await api.post(
-        `/api/v1/finanzas/acreedores/prestamos/${detallePrestamo.id}/pagar-cuota/${cuotaAPagar.numero_cuota}?empresa_id=${empresaId()}&usuario_id=1`,
+        `/api/v1/finanzas/acreedores/prestamos/${detallePrestamo.id}/pagar-cuota/${cuotaAPagar.numero_cuota}?empresa_id=${empresaId()}&usuario_id=${usuarioId()}`,
         payload
       );
       setModalPagoCuota(false);

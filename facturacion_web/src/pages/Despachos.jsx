@@ -3,6 +3,7 @@ import { Truck, MapPin, Search, Plus, Calendar, CheckCircle, Package, AlertCircl
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
+const usuarioId = () => localStorage.getItem('usuario_id') ? parseInt(localStorage.getItem('usuario_id')) : 1;
 
 export default function Despachos() {
   const [despachos, setDespachos] = useState([]);
@@ -51,7 +52,7 @@ export default function Despachos() {
         ...form,
         fecha_programada: form.fecha_programada ? new Date(form.fecha_programada).toISOString() : null,
       };
-      await api.post(`/api/v1/logistica/despachos/?empresa_id=${empresaId()}&usuario_id=1`, payload);
+      await api.post(`/api/v1/logistica/despachos/?empresa_id=${empresaId()}&usuario_id=${usuarioId()}`, payload);
       setVista('lista');
       cargar();
     } catch (e) {

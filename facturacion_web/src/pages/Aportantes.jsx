@@ -3,6 +3,7 @@ import { Users, DollarSign, Plus, Search, History, Edit, HeartHandshake, ArrowDo
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
+const usuarioId = () => localStorage.getItem('usuario_id') ? parseInt(localStorage.getItem('usuario_id')) : 1;
 const fmt = (cents) => `$${((cents || 0) / 100).toFixed(2)}`;
 
 export default function Aportantes() {
@@ -107,7 +108,7 @@ export default function Aportantes() {
         referencia: formMov.referencia,
         notas: formMov.notas
       };
-      await api.post(`/api/v1/finanzas/aportantes/${aportanteActivo.id}/movimiento?empresa_id=${empresaId()}&usuario_id=1`, payload);
+      await api.post(`/api/v1/finanzas/aportantes/${aportanteActivo.id}/movimiento?empresa_id=${empresaId()}&usuario_id=${usuarioId()}`, payload);
       setModalMovimiento(false);
       cargar();
       window.dispatchEvent(new CustomEvent("avatar:say", { detail: { text: "Movimiento de aportante registrado exitosamente." }}));

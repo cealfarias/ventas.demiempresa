@@ -3,6 +3,7 @@ import { CreditCard, Plus, Search, Calendar, AlertTriangle, CheckCircle2, Dollar
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
+const usuarioId = () => localStorage.getItem('usuario_id') ? parseInt(localStorage.getItem('usuario_id')) : 1;
 const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
 
 export default function CuentasPagar() {
@@ -51,7 +52,7 @@ export default function CuentasPagar() {
           metodo_pago: formPago.metodo_pago,
           referencia: formPago.referencia,
           notas: formPago.notas,
-          usuario_id: 1
+          usuario_id: usuarioId()
         };
         
         await api.post(`/api/v1/compras/cuentas-pagar/${c.id}/pagar?empresa_id=${empresaId()}`, payload);

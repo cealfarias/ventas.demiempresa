@@ -233,7 +233,7 @@ def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Ses
                 status_code=400, 
                 detail=f"Límite de crédito excedido para el cliente '{cliente.nombre}'. Límite autorizado: ${limite/100:.2f}, Saldo resultante con esta venta: ${nuevo_saldo/100:.2f}"
             )
-        dias_val = int(data.dias_credito) if data.dias_credito and int(data.dias_credito) > 0 else 30
+        dias_val = int(data.dias_credito) if (data.dias_credito is not None and str(data.dias_credito).isdigit()) else 30
         fecha_base = f.fecha_emision if f.fecha_emision else datetime.now(TIMEZONE)
         cxc = CuentaPorCobrar(
             empresa_id=empresa_id,
