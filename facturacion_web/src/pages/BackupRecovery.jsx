@@ -34,7 +34,8 @@ export default function BackupRecovery() {
 
       window.dispatchEvent(new CustomEvent("avatar:say", { detail: { text: "Copia de seguridad exportada y firmada digitalmente con HMAC-SHA256." }}));
     } catch (e) {
-      alert('Error al generar la copia de seguridad');
+      const msg = e.response?.data?.detail || 'Error al generar la copia de seguridad en el servidor.';
+      setErrorMsg(msg);
     } finally {
       setDescargando(false);
     }
