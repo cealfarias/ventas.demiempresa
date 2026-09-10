@@ -30,11 +30,46 @@ export default function CuentasCobrar() {
   const [guardando, setGuardando] = useState(false);
   const [modalAbonoExitoso, setModalAbonoExitoso] = useState(null);
 
+  const parseFechaLocal = (fechaStr) => {
+    if (!fechaStr) return null;
+    const parts = String(fechaStr).split('T')[0].split('-');
+    if (parts.length === 3) {
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const d = parseInt(parts[2], 10);
+      if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+        return new Date(y, m, d);
+      }
+    }
+    const dt = new Date(fechaStr);
+    return isNaN(dt.getTime()) ? null : dt;
+  };
+
+  const formatFecha = (fechaStr) => {
+    const dt = parseFechaLocal(fechaStr);
+    return dt ? dt.toLocaleDateString() : '—';
+  };
+
+  const esFacturaVencida = (fechaVencStr) => {
+    if (!fechaVencStr) return false;
+    const dt = parseFechaLocal(fechaVencStr);
+    if (!dt) return false;
+    const finDiaVencimiento = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 23, 59, 59, 999);
+    return finDiaVencimiento < new Date();
+  };
+
+  const getDiasAtraso = (fechaVencStr) => {
+    if (!esFacturaVencida(fechaVencStr)) return 0;
+    const dt = parseFechaLocal(fechaVencStr);
+    if (!dt) return 0;
+    const finDia = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 23, 59, 59, 999);
+    const diffMs = new Date() - finDia;
+    return Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+  };
+
   const enviarWhatsAppEstadoCuenta = (c) => {
     const lineasFacturas = (c.cuentas_pendientes || []).map(f => {
-      const diasAtraso = f.fecha_vencimiento && new Date(f.fecha_vencimiento) < new Date()
-        ? Math.ceil((new Date() - new Date(f.fecha_vencimiento)) / (1000 * 60 * 60 * 24))
-        : 0;
+      const diasAtraso = getDiasAtraso(f.fecha_vencimiento);
       const est = diasAtraso > 0 ? `⚠️ (${diasAtraso} días de atraso)` : '✅ (Al día)';
       return `• Factura N° ${f.factura_numero || 'S/N'}: ${fmt(f.monto_pendiente)} ${est}`;
     }).join('\n');
@@ -44,11 +79,9 @@ export default function CuentasCobrar() {
   };
 
   const enviarWhatsAppFactura = (clienteNombre, fact) => {
-    const diasAtraso = fact.fecha_vencimiento && new Date(fact.fecha_vencimiento) < new Date()
-      ? Math.ceil((new Date() - new Date(fact.fecha_vencimiento)) / (1000 * 60 * 60 * 24))
-      : 0;
+    const diasAtraso = getDiasAtraso(fact.fecha_vencimiento);
     const atrasoStr = diasAtraso > 0 ? `⚠️ Días de atraso: ${diasAtraso} días` : '✅ Factura al día';
-    const text = `Estimado/a *${clienteNombre}*,\nLe recordamos el saldo pendiente de la factura *N° ${fact.factura_numero || 'S/N'}*:\n\n💰 *Monto pendiente:* ${fmt(fact.monto_pendiente)}\n📅 *Fecha Vencimiento:* ${fact.fecha_vencimiento ? new Date(fact.fecha_vencimiento).toLocaleDateString() : 'N/A'}\n${atrasoStr}\n\nQuedamos a su disposición para cualquier consulta.`;
+    const text = `Estimado/a *${clienteNombre}*,\nLe recordamos el saldo pendiente de la factura *N° ${fact.factura_numero || 'S/N'}*:\n\n💰 *Monto pendiente:* ${fmt(fact.monto_pendiente)}\n📅 *Fecha Vencimiento:* ${formatFecha(fact.fecha_vencimiento)}\n${atrasoStr}\n\nQuedamos a su disposición para cualquier consulta.`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -75,7 +108,7 @@ export default function CuentasCobrar() {
             todas_cuentas: todasCuentas,
             saldo_pendiente_total: cuentasActualizadas.reduce((sum, c) => sum + c.monto_pendiente, 0),
             monto_original_total: cuentasActualizadas.reduce((sum, c) => sum + c.monto_original, 0),
-            tiene_mora: cuentasActualizadas.some(c => new Date(c.fecha_vencimiento) < new Date())
+            tiene_mora: cuentasActualizadas.some(c => esFacturaVencida(c.fecha_vencimiento))
           }));
         }
       }
@@ -105,7 +138,7 @@ export default function CuentasCobrar() {
         mapa[c.cliente_id].cuentas_pendientes.push(c);
         mapa[c.cliente_id].saldo_pendiente_total += c.monto_pendiente;
         mapa[c.cliente_id].monto_original_total += c.monto_original;
-        if (new Date(c.fecha_vencimiento) < new Date()) {
+        if (esFacturaVencida(c.fecha_vencimiento)) {
           mapa[c.cliente_id].tiene_mora = true;
         }
       }
@@ -494,13 +527,13 @@ export default function CuentasCobrar() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {clienteActivo.cuentas_pendientes.map(fact => {
-                  const esVencida = new Date(fact.fecha_vencimiento) < new Date();
+                  const esVencida = esFacturaVencida(fact.fecha_vencimiento);
                   return (
                     <tr key={fact.id} className="hover:bg-slate-50">
                       <td className="px-4 py-3 text-sm font-medium text-slate-700">{fact.factura_numero || '—'}</td>
                       <td className="px-4 py-3 text-sm">
                         <span className={esVencida ? 'text-red-600 font-bold' : 'text-slate-600'}>
-                          {fact.fecha_vencimiento ? new Date(fact.fecha_vencimiento).toLocaleDateString() : '—'}
+                          {formatFecha(fact.fecha_vencimiento)}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right text-sm text-slate-500">{fmt(fact.monto_original)}</td>
