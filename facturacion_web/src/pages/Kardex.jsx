@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { BookOpen, Search, ArrowRightLeft, TrendingUp, TrendingDown, RefreshCcw, Eye, Filter, Loader2, X, Package } from 'lucide-react';
+import { 
+  BookOpen, Search, ArrowRightLeft, TrendingUp, TrendingDown, RefreshCcw, 
+  Eye, Filter, Loader2, X, Package, ChevronDown, Check, Info, DollarSign, Boxes, Tag 
+} from 'lucide-react';
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
-const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
 
 export default function Kardex() {
   const location = useLocation();
@@ -19,6 +21,11 @@ export default function Kardex() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
+  // Estado para buscador de productos tipo Autocomplete/Combobox
+  const [prodSearchInput, setProdSearchInput] = useState('');
+  const [isProdDropdownOpen, setIsProdDropdownOpen] = useState(false);
+  const prodDropdownRef = useRef(null);
+
   // Estado para el modal de detalles
   const [movimientoActivo, setMovimientoActivo] = useState(null);
 
@@ -31,11 +38,11 @@ export default function Kardex() {
           api.get(`/api/v1/facturacion/productos/?empresa_id=${empresaId()}`),
           api.get(`/api/v1/almacen/bodegas/?empresa_id=${empresaId()}`)
         ]);
-        setMovimientos(resM.data);
-        setProductos(resP.data);
-        setBodegas(resB.data);
+        setMovimientos(resM.data || []);
+        setProductos(resP.data || []);
+        setBodegas(resB.data || []);
       } catch (e) {
-        console.error(e);
+        console.error("Error cargando Kardex:", e);
       } finally {
         setCargando(false);
       }
@@ -43,11 +50,35 @@ export default function Kardex() {
     cargar();
   }, []);
 
+  // Cerrar el dropdown de productos al hacer clic afuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (prodDropdownRef.current && !prodDropdownRef.current.contains(event.target)) {
+        setIsProdDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Producto seleccionado actualmente
+  const productoSeleccionado = productos.find(p => 
+    (p.id_producto || p.id)?.toString() === filtroProd
+  );
+
+  // Filtrado rápido de productos para la lista del Autocomplete (máximo 40 resultados en DOM)
+  const productosFiltradosCombobox = productos.filter(p => {
+    if (!prodSearchInput.trim()) return true;
+    const term = prodSearchInput.toLowerCase();
+    const codigo = (p.codigo || '').toLowerCase();
+    const nombre = (p.nombre || '').toLowerCase();
+    return codigo.includes(term) || nombre.includes(term);
+  }).slice(0, 40);
+
   // 1. Filtrar por producto, bodega y búsqueda inteligente
   const movimientosFiltrados = movimientos.filter(m => {
     let cumple = true;
-    if (filtroProd && m.producto_id.toString() !== filtroProd) cumple = false;
-    // Si tenemos bodega.id o comparamos por nombre:
+    if (filtroProd && m.producto_id?.toString() !== filtroProd) cumple = false;
     if (filtroBodega && m.bodega_nombre !== filtroBodega) cumple = false;
     
     if (searchTerm) {
@@ -63,13 +94,13 @@ export default function Kardex() {
     return cumple;
   });
 
-  // 2. Ordenar por fecha (más reciente primero)
+  // 2. Calcular movimientos procesados (Promedio Ponderado / Saldos)
   const getMovimientosProcesados = () => {
     if (!filtroProd) {
       return movimientosFiltrados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
     }
 
-    const ordenadosAsc = [...movimientosFiltrados].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+    const ordenadosAsc = [...movimientosFiltrados].sort((a, b) => new Date(a.fecha) - new Date(a.fecha));
     let saldo_cant = 0;
     let saldo_valor = 0;
     
@@ -105,6 +136,11 @@ export default function Kardex() {
 
   const movimientosOrdenados = getMovimientosProcesados();
 
+  // Métricas del producto seleccionado (si hay filtroProd activo)
+  const ultimoEstadoProd = filtroProd && movimientosOrdenados.length > 0 ? movimientosOrdenados[0] : null;
+  const totalEntradasProd = filtroProd ? movimientosOrdenados.reduce((acc, m) => acc + (m.in_cant || 0), 0) : 0;
+  const totalSalidasProd = filtroProd ? movimientosOrdenados.reduce((acc, m) => acc + (m.out_cant || 0), 0) : 0;
+
   // 3. Paginación
   const totalPages = Math.ceil(movimientosOrdenados.length / itemsPerPage);
   const paginatedMovimientos = movimientosOrdenados.slice(
@@ -120,184 +156,392 @@ export default function Kardex() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto pb-24">
+      {/* Encabezado Principal */}
       <div className="flex justify-between items-start mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <BookOpen className="w-6 h-6 text-indigo-600" /> Kardex (Libro Mayor de Inventario)
           </h1>
-          <p className="text-sm text-slate-500 mt-1">Auditoría completa de movimientos de inventario y coste</p>
+          <p className="text-sm text-slate-500 mt-1">Auditoría completa de movimientos de inventario, stock y costeo ponderado</p>
         </div>
       </div>
 
-      <div className="bg-white p-4 rounded-2xl shadow-sm border mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Selector de Producto */}
-        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3">
-          <Package className="w-4 h-4 text-slate-400" />
-          <select 
-            value={filtroProd} 
-            onChange={e => { setFiltroProd(e.target.value); setCurrentPage(1); }} 
-            className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium py-2"
+      {/* Barra de Filtros Inteligente */}
+      <div className="bg-white p-4 rounded-2xl shadow-sm border mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 relative z-20">
+        
+        {/* 1. Selector de Producto - Combobox Profesional */}
+        <div className="relative" ref={prodDropdownRef}>
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+            Buscar Producto ({productos.length} disp.)
+          </label>
+          <div 
+            className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 cursor-pointer focus-within:ring-2 focus-within:ring-indigo-500 focus-within:bg-white transition-all"
+            onClick={() => setIsProdDropdownOpen(true)}
           >
-            <option value="">Todos los productos...</option>
-            {productos.map(p => <option key={p.id_producto || p.codigo} value={p.id_producto || p.id}>{p.codigo} - {p.nombre}</option>)}
-          </select>
+            <Package className="w-4 h-4 text-indigo-500 mr-2 flex-shrink-0" />
+            
+            {productoSeleccionado && !isProdDropdownOpen ? (
+              <div className="flex items-center justify-between flex-1 min-w-0 pr-1">
+                <span className="text-sm font-semibold text-slate-800 truncate">
+                  <span className="font-bold text-indigo-600 mr-1.5">[{productoSeleccionado.codigo}]</span>
+                  {productoSeleccionado.nombre}
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFiltroProd('');
+                    setProdSearchInput('');
+                    setCurrentPage(1);
+                  }}
+                  className="p-1 text-slate-400 hover:text-red-500 hover:bg-slate-200 rounded-full transition-colors"
+                  title="Quitar filtro de producto"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <input
+                type="text"
+                placeholder={productoSeleccionado ? `${productoSeleccionado.codigo} - ${productoSeleccionado.nombre}` : "Escriba código o nombre de producto..."}
+                value={prodSearchInput}
+                onChange={(e) => {
+                  setProdSearchInput(e.target.value);
+                  setIsProdDropdownOpen(true);
+                }}
+                onFocus={() => setIsProdDropdownOpen(true)}
+                className="flex-1 bg-transparent border-none outline-none text-sm text-slate-800 placeholder-slate-400 focus:ring-0 p-0"
+              />
+            )}
+            
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ml-1 ${isProdDropdownOpen ? 'rotate-180' : ''}`} />
+          </div>
+
+          {/* Menú desplegable autocomplete */}
+          {isProdDropdownOpen && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-80 overflow-y-auto divide-y divide-slate-100">
+              <div 
+                className={`p-2.5 text-xs font-semibold cursor-pointer flex items-center justify-between hover:bg-indigo-50 transition-colors ${!filtroProd ? 'bg-indigo-50/70 text-indigo-700' : 'text-slate-600'}`}
+                onClick={() => {
+                  setFiltroProd('');
+                  setProdSearchInput('');
+                  setIsProdDropdownOpen(false);
+                  setCurrentPage(1);
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <Boxes className="w-4 h-4 text-indigo-500" />
+                  <span>Todos los productos (Vista General)</span>
+                </div>
+                {!filtroProd && <Check className="w-4 h-4 text-indigo-600" />}
+              </div>
+
+              {productosFiltradosCombobox.length === 0 ? (
+                <div className="p-4 text-center text-xs text-slate-400">
+                  No se encontraron productos con "{prodSearchInput}"
+                </div>
+              ) : (
+                productosFiltradosCombobox.map(p => {
+                  const pId = (p.id_producto || p.id)?.toString();
+                  const isSelected = pId === filtroProd;
+                  return (
+                    <div
+                      key={pId || p.codigo}
+                      onClick={() => {
+                        setFiltroProd(pId);
+                        setProdSearchInput('');
+                        setIsProdDropdownOpen(false);
+                        setCurrentPage(1);
+                      }}
+                      className={`p-2.5 text-xs cursor-pointer flex items-center justify-between hover:bg-slate-50 transition-colors ${isSelected ? 'bg-indigo-50/70 font-semibold text-indigo-700' : 'text-slate-700'}`}
+                    >
+                      <div className="flex flex-col min-w-0 pr-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="px-1.5 py-0.5 bg-slate-100 border border-slate-200 font-mono text-[10px] text-slate-600 rounded">
+                            {p.codigo}
+                          </span>
+                          <span className="font-medium truncate">{p.nombre}</span>
+                        </div>
+                        {p.precio_venta && (
+                          <span className="text-[10px] text-slate-400 mt-0.5">Precio: ${Number(p.precio_venta).toFixed(2)}</span>
+                        )}
+                      </div>
+                      {isSelected && <Check className="w-4 h-4 text-indigo-600 flex-shrink-0" />}
+                    </div>
+                  );
+                })
+              )}
+              {productos.length > 40 && !prodSearchInput && (
+                <div className="p-2 text-center text-[10px] text-slate-400 bg-slate-50 border-t">
+                  Mostrando los primeros 40 productos. Escriba para filtrar...
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Selector de Bodega */}
-        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3">
-          <Filter className="w-4 h-4 text-slate-400" />
-          <select 
-            value={filtroBodega} 
-            onChange={e => { setFiltroBodega(e.target.value); setCurrentPage(1); }} 
-            className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium py-2"
-          >
-            <option value="">Todas las bodegas...</option>
-            {bodegas.map(b => <option key={b.id} value={b.nombre}>{b.nombre}</option>)}
-          </select>
+        {/* 2. Selector de Bodega */}
+        <div>
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+            Bodega / Almacén
+          </label>
+          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+            <Filter className="w-4 h-4 text-slate-400 mr-2" />
+            <select 
+              value={filtroBodega} 
+              onChange={e => { setFiltroBodega(e.target.value); setCurrentPage(1); }} 
+              className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium p-0 text-slate-800"
+            >
+              <option value="">Todas las bodegas...</option>
+              {bodegas.map(b => <option key={b.id} value={b.nombre}>{b.nombre}</option>)}
+            </select>
+          </div>
         </div>
 
-        {/* Búsqueda inteligente */}
-        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3">
-          <Search className="w-4 h-4 text-slate-400" />
-          <input 
-            type="text"
-            placeholder="Buscar por código, nombre o documento..."
-            value={searchTerm}
-            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-            className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2"
-          />
+        {/* 3. Búsqueda por documento / nota */}
+        <div>
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+            Búsqueda General
+          </label>
+          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+            <Search className="w-4 h-4 text-slate-400 mr-2" />
+            <input 
+              type="text"
+              placeholder="Buscar doc #, nota o concepto..."
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              className="flex-1 bg-transparent border-none outline-none text-sm text-slate-800 placeholder-slate-400 focus:ring-0 p-0"
+            />
+          </div>
         </div>
+
       </div>
 
+      {/* Tarjeta de Información del Producto Seleccionado */}
+      {productoSeleccionado && (
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-6 shadow-md mb-6 border border-slate-800 relative overflow-hidden">
+          <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 opacity-5 pointer-events-none">
+            <Package className="w-64 h-64" />
+          </div>
+
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+            {/* Información Principal del Producto */}
+            <div className="space-y-2 max-w-xl">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono text-xs font-bold rounded-lg tracking-wider">
+                  CÓD: {productoSeleccionado.codigo}
+                </span>
+                <span className="px-2.5 py-1 bg-slate-800 text-slate-300 text-xs rounded-lg flex items-center gap-1">
+                  <Tag className="w-3 h-3 text-slate-400" /> Kardex Individual
+                </span>
+              </div>
+              <h2 className="text-xl font-bold text-white tracking-tight">{productoSeleccionado.nombre}</h2>
+              {productoSeleccionado.descripcion && (
+                <p className="text-xs text-slate-300 line-clamp-1">{productoSeleccionado.descripcion}</p>
+              )}
+            </div>
+
+            {/* KPIs de Stock y Costeo */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white/5 backdrop-blur-md p-3.5 rounded-xl border border-white/10">
+              <div className="px-3 border-r border-white/10">
+                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">Stock Actual</p>
+                <p className="text-lg font-extrabold text-emerald-400 mt-0.5">
+                  {ultimoEstadoProd ? ultimoEstadoProd.saldo_cant : 0}
+                  <span className="text-xs font-normal text-slate-400 ml-1">uds</span>
+                </p>
+              </div>
+
+              <div className="px-3 border-r border-white/10">
+                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">Costo Prom. Ponderado</p>
+                <p className="text-lg font-bold text-indigo-300 mt-0.5">
+                  ${ultimoEstadoProd ? Number(ultimoEstadoProd.saldo_unit).toFixed(4) : '0.0000'}
+                </p>
+              </div>
+
+              <div className="px-3 border-r border-white/10">
+                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">Valor Total Inventario</p>
+                <p className="text-lg font-bold text-amber-400 mt-0.5">
+                  ${ultimoEstadoProd ? Number(ultimoEstadoProd.saldo_total).toFixed(2) : '0.00'}
+                </p>
+              </div>
+
+              <div className="px-3">
+                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">Flujo Entradas / Salidas</p>
+                <p className="text-xs font-semibold mt-1.5 flex items-center gap-2">
+                  <span className="text-emerald-400 flex items-center"><TrendingUp className="w-3 h-3 mr-0.5" />+{totalEntradasProd}</span>
+                  <span className="text-rose-400 flex items-center"><TrendingDown className="w-3 h-3 mr-0.5" />-{totalSalidasProd}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tabla de Movimientos */}
       {cargando ? (
-        <div className="text-center py-20 text-slate-400 flex flex-col items-center justify-center">
+        <div className="text-center py-20 text-slate-400 flex flex-col items-center justify-center bg-white rounded-2xl border shadow-sm">
           <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mb-2" />
           Cargando Kardex...
         </div>
       ) : movimientosOrdenados.length === 0 ? (
-        <div className="text-center py-20 text-slate-400">
-          <ArrowRightLeft className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">No hay movimientos registrados que coincidan con la búsqueda</p>
+        <div className="text-center py-20 text-slate-400 bg-white rounded-2xl border shadow-sm">
+          <ArrowRightLeft className="w-12 h-12 mx-auto mb-3 opacity-30 text-indigo-500" />
+          <p className="font-semibold text-slate-700">No hay movimientos registrados que coincidan con la búsqueda</p>
+          <p className="text-xs text-slate-400 mt-1">Intenta cambiando de producto, bodega o limpiando los filtros</p>
         </div>
       ) : (
         <div className="bg-white border rounded-2xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             {filtroProd ? (
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="px-3 py-2 border-b border-r" rowSpan="2">Fecha / Detalle</th>
-                  <th className="px-3 py-2 border-b border-r text-center bg-emerald-50 text-emerald-700" colSpan="3">ENTRADAS</th>
-                  <th className="px-3 py-2 border-b border-r text-center bg-rose-50 text-rose-700" colSpan="3">SALIDAS</th>
-                  <th className="px-3 py-2 border-b text-center bg-indigo-50 text-indigo-700" colSpan="3">Saldos (Prom. Ponderado)</th>
-                </tr>
-                <tr className="bg-slate-50 text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="px-2 py-2 border-b border-r bg-emerald-50/50">Cant</th>
-                  <th className="px-2 py-2 border-b border-r bg-emerald-50/50">C.Unit</th>
-                  <th className="px-2 py-2 border-b border-r bg-emerald-50/50">Total</th>
-                  <th className="px-2 py-2 border-b border-r bg-rose-50/50">Cant</th>
-                  <th className="px-2 py-2 border-b border-r bg-rose-50/50">C.Unit</th>
-                  <th className="px-2 py-2 border-b border-r bg-rose-50/50">Total</th>
-                  <th className="px-2 py-2 border-b border-r bg-indigo-50/50">Cant</th>
-                  <th className="px-2 py-2 border-b border-r bg-indigo-50/50">C.Prom</th>
-                  <th className="px-2 py-2 border-b bg-indigo-50/50">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {paginatedMovimientos.map(m => (
-                  <tr key={m.id} className="hover:bg-slate-50 text-sm">
-                    <td className="px-3 py-2 border-r">
-                      <div className="text-xs text-slate-500">{new Date(m.fecha).toLocaleString()}</div>
-                      <div className="flex items-center gap-1 mt-1">
-                        {getMovIcon(m.tipo_movimiento)}
-                        <span className="font-medium text-slate-700 text-[11px]">{m.tipo_movimiento.replace('_', ' ')}</span>
-                      </div>
-                      <div className="text-[10px] text-indigo-500 font-semibold">{m.referencia_tipo} #{m.referencia_id}</div>
-                      <div className="text-[10px] text-slate-400">{m.bodega_nombre}</div>
-                    </td>
-                    <td className="px-2 py-2 text-right border-r font-medium text-emerald-600 bg-emerald-50/10">{m.in_cant > 0 ? m.in_cant : ''}</td>
-                    <td className="px-2 py-2 text-right border-r text-slate-500 bg-emerald-50/10">{m.in_cant > 0 ? '$' + Number(m.in_unit).toFixed(4) : ''}</td>
-                    <td className="px-2 py-2 text-right border-r font-medium text-emerald-700 bg-emerald-50/10">{m.in_cant > 0 ? '$' + Number(m.in_total).toFixed(2) : ''}</td>
-                    <td className="px-2 py-2 text-right border-r font-medium text-rose-600 bg-rose-50/10">{m.out_cant > 0 ? m.out_cant : ''}</td>
-                    <td className="px-2 py-2 text-right border-r text-slate-500 bg-rose-50/10">{m.out_cant > 0 ? '$' + Number(m.out_unit).toFixed(4) : ''}</td>
-                    <td className="px-2 py-2 text-right border-r font-medium text-rose-700 bg-rose-50/10">{m.out_cant > 0 ? '$' + Number(m.out_total).toFixed(2) : ''}</td>
-                    <td className="px-2 py-2 text-right border-r font-bold text-indigo-600 bg-indigo-50/30">{m.saldo_cant}</td>
-                    <td className="px-2 py-2 text-right border-r text-slate-600 bg-indigo-50/30">{'$' + Number(m.saldo_unit).toFixed(4)}</td>
-                    <td className="px-2 py-2 text-right font-bold text-indigo-700 bg-indigo-50/30">{'$' + Number(m.saldo_total).toFixed(2)}</td>
+              /* TABLA KARDEX INDIVIDUAL (Promedio Ponderado en 3 Columnas principales) */
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-b">
+                    <th className="px-4 py-3 border-r" rowSpan="2">Fecha / Movimiento</th>
+                    <th className="px-3 py-2 border-r text-center bg-emerald-50 text-emerald-700" colSpan="3">ENTRADAS</th>
+                    <th className="px-3 py-2 border-r text-center bg-rose-50 text-rose-700" colSpan="3">SALIDAS</th>
+                    <th className="px-3 py-2 text-center bg-indigo-50 text-indigo-700" colSpan="3">SALDOS (Prom. Ponderado)</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-slate-50 border-b text-xs uppercase text-slate-500 font-semibold">
-                  <th className="px-5 py-3.5">Fecha</th>
-                  <th className="px-5 py-3.5">Producto</th>
-                  <th className="px-5 py-3.5">Bodega</th>
-                  <th className="px-5 py-3.5">Movimiento</th>
-                  <th className="px-5 py-3.5 text-right">Cant.</th>
-                  <th className="px-5 py-3.5 text-right">Costo Unit.</th>
-                  <th className="px-5 py-3.5 text-right">Stock Final</th>
-                  <th className="px-5 py-3.5 text-center">Detalle</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {paginatedMovimientos.map(m => (
-                  <tr key={m.id} className="hover:bg-slate-50">
-                    <td className="px-5 py-4 text-xs text-slate-500">{new Date(m.fecha).toLocaleString()}</td>
-                    <td className="px-5 py-4 font-medium text-slate-800 text-sm">
-                      <div className="font-bold">{m.producto_codigo}</div>
-                      <div className="text-xs text-slate-500 truncate max-w-[150px]">{m.producto_nombre}</div>
-                    </td>
-                    <td className="px-5 py-4 text-sm text-slate-600">{m.bodega_nombre}</td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-2">
-                        {getMovIcon(m.tipo_movimiento)}
-                        <span className="text-xs font-bold text-slate-700">{m.tipo_movimiento.replace('_', ' ')}</span>
-                      </div>
-                      {m.referencia_tipo && <p className="text-[10px] text-indigo-500 mt-1 font-semibold">{m.referencia_tipo} #{m.referencia_id}</p>}
-                    </td>
-                    <td className="px-5 py-4 text-right font-bold text-slate-700">
-                      <span className={m.tipo_movimiento.includes('SALIDA') ? 'text-red-500' : 'text-emerald-500'}>
-                        {m.tipo_movimiento.includes('SALIDA') ? '-' : '+'}{m.cantidad}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-right text-sm text-slate-500">{m.costo_unitario > 0 ? '$' + Number(m.costo_unitario).toFixed(4) : '—'}</td>
-                    <td className="px-5 py-4 text-right font-bold text-indigo-700 bg-indigo-50/30">{m.stock_resultante || m.saldo_cantidad || 0}</td>
-                    <td className="px-5 py-4 text-center">
-                      <button 
-                        onClick={() => setMovimientoActivo(m)}
-                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                        title="Ver Documento"
-                      >
-                        <Eye className="w-5 h-5" />
-                      </button>
-                    </td>
+                  <tr className="bg-slate-50 text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wider border-b">
+                    <th className="px-2 py-2 border-r bg-emerald-50/50">Cant</th>
+                    <th className="px-2 py-2 border-r bg-emerald-50/50">C.Unit</th>
+                    <th className="px-2 py-2 border-r bg-emerald-50/50">Total</th>
+                    <th className="px-2 py-2 border-r bg-rose-50/50">Cant</th>
+                    <th className="px-2 py-2 border-r bg-rose-50/50">C.Unit</th>
+                    <th className="px-2 py-2 border-r bg-rose-50/50">Total</th>
+                    <th className="px-2 py-2 border-r bg-indigo-50/50">Cant</th>
+                    <th className="px-2 py-2 border-r bg-indigo-50/50">C.Prom</th>
+                    <th className="px-2 py-2 bg-indigo-50/50">Total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {paginatedMovimientos.map(m => (
+                    <tr key={m.id} className="hover:bg-slate-50 text-sm">
+                      <td className="px-4 py-3 border-r">
+                        <div className="text-xs text-slate-500 font-medium">{new Date(m.fecha).toLocaleString()}</div>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          {getMovIcon(m.tipo_movimiento)}
+                          <span className="font-semibold text-slate-700 text-xs">{m.tipo_movimiento.replace('_', ' ')}</span>
+                        </div>
+                        {m.referencia_tipo && (
+                          <div className="text-[10px] text-indigo-600 font-bold mt-0.5">{m.referencia_tipo} #{m.referencia_id}</div>
+                        )}
+                        <div className="text-[10px] text-slate-400">{m.bodega_nombre}</div>
+                      </td>
+                      
+                      {/* Entradas */}
+                      <td className="px-2 py-3 text-right border-r font-semibold text-emerald-600 bg-emerald-50/10">{m.in_cant > 0 ? m.in_cant : ''}</td>
+                      <td className="px-2 py-3 text-right border-r text-slate-500 text-xs bg-emerald-50/10">{m.in_cant > 0 ? '$' + Number(m.in_unit).toFixed(4) : ''}</td>
+                      <td className="px-2 py-3 text-right border-r font-semibold text-emerald-700 text-xs bg-emerald-50/10">{m.in_cant > 0 ? '$' + Number(m.in_total).toFixed(2) : ''}</td>
+                      
+                      {/* Salidas */}
+                      <td className="px-2 py-3 text-right border-r font-semibold text-rose-600 bg-rose-50/10">{m.out_cant > 0 ? m.out_cant : ''}</td>
+                      <td className="px-2 py-3 text-right border-r text-slate-500 text-xs bg-rose-50/10">{m.out_cant > 0 ? '$' + Number(m.out_unit).toFixed(4) : ''}</td>
+                      <td className="px-2 py-3 text-right border-r font-semibold text-rose-700 text-xs bg-rose-50/10">{m.out_cant > 0 ? '$' + Number(m.out_total).toFixed(2) : ''}</td>
+                      
+                      {/* Saldos */}
+                      <td className="px-2 py-3 text-right border-r font-bold text-indigo-700 bg-indigo-50/30">{m.saldo_cant}</td>
+                      <td className="px-2 py-3 text-right border-r text-slate-700 text-xs bg-indigo-50/30 font-mono">{'$' + Number(m.saldo_unit).toFixed(4)}</td>
+                      <td className="px-2 py-3 text-right font-extrabold text-indigo-800 text-xs bg-indigo-50/30">{'$' + Number(m.saldo_total).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              /* TABLA KARDEX GENERAL (Todos los productos) */
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b text-xs uppercase text-slate-500 font-semibold tracking-wider">
+                    <th className="px-5 py-3.5">Fecha</th>
+                    <th className="px-5 py-3.5">Producto</th>
+                    <th className="px-5 py-3.5">Bodega</th>
+                    <th className="px-5 py-3.5">Movimiento</th>
+                    <th className="px-5 py-3.5 text-right">Cant.</th>
+                    <th className="px-5 py-3.5 text-right">Costo Unit.</th>
+                    <th className="px-5 py-3.5 text-right">Stock Final</th>
+                    <th className="px-5 py-3.5 text-center">Acción</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {paginatedMovimientos.map(m => (
+                    <tr key={m.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-5 py-4 text-xs text-slate-500 whitespace-nowrap">{new Date(m.fecha).toLocaleString()}</td>
+                      <td className="px-5 py-4">
+                        <div className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                          <span className="px-1.5 py-0.5 bg-slate-100 border text-[11px] font-mono text-slate-600 rounded">
+                            {m.producto_codigo}
+                          </span>
+                          <span className="truncate max-w-[200px]">{m.producto_nombre}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-sm text-slate-600">{m.bodega_nombre}</td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2">
+                          {getMovIcon(m.tipo_movimiento)}
+                          <span className="text-xs font-bold text-slate-700">{m.tipo_movimiento.replace('_', ' ')}</span>
+                        </div>
+                        {m.referencia_tipo && <p className="text-[10px] text-indigo-600 font-bold mt-0.5">{m.referencia_tipo} #{m.referencia_id}</p>}
+                      </td>
+                      <td className="px-5 py-4 text-right font-bold text-slate-800">
+                        <span className={m.tipo_movimiento.includes('SALIDA') ? 'text-rose-600' : 'text-emerald-600'}>
+                          {m.tipo_movimiento.includes('SALIDA') ? '-' : '+'}{m.cantidad}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 text-right text-sm text-slate-600 font-mono">
+                        {m.costo_unitario > 0 ? '$' + Number(m.costo_unitario).toFixed(4) : '—'}
+                      </td>
+                      <td className="px-5 py-4 text-right font-bold text-indigo-700 bg-indigo-50/30">
+                        {m.stock_resultante || m.saldo_cantidad || 0}
+                      </td>
+                      <td className="px-5 py-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button 
+                            onClick={() => {
+                              setFiltroProd(m.producto_id?.toString() || '');
+                              setCurrentPage(1);
+                            }}
+                            className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors text-xs font-semibold flex items-center gap-1"
+                            title="Filtrar Kardex de este producto"
+                          >
+                            <Filter className="w-3.5 h-3.5" />
+                            Kardex
+                          </button>
+                          <button 
+                            onClick={() => setMovimientoActivo(m)}
+                            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                            title="Ver Detalle Documento"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
+
           {/* Footer paginación */}
-          <div className="p-4 border-t border-slate-200 flex items-center justify-between text-sm text-slate-500">
-            <span>Mostrando {paginatedMovimientos.length} de {movimientosOrdenados.length} movimientos</span>
+          <div className="p-4 border-t border-slate-200 flex items-center justify-between text-sm text-slate-500 bg-slate-50/50">
+            <span className="text-xs font-medium text-slate-600">
+              Mostrando <strong className="text-slate-800">{paginatedMovimientos.length}</strong> de <strong className="text-slate-800">{movimientosOrdenados.length}</strong> movimientos
+            </span>
             <div className="flex gap-1 items-center">
               <button 
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="px-3 py-1 rounded-md hover:bg-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Anterior
               </button>
-              <span className="px-3 py-1 rounded-md bg-indigo-50 text-indigo-600 font-medium">
-                {currentPage} / {totalPages || 1}
+              <span className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-bold border border-indigo-100">
+                Página {currentPage} de {totalPages || 1}
               </span>
               <button 
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages || totalPages === 0}
-                className="px-3 py-1 rounded-md hover:bg-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Siguiente
               </button>
@@ -306,68 +550,73 @@ export default function Kardex() {
         </div>
       )}
 
-      {/* Modal de Detalle */}
+      {/* Modal de Detalle de Movimiento */}
       {movimientoActivo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <h3 className="font-bold text-slate-800 flex items-center gap-2">
                 <BookOpen className="w-5 h-5 text-indigo-600" />
-                Detalle de Movimiento
+                Detalle del Movimiento
               </h3>
               <button onClick={() => setMovimientoActivo(null)} className="text-slate-400 hover:text-slate-600 transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
+
             <div className="p-6 space-y-4">
               <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Producto</p>
-                <p className="font-semibold text-slate-800">{movimientoActivo.producto_codigo} - {movimientoActivo.producto_nombre}</p>
+                <p className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Producto</p>
+                <p className="font-bold text-slate-800 text-sm">
+                  <span className="text-indigo-600 font-mono mr-1">[{movimientoActivo.producto_codigo}]</span>
+                  {movimientoActivo.producto_nombre}
+                </p>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Fecha</p>
-                  <p className="font-medium text-slate-700">{new Date(movimientoActivo.fecha).toLocaleString()}</p>
+                  <p className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Fecha</p>
+                  <p className="font-medium text-slate-700 text-xs">{new Date(movimientoActivo.fecha).toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Bodega</p>
-                  <p className="font-medium text-slate-700">{movimientoActivo.bodega_nombre}</p>
+                  <p className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Bodega</p>
+                  <p className="font-medium text-slate-700 text-xs">{movimientoActivo.bodega_nombre}</p>
                 </div>
               </div>
 
-              <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200/80">
                 <div className="flex items-center gap-2 mb-3">
                   {getMovIcon(movimientoActivo.tipo_movimiento)}
-                  <span className="font-bold text-slate-800">{movimientoActivo.tipo_movimiento.replace('_', ' ')}</span>
+                  <span className="font-bold text-slate-800 text-sm">{movimientoActivo.tipo_movimiento.replace('_', ' ')}</span>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-y-2 text-sm">
-                  <span className="text-slate-500">Documento:</span>
-                  <span className="font-medium text-right">{movimientoActivo.referencia_tipo || 'N/A'} #{movimientoActivo.referencia_id || ''}</span>
+                <div className="grid grid-cols-2 gap-y-2 text-xs">
+                  <span className="text-slate-500">Documento Ref:</span>
+                  <span className="font-bold text-right text-indigo-600">{movimientoActivo.referencia_tipo || 'N/A'} #{movimientoActivo.referencia_id || ''}</span>
                   
                   <span className="text-slate-500">Unidades:</span>
-                  <span className="font-medium text-right">{movimientoActivo.cantidad}</span>
+                  <span className="font-semibold text-right">{movimientoActivo.cantidad}</span>
                   
                   <span className="text-slate-500">Costo Unitario:</span>
-                  <span className="font-medium text-right">{'$' + Number(movimientoActivo.costo_unitario).toFixed(4)}</span>
+                  <span className="font-mono text-right">{'$' + Number(movimientoActivo.costo_unitario).toFixed(4)}</span>
                   
-                  <span className="text-slate-500">Valor Total:</span>
-                  <span className="font-medium text-right text-indigo-600">{'$' + Number(movimientoActivo.costo_total || (movimientoActivo.costo_unitario * movimientoActivo.cantidad)).toFixed(2)}</span>
+                  <span className="text-slate-500">Costo Total:</span>
+                  <span className="font-bold text-right text-indigo-600">{'$' + Number(movimientoActivo.costo_total || (movimientoActivo.costo_unitario * movimientoActivo.cantidad)).toFixed(2)}</span>
                 </div>
               </div>
 
               {movimientoActivo.notas && (
                 <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Observaciones</p>
-                  <p className="text-sm text-slate-600 bg-amber-50 p-3 rounded-lg border border-amber-100">{movimientoActivo.notas}</p>
+                  <p className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Notas / Observaciones</p>
+                  <p className="text-xs text-slate-700 bg-amber-50/80 p-3 rounded-xl border border-amber-200">{movimientoActivo.notas}</p>
                 </div>
               )}
             </div>
+
             <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end">
               <button 
                 onClick={() => setMovimientoActivo(null)}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl transition-colors shadow-sm"
               >
                 Cerrar
               </button>
