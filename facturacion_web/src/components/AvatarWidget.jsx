@@ -138,7 +138,15 @@ export default function AvatarWidget() {
   const [hasMic, setHasMic] = useState(true);
   const [isListening, setIsListening] = useState(false);
   const [inputText, setInputText] = useState('');
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('avatar_chat_messages');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [playingMsgIdx, setPlayingMsgIdx] = useState(null);
   const [loading, setLoading] = useState(false);
   const [lastInstruction, setLastInstruction] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
@@ -264,6 +272,15 @@ export default function AvatarWidget() {
       setUnreadCount(0);
     }
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+
+    // Guardar mensajes en la sesión del navegador para poder retomarlos al cambiar de módulo
+    try {
+      if (messages.length > 0) {
+        sessionStorage.setItem('avatar_chat_messages', JSON.stringify(messages));
+      }
+    } catch (e) {
+      console.error("Error guardando mensajes de avatar:", e);
+    }
   }, [messages, isOpen]);
 
   // 5. Guía Paso a Paso de la Página Actual
@@ -295,8 +312,33 @@ export default function AvatarWidget() {
   const handleResetSession = () => {
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     sessionStorage.removeItem('avatar_session_greeted');
+    sessionStorage.removeItem('avatar_chat_messages');
     setMessages([]);
+    setPlayingMsgIdx(null);
     initGreeting(true);
+  };
+
+  // 7b. Reproducir por voz cualquier mensaje específico del historial
+  const handlePlayMessageAudio = (text, idx) => {
+    if (!('speechSynthesis' in window)) return;
+
+    if (playingMsgIdx === idx) {
+      window.speechSynthesis.cancel();
+      setPlayingMsgIdx(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const cleanText = text.replace(/[*_#`~>|-]/g, ' ').replace(/\s+/g, ' ');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'es-ES';
+    utterance.rate = 1.0;
+
+    utterance.onend = () => setPlayingMsgIdx(null);
+    utterance.onerror = () => setPlayingMsgIdx(null);
+
+    setPlayingMsgIdx(idx);
+    window.speechSynthesis.speak(utterance);
   };
 
   // 8. Repetir últimas instrucciones
@@ -639,6 +681,25 @@ export default function AvatarWidget() {
                     </div>
                   )}
                   <p className="whitespace-pre-line">{m.text}</p>
+
+                  {/* Botón para reproducir por voz cualquier mensaje específico del historial */}
+                  <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-slate-100/60 text-[10px]">
+                    <button
+                      type="button"
+                      onClick={() => handlePlayMessageAudio(m.text, idx)}
+                      className={`flex items-center gap-1 font-semibold transition-colors px-1.5 py-0.5 rounded-md ${
+                        playingMsgIdx === idx
+                          ? 'text-indigo-600 bg-indigo-50 font-bold'
+                          : m.sender === 'user'
+                          ? 'text-indigo-200 hover:text-white'
+                          : 'text-slate-500 hover:text-indigo-600'
+                      }`}
+                      title={playingMsgIdx === idx ? 'Detener reproducción de voz' : 'Escuchar / Reproducir mensaje por voz'}
+                    >
+                      <Volume2 className={`w-3 h-3 ${playingMsgIdx === idx ? 'animate-bounce text-indigo-600' : ''}`} />
+                      <span>{playingMsgIdx === idx ? 'Reproduciendo...' : 'Reproducir'}</span>
+                    </button>
+                  </div>
 
                   {/* Opciones interactivas */}
                   {m.options && m.options.length > 0 && (
