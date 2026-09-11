@@ -581,3 +581,46 @@ def pagar_cuota_prestamo(prestamo_id: int, numero_cuota: int, empresa_id: str, u
         "saldo_prestamo_restante": prestamo.saldo_pendiente
     }
 
+
+@router.delete("/prestamos/{prestamo_id}")
+def eliminar_prestamo(prestamo_id: int, empresa_id: str, db: Session = Depends(get_db)):
+    prestamo = db.query(PrestamoAcreedor).filter(
+        PrestamoAcreedor.id == prestamo_id,
+        PrestamoAcreedor.empresa_id == empresa_id
+    ).first()
+    if not prestamo:
+        raise HTTPException(status_code=404, detail="Préstamo no encontrado")
+
+    # Ajustar saldo_capital del acreedor restando el saldo pendiente de este préstamo
+    if prestamo.acreedor and prestamo.saldo_pendiente > 0:
+        prestamo.acreedor.saldo_capital = max(0, (prestamo.acreedor.saldo_capital or 0) - prestamo.saldo_pendiente)
+
+    # Eliminar cuotas asociadas
+    db.query(CuotaAmortizacion).filter(CuotaAmortizacion.prestamo_id == prestamo_id).delete()
+    
+    # Eliminar préstamo
+    db.delete(prestamo)
+    db.commit()
+    return {"mensaje": "Préstamo y su tabla de amortización eliminados exitosamente"}
+
+
+@router.delete("/{acreedor_id}")
+def eliminar_acreedor(acreedor_id: int, empresa_id: str, db: Session = Depends(get_db)):
+    a = db.query(Acreedor).filter(Acreedor.id == acreedor_id, Acreedor.empresa_id == empresa_id).first()
+    if not a:
+        raise HTTPException(status_code=404, detail="Acreedor no encontrado")
+
+    # Eliminar préstamos y cuotas asociadas
+    prestamos_asociados = db.query(PrestamoAcreedor).filter(PrestamoAcreedor.acreedor_id == acreedor_id).all()
+    for p in prestamos_asociados:
+        db.query(CuotaAmortizacion).filter(CuotaAmortizacion.prestamo_id == p.id).delete()
+        db.delete(p)
+
+    # Eliminar movimientos asociados
+    db.query(MovimientoAcreedor).filter(MovimientoAcreedor.acreedor_id == acreedor_id).delete()
+
+    db.delete(a)
+    db.commit()
+    return {"mensaje": "Acreedor y registros asociados eliminados exitosamente"}
+
+

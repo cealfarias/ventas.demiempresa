@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { CreditCard, Plus, Search, Percent, History, Edit, UserCheck, ChevronRight, Calculator } from 'lucide-react';
+import { CreditCard, Plus, Search, Percent, History, Edit, UserCheck, ChevronRight, Calculator, Trash2 } from 'lucide-react';
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
@@ -88,6 +88,23 @@ export default function Acreedores() {
       cargar();
     } catch (e) { alert(e.response?.data?.detail || 'Error al guardar acreedor'); }
     finally { setGuardando(false); }
+  };
+
+  const eliminarAcreedor = async (ac) => {
+    if (!ac) return;
+    if (!window.confirm(`¿Está seguro de eliminar al acreedor "${ac.nombre}"?\n\nEsta acción eliminará el acreedor, sus préstamos y sus registros asociados.`)) return;
+
+    try {
+      try {
+        await api.delete(`/api/v1/finanzas/acreedores/${ac.id}?empresa_id=${empresaId()}`);
+      } catch (err) {
+        await api.delete(`/api/v1/acreedores/${ac.id}?empresa_id=${empresaId()}`);
+      }
+      cargar();
+      window.dispatchEvent(new CustomEvent("avatar:say", { detail: { text: "Acreedor eliminado exitosamente." }}));
+    } catch (e) {
+      alert(e.response?.data?.detail || 'Error al eliminar acreedor');
+    }
   };
 
   const abrirHistorial = async (ac) => {
@@ -225,10 +242,17 @@ export default function Acreedores() {
                     </button>
                     <button
                       onClick={() => abrirEditarAcreedor(a)}
-                      className="text-xs text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-100"
+                      className="text-xs text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100"
                       title="Editar Acreedor"
                     >
                       <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => eliminarAcreedor(a)}
+                      className="text-xs text-rose-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50"
+                      title="Eliminar Acreedor"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </td>
                 </tr>

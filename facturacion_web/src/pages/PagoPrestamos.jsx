@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { Calendar, CreditCard, DollarSign, Plus, CheckCircle, Clock, AlertCircle, Lock, Percent, History, Calculator, ArrowRight, UserCheck } from 'lucide-react';
+import { Calendar, CreditCard, DollarSign, Plus, CheckCircle, Clock, AlertCircle, Lock, Percent, History, Calculator, ArrowRight, UserCheck, Trash2 } from 'lucide-react';
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
@@ -163,6 +163,31 @@ export default function PagoPrestamos() {
     }
   };
 
+  const eliminarPrestamo = async (idAEliminar) => {
+    const targetId = idAEliminar || prestamoSeleccionadoId;
+    if (!targetId) return;
+    const target = prestamos.find(p => p.id === parseInt(targetId));
+    const confirmMsg = target 
+      ? `¿Está seguro de eliminar el Préstamo #${target.id} (${target.acreedor_nombre} - ${fmt(target.monto_prestamo)})?\n\nEsta acción eliminará la tabla de amortización y revertirá el saldo correspondiente.`
+      : `¿Está seguro de eliminar el préstamo seleccionado?`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setGuardando(true);
+    try {
+      await api.delete(`/api/v1/finanzas/acreedores/prestamos/${targetId}?empresa_id=${empresaId()}`);
+      setPrestamoSeleccionadoId('');
+      setDetallePrestamo(null);
+      setCuotas([]);
+      await cargarDatosIniciales();
+      window.dispatchEvent(new CustomEvent("avatar:say", { detail: { text: "Préstamo eliminado exitosamente." }}));
+    } catch (e) {
+      alert(e.response?.data?.detail || 'Error al eliminar préstamo');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
   return (
     <div className="p-8 max-w-7xl mx-auto pb-24">
       {/* HEADER */}
@@ -186,24 +211,37 @@ export default function PagoPrestamos() {
         </div>
       </div>
 
-      {/* SELECTOR DE PRÉSTAMO */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm mb-8">
-        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Seleccionar Préstamo Activo</label>
-        <select
-          value={prestamoSeleccionadoId}
-          onChange={(e) => setPrestamoSeleccionadoId(e.target.value)}
-          className="w-full md:w-1/2 p-3 border rounded-xl outline-none font-semibold text-slate-700 bg-slate-50 focus:bg-white focus:border-indigo-500 text-sm"
-        >
-          {prestamos.length === 0 ? (
-            <option value="">No hay préstamos registrados</option>
-          ) : (
-            prestamos.map((p) => (
-              <option key={p.id} value={p.id}>
-                Préstamo #{p.id} - {p.acreedor_nombre} | {fmt(p.monto_prestamo)} ({p.tipo_amortizacion === 'saldos_frances' ? 'Francés sobre Saldos' : 'Interés Simple'})
-              </option>
-            ))
-          )}
-        </select>
+      {/* SELECTOR DE PRÉSTAMO Y ACCIONES DE MANTENIMIENTO */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="flex-1">
+          <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Seleccionar Préstamo Activo</label>
+          <select
+            value={prestamoSeleccionadoId}
+            onChange={(e) => setPrestamoSeleccionadoId(e.target.value)}
+            className="w-full p-3 border rounded-xl outline-none font-semibold text-slate-700 bg-slate-50 focus:bg-white focus:border-indigo-500 text-sm"
+          >
+            {prestamos.length === 0 ? (
+              <option value="">No hay préstamos registrados</option>
+            ) : (
+              prestamos.map((p) => (
+                <option key={p.id} value={p.id}>
+                  Préstamo #{p.id} - {p.acreedor_nombre} | {fmt(p.monto_prestamo)} ({p.tipo_amortizacion === 'saldos_frances' ? 'Francés sobre Saldos' : 'Interés Simple'})
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+
+        {prestamoSeleccionadoId && (
+          <button
+            onClick={() => eliminarPrestamo(prestamoSeleccionadoId)}
+            className="bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-bold px-4 py-3 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm shrink-0"
+            title="Eliminar este préstamo y su tabla de amortizaciones"
+          >
+            <Trash2 className="w-4 h-4 text-rose-600" />
+            <span>Eliminar Préstamo</span>
+          </button>
+        )}
       </div>
 
       {/* RESUMEN DEL PRÉSTAMO SELECCIONADO */}
