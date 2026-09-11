@@ -5,7 +5,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from database import get_db
 from pydantic import BaseModel
-from models import Caja, SesionCaja, MovimientoCaja
+from models import Caja, SesionCaja, MovimientoCaja, Usuario
 import pytz
 
 router = APIRouter(prefix="/cajas", tags=["Cajas"])
@@ -38,25 +38,52 @@ def crear_caja(empresa_id: str, nombre: str, bodega_id: Optional[int] = None, db
     return {"id": caja.id, "nombre": caja.nombre}
 
 @router.post("/{caja_id}/abrir")
-def abrir_caja(caja_id: int, empresa_id: str, usuario_id: int, saldo_inicial: float = 0.0, db: Session = Depends(get_db)):
+def abrir_caja(
+    caja_id: int, 
+    empresa_id: str, 
+    usuario_id: int, 
+    saldo_inicial: float = 0.0, 
+    force_close: bool = False, 
+    db: Session = Depends(get_db)
+):
     caja = db.query(Caja).filter(Caja.id == caja_id, Caja.empresa_id == empresa_id).first()
     if not caja:
         raise HTTPException(status_code=404, detail="Caja no encontrada")
     
-    # Verificar si la caja ya esta abierta
-    activa = db.query(SesionCaja).filter(SesionCaja.caja_id == caja_id, SesionCaja.estado == "abierta").first()
-    if activa:
-        raise HTTPException(status_code=400, detail="La caja ya tiene un turno abierto")
-    
-    # Verificar si EL USUARIO ya tiene otra caja abierta
-    user_activa = db.query(SesionCaja).join(Caja).filter(SesionCaja.usuario_id == usuario_id, SesionCaja.estado == "abierta", Caja.empresa_id == empresa_id).first()
-    if user_activa:
-        raise HTTPException(status_code=400, detail=f"Usted ya tiene un turno abierto en la caja: {user_activa.caja.nombre}")
+    if force_close:
+        # Cerrar cualquier turno abierto previo para esta caja o usuario en esta empresa
+        sesiones_abiertas = db.query(SesionCaja).join(Caja).filter(
+            Caja.empresa_id == empresa_id,
+            SesionCaja.estado == "abierta",
+            (SesionCaja.caja_id == caja_id) | (SesionCaja.usuario_id == usuario_id)
+        ).all()
+        for s in sesiones_abiertas:
+            s.estado = "cerrada"
+            s.fecha_cierre = datetime.now(TIMEZONE)
+            s.notas = "Cierre forzado de turno anterior al abrir nuevo turno"
+        db.commit()
+    else:
+        # Verificar si la caja ya esta abierta por alguien mas o este usuario
+        activa = db.query(SesionCaja).filter(SesionCaja.caja_id == caja_id, SesionCaja.estado == "abierta").first()
+        if activa:
+            if activa.usuario_id == usuario_id:
+                return {"mensaje": "Caja reactivada exitosamente", "sesion_id": activa.id}
+            ocupante = activa.usuario.username if activa.usuario else "admin"
+            raise HTTPException(status_code=400, detail=f"La caja ya tiene un turno abierto por {ocupante}. Para reiniciar, use la opción de forzar cierre.")
+        
+        # Verificar si EL USUARIO ya tiene otra caja abierta
+        user_activa = db.query(SesionCaja).join(Caja).filter(
+            SesionCaja.usuario_id == usuario_id, 
+            SesionCaja.estado == "abierta", 
+            Caja.empresa_id == empresa_id
+        ).first()
+        if user_activa:
+            raise HTTPException(status_code=400, detail=f"Usted ya tiene un turno abierto en la caja: {user_activa.caja.nombre}")
 
     sesion = SesionCaja(
         caja_id=caja_id,
         usuario_id=usuario_id,
-        saldo_inicial=int(saldo_inicial * 100),
+        saldo_inicial=int(round(saldo_inicial * 100)),
         estado="abierta"
     )
     db.add(sesion)
@@ -73,7 +100,20 @@ def obtener_sesion_activa(empresa_id: str, usuario_id: int, db: Session = Depend
     ).first()
     
     if not sesion:
-        return {"activa": False}
+        # Auto-adopción: Si el usuario es admin o se reconnectó tras expirar DB/token,
+        # asociar la sesión huérfana de la empresa al usuario actual
+        sesion_orfana = db.query(SesionCaja).join(Caja).filter(
+            Caja.empresa_id == empresa_id,
+            SesionCaja.estado == "abierta"
+        ).first()
+        
+        if sesion_orfana:
+            sesion_orfana.usuario_id = usuario_id
+            db.commit()
+            db.refresh(sesion_orfana)
+            sesion = sesion_orfana
+        else:
+            return {"activa": False}
         
     movimientos = db.query(MovimientoCaja).filter(MovimientoCaja.sesion_caja_id == sesion.id).all()
     
@@ -146,6 +186,21 @@ def cerrar_caja(sesion_id: int, empresa_id: str, data: CerrarTurnoRequest, db: S
     sesion.diferencia = data.diferencia
     db.commit()
     return {"mensaje": "Turno cerrado exitosamente"}
+
+@router.post("/sesiones/{sesion_id}/forzar-cierre")
+def forzar_cierre_caja(sesion_id: int, empresa_id: str, db: Session = Depends(get_db)):
+    sesion = db.query(SesionCaja).join(Caja).filter(
+        SesionCaja.id == sesion_id,
+        Caja.empresa_id == empresa_id
+    ).first()
+    if not sesion or sesion.estado == "cerrada":
+        raise HTTPException(status_code=400, detail="Sesion invalida o ya cerrada")
+        
+    sesion.estado = "cerrada"
+    sesion.fecha_cierre = datetime.now(TIMEZONE)
+    sesion.notas = "Cierre administrativo forzado"
+    db.commit()
+    return {"mensaje": "Turno cerrado forzadamente exitosamente"}
 
 @router.get("/historial")
 def historial_cajas(empresa_id: str, db: Session = Depends(get_db)):

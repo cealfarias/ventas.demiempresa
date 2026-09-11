@@ -23,8 +23,8 @@ export default function AperturaCajaModal({ onClose, onSuccess }) {
     }
   }, [empresaId]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e, forceClose = false) => {
+    if (e) e.preventDefault();
     if (!cajaId) {
       setError('Por favor seleccione una caja');
       return;
@@ -33,7 +33,7 @@ export default function AperturaCajaModal({ onClose, onSuccess }) {
     setCargando(true);
 
     try {
-      await api.post(`/api/v1/cajas/${cajaId}/abrir?empresa_id=${empresaId}&usuario_id=${usuarioId}&saldo_inicial=${saldoInicial}`);
+      await api.post(`/api/v1/cajas/${cajaId}/abrir?empresa_id=${empresaId}&usuario_id=${usuarioId}&saldo_inicial=${saldoInicial}&force_close=${forceClose}`);
       window.dispatchEvent(new CustomEvent('caja:updated'));
       window.dispatchEvent(new CustomEvent('avatar:say', { detail: { text: 'Apertura de caja realizada exitosamente.' } }));
       if (onSuccess) onSuccess();
@@ -62,15 +62,24 @@ export default function AperturaCajaModal({ onClose, onSuccess }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={(e) => handleSubmit(e, false)} className="p-6 space-y-4">
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl font-medium">
-              {error}
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl font-medium flex flex-col gap-2">
+              <span>{error}</span>
+              {error.toLowerCase().includes('turno abierto') && (
+                <button
+                  type="button"
+                  onClick={(e) => handleSubmit(e, true)}
+                  className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-700 transition-colors w-fit self-end shadow"
+                >
+                  Forzar Cierre Anterior y Abrir
+                </button>
+              )}
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">Seleccionar Caja Fisica</label>
+            <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">Seleccionar Caja Física</label>
             <select
               value={cajaId}
               onChange={e => setCajaId(e.target.value)}
@@ -78,8 +87,8 @@ export default function AperturaCajaModal({ onClose, onSuccess }) {
             >
               <option value="">-- Seleccionar --</option>
               {cajas.map(c => (
-                <option key={c.id} value={c.id} disabled={c.tiene_sesion_activa}>
-                  {c.nombre} {c.tiene_sesion_activa ? `(Ocupada por ${c.usuario_sesion_activa || 'otro usuario'})` : '(Disponible)'}
+                <option key={c.id} value={c.id}>
+                  {c.nombre} {c.tiene_sesion_activa ? `(Ocupada por ${c.usuario_sesion_activa || 'admin'})` : '(Disponible)'}
                 </option>
               ))}
             </select>
