@@ -193,6 +193,10 @@ export default function Facturas() {
         setClientes(resC.data);
         setProductos(resP.data);
         setBodegas(resB.data);
+        const principal = (resB.data || []).find(b => b.es_principal) || (resB.data || [])[0];
+        if (principal) {
+          setForm(prev => prev.bodega_salida_id ? prev : ({ ...prev, bodega_salida_id: principal.id.toString() }));
+        }
         setVendedores(resV.data || []);
         if (resCaja && resCaja.data) {
           setCajaActiva(resCaja.data.activa);
@@ -449,8 +453,8 @@ export default function Facturas() {
               <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase">Bodega de Salida (Inventario)</label>
                 <select value={form.bodega_salida_id} onChange={e => cambiarBodega(e.target.value)} className="w-full mt-1 px-3 py-2 border rounded-xl">
-                  <option value="">(Sin descontar inventario)</option>
-                  {bodegas.map(b => <option key={b.id} value={b.id}>{b.nombre}</option>)}
+                  <option value="">(Bodega Principal por Defecto)</option>
+                  {bodegas.map(b => <option key={b.id} value={b.id}>{b.nombre}{b.es_principal ? ' (Principal)' : ''}</option>)}
                 </select>
               </div>
             <div>
