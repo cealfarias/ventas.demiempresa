@@ -356,11 +356,19 @@ def recalcular_saldos(req: RecalcularSaldosRequest, db: Session = Depends(get_db
         prod_tiene_negativo = False
         
         for bod in bodegas:
-            movimientos = db.query(Kardex).filter(
+            query_mov = db.query(Kardex).filter(
                 Kardex.empresa_id == req.empresa_id,
                 Kardex.producto_id == prod.id_producto,
                 Kardex.bodega_id == bod.id
-            ).order_by(Kardex.fecha.asc(), Kardex.id.asc()).all()
+            )
+            if req.fecha_desde:
+                inicio_dt = datetime.combine(req.fecha_desde, datetime.min.time())
+                query_mov = query_mov.filter(Kardex.fecha >= inicio_dt)
+            if req.fecha_hasta:
+                fin_dt = datetime.combine(req.fecha_hasta, datetime.max.time())
+                query_mov = query_mov.filter(Kardex.fecha <= fin_dt)
+
+            movimientos = query_mov.order_by(Kardex.fecha.asc(), Kardex.id.asc()).all()
 
             if not movimientos:
                 continue

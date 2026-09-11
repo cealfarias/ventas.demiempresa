@@ -42,14 +42,19 @@ export default function Kardex() {
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [incluirVentasSinBodega, setIncluirVentasSinBodega] = useState(true);
   const [fechaDesdeRetro, setFechaDesdeRetro] = useState(`${anioActual}-01-01`);
-  const [fechaHastaRetro, setFechaHastaRetro] = useState(new Date().toISOString().slice(0, 10));
-  const [mensajeExito, setMensajeExito] = useState('');
+  // Filtros de fecha principal en pantalla de Kardex
+  const [filtroFechaDesde, setFiltroFechaDesde] = useState(`${anioActual}-01-01`);
+  const [filtroFechaHasta, setFiltroFechaHasta] = useState('');
 
-  const cargarDatos = async () => {
+  const cargarDatos = async (fDesde = filtroFechaDesde, fHasta = filtroFechaHasta) => {
     setCargando(true);
     try {
+      let urlMov = `/api/v1/almacen/kardex/movimientos?empresa_id=${empresaId()}`;
+      if (fDesde) urlMov += `&fecha_desde=${fDesde}`;
+      if (fHasta) urlMov += `&fecha_hasta=${fHasta}`;
+
       const [resM, resP, resB] = await Promise.all([
-        api.get(`/api/v1/almacen/kardex/movimientos?empresa_id=${empresaId()}`),
+        api.get(urlMov),
         api.get(`/api/v1/facturacion/productos/?empresa_id=${empresaId()}`),
         api.get(`/api/v1/almacen/bodegas/?empresa_id=${empresaId()}`)
       ]);
@@ -64,8 +69,8 @@ export default function Kardex() {
   };
 
   useEffect(() => {
-    cargarDatos();
-  }, []);
+    cargarDatos(filtroFechaDesde, filtroFechaHasta);
+  }, [filtroFechaDesde, filtroFechaHasta]);
 
   const handleRecalcularSaldos = async (incluirVentas = incluirVentasSinBodega) => {
     setShowAdminModal(false);
@@ -124,12 +129,21 @@ export default function Kardex() {
     return codigo.includes(term) || nombre.includes(term);
   }).slice(0, 40);
 
-  // 1. Filtrar por producto, bodega y búsqueda inteligente
+  // 1. Filtrar por producto, bodega, fecha y búsqueda inteligente
   const movimientosFiltrados = movimientos.filter(m => {
     let cumple = true;
     if (filtroProd && m.producto_id?.toString() !== filtroProd) cumple = false;
     if (filtroBodega && m.bodega_nombre !== filtroBodega) cumple = false;
     
+    if (filtroFechaDesde) {
+      const fMov = new Date(m.fecha).toISOString().slice(0, 10);
+      if (fMov < filtroFechaDesde) cumple = false;
+    }
+    if (filtroFechaHasta) {
+      const fMov = new Date(m.fecha).toISOString().slice(0, 10);
+      if (fMov > filtroFechaHasta) cumple = false;
+    }
+
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       const textMatches = (
@@ -249,7 +263,7 @@ export default function Kardex() {
       )}
 
       {/* Barra de Filtros Inteligente */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 relative z-20">
+      <div className="bg-white p-4 rounded-2xl shadow-sm border mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 relative z-20">
         
         {/* 1. Selector de Producto - Combobox Profesional */}
         <div className="relative" ref={prodDropdownRef}>
@@ -380,7 +394,42 @@ export default function Kardex() {
           </div>
         </div>
 
-        {/* 3. Búsqueda por documento / nota */}
+        {/* 3. Selector de Fecha Desde - Hasta */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+              Periodo (Desde / Hasta)
+            </label>
+            {filtroFechaDesde && (
+              <button 
+                type="button" 
+                onClick={() => { setFiltroFechaDesde(''); setFiltroFechaHasta(''); }}
+                className="text-[10px] text-indigo-600 hover:text-indigo-800 font-semibold"
+              >
+                Limpiar fecha
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            <input 
+              type="date"
+              value={filtroFechaDesde}
+              onChange={(e) => { setFiltroFechaDesde(e.target.value); setCurrentPage(1); }}
+              className="w-1/2 bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5 text-xs text-slate-800 focus:ring-2 focus:ring-indigo-500 font-medium"
+              title="Fecha inicial de consulta de Kardex"
+            />
+            <span className="text-slate-400 text-xs">-</span>
+            <input 
+              type="date"
+              value={filtroFechaHasta}
+              onChange={(e) => { setFiltroFechaHasta(e.target.value); setCurrentPage(1); }}
+              className="w-1/2 bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5 text-xs text-slate-800 focus:ring-2 focus:ring-indigo-500 font-medium"
+              title="Fecha final (opcional)"
+            />
+          </div>
+        </div>
+
+        {/* 4. Búsqueda por documento / nota */}
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
             Búsqueda General
@@ -428,7 +477,7 @@ export default function Kardex() {
               <div className="px-3 border-r border-white/10">
                 <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">Stock Actual</p>
                 <p className="text-lg font-extrabold text-emerald-400 mt-0.5">
-                  {ultimoEstadoProd ? ultimoEstadoProd.saldo_cant : 0}
+                  {ultimoEstadoProd ? Number(Number(ultimoEstadoProd.saldo_cant).toFixed(4)).toString() : 0}
                   <span className="text-xs font-normal text-slate-400 ml-1">uds</span>
                 </p>
               </div>
@@ -522,7 +571,7 @@ export default function Kardex() {
                       <td className="px-2 py-3 text-right border-r font-semibold text-rose-700 text-xs bg-rose-50/10">{m.out_cant > 0 ? '$' + Number(m.out_total).toFixed(2) : ''}</td>
                       
                       {/* Saldos */}
-                      <td className="px-2 py-3 text-right border-r font-bold text-indigo-700 bg-indigo-50/30">{m.saldo_cant}</td>
+                      <td className="px-2 py-3 text-right border-r font-bold text-indigo-700 bg-indigo-50/30">{Number(Number(m.saldo_cant).toFixed(4)).toString()}</td>
                       <td className="px-2 py-3 text-right border-r text-slate-700 text-xs bg-indigo-50/30 font-mono">{'$' + Number(m.saldo_unit).toFixed(4)}</td>
                       <td className="px-2 py-3 text-right font-extrabold text-indigo-800 text-xs bg-indigo-50/30">{'$' + Number(m.saldo_total).toFixed(2)}</td>
                     </tr>
