@@ -342,5 +342,52 @@ def eliminar_movimiento(movimiento_id: int, empresa_id: str, db: Session = Depen
     db.commit()
     return {"mensaje": "Movimiento eliminado exitosamente"}
 
+class RecalcularCajasRequest(BaseModel):
+    empresa_id: str
+    sesion_id: Optional[int] = None
+
+@router.post("/recalcular-saldos")
+def recalcular_saldos_caja(req: RecalcularCajasRequest, db: Session = Depends(get_db)):
+    """Recalcula los saldos de turnos de caja en base a la sumatoria exacta de sus movimientos."""
+    query = db.query(SesionCaja).join(Caja).filter(Caja.empresa_id == req.empresa_id)
+    if req.sesion_id:
+        query = query.filter(SesionCaja.id == req.sesion_id)
+    
+    sesiones = query.all()
+    if not sesiones:
+        return {"mensaje": "No se encontraron turnos de caja para recalcular", "sesiones_recalculadas": 0, "resumen": []}
+    
+    resumen = []
+    for s in sesiones:
+        movimientos = db.query(MovimientoCaja).filter(MovimientoCaja.sesion_caja_id == s.id).order_by(MovimientoCaja.fecha.asc(), MovimientoCaja.id.asc()).all()
+        
+        ingresos = sum(m.monto for m in movimientos if m.tipo == "ingreso")
+        egresos = sum(m.monto for m in movimientos if m.tipo == "egreso")
+        
+        total_efectivo = s.saldo_inicial + sum(m.monto for m in movimientos if m.tipo == "ingreso" and m.metodo_pago == "efectivo") - sum(m.monto for m in movimientos if m.tipo == "egreso" and m.metodo_pago == "efectivo")
+        total_transferencia = sum(m.monto for m in movimientos if m.tipo == "ingreso" and m.metodo_pago == "transferencia") - sum(m.monto for m in movimientos if m.tipo == "egreso" and m.metodo_pago == "transferencia")
+        total_tarjeta = sum(m.monto for m in movimientos if m.tipo == "ingreso" and m.metodo_pago == "tarjeta") - sum(m.monto for m in movimientos if m.tipo == "egreso" and m.metodo_pago == "tarjeta")
+        
+        saldo_calculado = s.saldo_inicial + ingresos - egresos
+        
+        resumen.append({
+            "sesion_id": s.id,
+            "caja_nombre": s.caja.nombre if s.caja else "Caja",
+            "saldo_inicial": s.saldo_inicial,
+            "total_efectivo": total_efectivo,
+            "total_transferencia": total_transferencia,
+            "total_tarjeta": total_tarjeta,
+            "saldo_calculado": saldo_calculado,
+            "movimientos_count": len(movimientos)
+        })
+
+    db.commit()
+    
+    return {
+        "mensaje": "Saldos de turno de caja recalculados exitosamente.",
+        "sesiones_recalculadas": len(sesiones),
+        "resumen": resumen
+    }
+
 
 

@@ -37,8 +37,36 @@ export default function Cajas() {
   const [editarForm, setEditarForm] = useState({ monto: "", concepto: "", metodo_pago: "efectivo" });
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
 
+  // Admin recalculation states
+  const userRole = (localStorage.getItem("rol") || "").toLowerCase();
+  const esAdmin = !userRole || userRole === "admin" || userRole === "administrador" || userRole === "propietario" || userRole === "superadmin";
+  const [recalculando, setRecalculando] = useState(false);
+  const [mensajeExito, setMensajeExito] = useState("");
+
   const empresaId = localStorage.getItem("empresa_id");
   const usuarioId = localStorage.getItem("usuario_id") ? parseInt(localStorage.getItem("usuario_id")) : 1;
+
+  const handleRecalcularSaldosCaja = async () => {
+    setRecalculando(true);
+    setMensajeExito("");
+    try {
+      const res = await api.post("/api/v1/cajas/recalcular-saldos", {
+        empresa_id: empresaId,
+        sesion_id: sesionActiva ? sesionActiva.sesion_id : null
+      });
+      await cargarSesion();
+      await cargarCajas();
+      await cargarHistorial();
+      window.dispatchEvent(new CustomEvent("caja:updated"));
+      setMensajeExito(res.data?.mensaje || "Saldos de turno de caja recalculados exitosamente.");
+      setTimeout(() => setMensajeExito(""), 6000);
+    } catch (e) {
+      console.error("Error al recalcular saldos de caja:", e);
+      alert("Error al recalcular saldos de caja: " + (e.response?.data?.detail || e.message));
+    } finally {
+      setRecalculando(false);
+    }
+  };
 
   const cargarCajas = async () => {
     const res = await api.get(`/api/v1/cajas?empresa_id=${empresaId}`);
@@ -316,10 +344,30 @@ export default function Cajas() {
           </h1>
           <p className="text-sm text-slate-500 mt-1">Gestión de turnos y flujo de efectivo</p>
         </div>
-        <button onClick={crearCaja} className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-medium hover:bg-emerald-700 flex items-center gap-2 text-sm shadow-sm transition-all">
-          <Plus className="w-4 h-4" /> Nueva Caja
-        </button>
+        <div className="flex items-center gap-2">
+          {esAdmin && (
+            <button
+              onClick={handleRecalcularSaldosCaja}
+              disabled={recalculando}
+              className="bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 shadow-xs transition-all disabled:opacity-50"
+              title="Recalcular saldos de turno de caja desde la sumatoria de movimientos"
+            >
+              <RefreshCcw className={`w-3.5 h-3.5 text-indigo-600 ${recalculando ? 'animate-spin' : ''}`} />
+              <span>{recalculando ? 'Recalculando...' : 'Recalcular Saldos de Caja (Admin)'}</span>
+            </button>
+          )}
+          <button onClick={crearCaja} className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-medium hover:bg-emerald-700 flex items-center gap-2 text-sm shadow-sm transition-all">
+            <Plus className="w-4 h-4" /> Nueva Caja
+          </button>
+        </div>
       </div>
+
+      {mensajeExito && (
+        <div className="mb-6 bg-emerald-50 border border-emerald-300 text-emerald-800 px-4 py-3 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-sm animate-in fade-in">
+          <span>{mensajeExito}</span>
+          <button onClick={() => setMensajeExito("")} className="text-emerald-600 hover:text-emerald-900 font-bold ml-2">✕</button>
+        </div>
+      )}
 
       <div className="flex gap-4 mb-6 border-b border-slate-200">
         <button 
@@ -376,7 +424,18 @@ export default function Cajas() {
                     </h3>
                     <p className="text-xs text-slate-500 mt-1">Apertura: {new Date(sesionActiva.fecha_apertura).toLocaleString()}</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    {esAdmin && (
+                      <button
+                        onClick={handleRecalcularSaldosCaja}
+                        disabled={recalculando}
+                        className="bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-3.5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all disabled:opacity-50"
+                        title="Recalcular sumatoria de movimientos del turno"
+                      >
+                        <RefreshCcw className={`w-3.5 h-3.5 text-indigo-600 ${recalculando ? 'animate-spin' : ''}`} />
+                        <span>{recalculando ? 'Recalculando...' : 'Recalcular Turno (Admin)'}</span>
+                      </button>
+                    )}
                     <button onClick={() => setShowInyeccionModal(true)} className="bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-indigo-700 flex items-center gap-2 text-sm shadow-md shadow-indigo-500/20 transition-all">
                       <TrendingUp className="w-4 h-4" /> Inyectar Capital
                     </button>
