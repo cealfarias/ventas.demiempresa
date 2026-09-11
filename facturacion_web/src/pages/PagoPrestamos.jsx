@@ -29,7 +29,7 @@ export default function PagoPrestamos() {
   // Modales
   const [modalNuevoPrestamo, setModalNuevoPrestamo] = useState(false);
   const [formPrestamo, setFormPrestamo] = useState({
-    acreedor_id: '', monto_prestamo: '', tasa_interes_anual: 12.0, plazo: 12, plazo_meses: 12, unidad_plazo: 'meses', monto_cuota: '', tipo_amortizacion: 'saldos_frances', fecha_desembolso: '', notas: ''
+    acreedor_id: '', monto_prestamo: '', tasa_interes_anual: 12.0, plazo: 12, plazo_meses: 12, unidad_plazo: 'meses', monto_cuota: '', tipo_amortizacion: 'saldos_frances', fecha_desembolso: '', metodo_pago: 'efectivo', notas: ''
   });
 
   const calcularCuotaEstimada = (monto, tasa, plazo, unidad, tipo) => {
@@ -162,6 +162,7 @@ export default function PagoPrestamos() {
       unidad_plazo: 'meses',
       tipo_amortizacion: 'saldos_frances',
       fecha_desembolso: new Date().toISOString().split('T')[0],
+      metodo_pago: 'efectivo',
       notas: ''
     });
     setModalNuevoPrestamo(true);
@@ -186,6 +187,7 @@ export default function PagoPrestamos() {
         monto_cuota_manual: formPrestamo.monto_cuota ? Math.round(parseFloat(formPrestamo.monto_cuota) * 100) : null,
         tipo_amortizacion: formPrestamo.tipo_amortizacion,
         fecha_desembolso: formPrestamo.fecha_desembolso || null,
+        metodo_pago: formPrestamo.metodo_pago || 'efectivo',
         notas: formPrestamo.notas
       };
 
@@ -369,7 +371,31 @@ export default function PagoPrestamos() {
               ) : cuotas.length === 0 ? (
                 <tr><td colSpan="8" className="text-center py-12 text-slate-400">Seleccione un préstamo para ver su tabla de amortización</td></tr>
               ) : (
-                cuotas.map((c) => {
+                <React.Fragment>
+                  {/* Fila 0: Otorgamiento del Préstamo */}
+                  {detallePrestamo && (
+                    <tr className="bg-blue-50/40 border-b border-blue-100 font-medium">
+                      <td className="py-3 px-4 font-bold text-blue-900 flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0"></span>
+                        <span>Otorgamiento</span>
+                      </td>
+                      <td className="py-3 px-4 text-xs font-semibold text-slate-700">
+                        {fmtDate(detallePrestamo.fecha_desembolso)}
+                      </td>
+                      <td className="py-3 px-4 text-right font-semibold text-slate-400">$0.00</td>
+                      <td className="py-3 px-4 text-right font-semibold text-slate-400">$0.00</td>
+                      <td className="py-3 px-4 text-right font-semibold text-slate-400">$0.00</td>
+                      <td className="py-3 px-4 text-right font-black text-slate-900">{fmt(detallePrestamo.monto_prestamo)}</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 flex items-center justify-center gap-1 mx-auto w-fit">
+                          <CheckCircle className="w-3 h-3 text-blue-600" /> OTORGADO / DESEMBOLSADO
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center text-xs text-slate-400 font-medium">-</td>
+                    </tr>
+                  )}
+
+                  {cuotas.map((c) => {
                   const esPagada = c.estado === 'pagado';
                   const esSiguiente = c.es_siguiente_a_pagar;
 
@@ -425,7 +451,8 @@ export default function PagoPrestamos() {
                       </td>
                     </tr>
                   );
-                })
+                })}
+              </React.Fragment>
               )}
             </tbody>
           </table>
@@ -565,6 +592,17 @@ export default function PagoPrestamos() {
                     onChange={(e) => setFormPrestamo({ ...formPrestamo, fecha_desembolso: e.target.value })}
                     className="w-full border rounded-xl p-2.5 outline-none focus:border-indigo-500"
                   />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Vía de Inyección a Caja</label>
+                  <select
+                    value={formPrestamo.metodo_pago || 'efectivo'}
+                    onChange={(e) => setFormPrestamo({ ...formPrestamo, metodo_pago: e.target.value })}
+                    className="w-full border rounded-xl p-2.5 outline-none focus:border-indigo-500 bg-white font-medium text-slate-800"
+                  >
+                    <option value="efectivo">Efectivo (Gaveta)</option>
+                    <option value="transferencia">Transferencia Bancaria</option>
+                  </select>
                 </div>
               </div>
 

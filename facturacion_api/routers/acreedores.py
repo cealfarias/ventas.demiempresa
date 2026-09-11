@@ -80,6 +80,7 @@ class PrestamoCreate(BaseModel):
     monto_cuota_manual: Optional[int] = None # cuota ingresada en USD (centavos)
     tipo_amortizacion: str # saldos_frances | interes_simple
     fecha_desembolso: Optional[str] = None
+    metodo_pago: Optional[str] = "efectivo"
     notas: Optional[str] = None
 
 class PagarCuotaRequest(BaseModel):
@@ -87,6 +88,24 @@ class PagarCuotaRequest(BaseModel):
     referencia: Optional[str] = None
     notas: Optional[str] = None
     fecha_pago: Optional[str] = None
+
+# Helper para obtener/auto-adoptar sesión activa de caja para la empresa
+def obtener_sesion_caja_activa(db: Session, empresa_id: str, usuario_id: int) -> Optional[SesionCaja]:
+    sesion = db.query(SesionCaja).join(Caja).filter(
+        SesionCaja.usuario_id == usuario_id,
+        SesionCaja.estado == "abierta",
+        Caja.empresa_id == empresa_id
+    ).first()
+    if not sesion:
+        sesion = db.query(SesionCaja).join(Caja).filter(
+            SesionCaja.estado == "abierta",
+            Caja.empresa_id == empresa_id
+        ).first()
+        if sesion:
+            sesion.usuario_id = usuario_id
+            db.commit()
+            db.refresh(sesion)
+    return sesion
 
 
 # ── Endpoints de Acreedores ───────────────────────────────────────────────────
@@ -248,7 +267,7 @@ def registrar_movimiento_acreedor(acreedor_id: int, empresa_id: str, usuario_id:
     db.add(mov)
     db.flush()
 
-    sesion = db.query(SesionCaja).join(Caja).filter(SesionCaja.usuario_id == usuario_id, SesionCaja.estado == "abierta", Caja.empresa_id == empresa_id).first()
+    sesion = obtener_sesion_caja_activa(db, empresa_id, usuario_id)
     if sesion:
         if data.tipo == "PRESTAMO_RECIBIDO":
             db.add(MovimientoCaja(
@@ -458,6 +477,8 @@ def crear_prestamo(empresa_id: str, usuario_id: int, data: PrestamoCreate, db: S
     # Actualizar saldo del acreedor
     acreedor.saldo_capital = (acreedor.saldo_capital or 0) + P
 
+    metodo = data.metodo_pago or "efectivo"
+
     # Registrar movimiento de desembolso
     mov = MovimientoAcreedor(
         acreedor_id=acreedor.id,
@@ -466,7 +487,7 @@ def crear_prestamo(empresa_id: str, usuario_id: int, data: PrestamoCreate, db: S
         monto_capital=P,
         monto_interes=0,
         monto_total=P,
-        metodo_pago="transferencia",
+        metodo_pago=metodo,
         notas=f"Desembolso de Préstamo #{prestamo.id} ({data.tipo_amortizacion})",
         usuario_id=usuario_id
     )
@@ -474,14 +495,14 @@ def crear_prestamo(empresa_id: str, usuario_id: int, data: PrestamoCreate, db: S
     db.flush()
 
     # Integración con Caja si hay sesión abierta
-    sesion = db.query(SesionCaja).join(Caja).filter(SesionCaja.usuario_id == usuario_id, SesionCaja.estado == "abierta", Caja.empresa_id == empresa_id).first()
+    sesion = obtener_sesion_caja_activa(db, empresa_id, usuario_id)
     if sesion:
         db.add(MovimientoCaja(
             sesion_caja_id=sesion.id,
             tipo="ingreso",
-            metodo_pago="transferencia",
+            metodo_pago=metodo,
             monto=P,
-            concepto=f"Desembolso Préstamo #{prestamo.id}: {acreedor.nombre}",
+            concepto=f"Desembolso / Inyección Préstamo #{prestamo.id}: {acreedor.nombre}",
             referencia_tipo="acreedor",
             referencia_id=mov.id,
             usuario_id=usuario_id
@@ -639,7 +660,7 @@ def pagar_cuota_prestamo(prestamo_id: int, numero_cuota: int, empresa_id: str, u
     db.flush()
 
     # Integración automática con Movimiento de Caja (Egreso)
-    sesion = db.query(SesionCaja).join(Caja).filter(SesionCaja.usuario_id == usuario_id, SesionCaja.estado == "abierta", Caja.empresa_id == empresa_id).first()
+    sesion = obtener_sesion_caja_activa(db, empresa_id, usuario_id)
     if sesion:
         db.add(MovimientoCaja(
             sesion_caja_id=sesion.id,
