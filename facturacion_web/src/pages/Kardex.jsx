@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { 
   BookOpen, Search, ArrowRightLeft, TrendingUp, TrendingDown, RefreshCcw, 
   Eye, Filter, Loader2, X, Package, ChevronDown, Check, Info, DollarSign, Boxes, Tag,
-  ShieldAlert, AlertTriangle, CheckCircle2
+  ShieldAlert, AlertTriangle, CheckCircle2, Lock
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -30,10 +30,16 @@ export default function Kardex() {
   // Estado para el modal de detalles
   const [movimientoActivo, setMovimientoActivo] = useState(null);
 
+  // Verificación de Rol del usuario (Administrador vs Empleado)
+  const userRole = (localStorage.getItem('rol') || '').toLowerCase();
+  const esAdmin = !userRole || userRole === 'admin' || userRole === 'administrador' || userRole === 'propietario' || userRole === 'superadmin';
+
   // Estado para recalculador de saldos e informe de stock negativo
   const [recalculando, setRecalculando] = useState(false);
   const [informeData, setInformeData] = useState(null);
   const [showInformeModal, setShowInformeModal] = useState(false);
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [incluirVentasSinBodega, setIncluirVentasSinBodega] = useState(true);
   const [mensajeExito, setMensajeExito] = useState('');
 
   const cargarDatos = async () => {
@@ -58,14 +64,16 @@ export default function Kardex() {
     cargarDatos();
   }, []);
 
-  const handleRecalcularSaldos = async () => {
+  const handleRecalcularSaldos = async (incluirVentas = incluirVentasSinBodega) => {
+    setShowAdminModal(false);
     setRecalculando(true);
     setMensajeExito('');
     try {
       const payload = {
         empresa_id: empresaId(),
         producto_id: filtroProd ? parseInt(filtroProd) : null,
-        bodega_id: filtroBodega ? bodegas.find(b => b.nombre === filtroBodega)?.id : null
+        bodega_id: filtroBodega ? bodegas.find(b => b.nombre === filtroBodega)?.id : null,
+        incluir_ventas_sin_bodega: incluirVentas
       };
 
       const res = await api.post('/api/v1/almacen/kardex/recalcular-saldos', payload);
@@ -201,19 +209,26 @@ export default function Kardex() {
           <p className="text-sm text-slate-500 mt-1">Auditoría completa de movimientos de inventario, stock y costeo ponderado</p>
         </div>
 
-        <button
-          onClick={handleRecalcularSaldos}
-          disabled={recalculando}
-          className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl shadow-md font-semibold text-xs flex items-center gap-2 transition-all disabled:opacity-50 self-start sm:self-auto"
-          title="Buscar todos los movimientos en la base de datos y actualizar existencias maestras"
-        >
-          {recalculando ? (
-            <Loader2 className="w-4 h-4 animate-spin text-white" />
-          ) : (
-            <RefreshCcw className="w-4 h-4 text-indigo-200" />
-          )}
-          {recalculando ? 'Recalculando Existencias...' : (filtroProd ? 'Recalcular Saldo del Producto' : 'Actualizar Saldos (Maestro)')}
-        </button>
+        {esAdmin ? (
+          <button
+            onClick={() => setShowAdminModal(true)}
+            disabled={recalculando}
+            className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl shadow-md font-semibold text-xs flex items-center gap-2 transition-all disabled:opacity-50 self-start sm:self-auto"
+            title="Configurar y actualizar existencias maestras desde Kardex (Control Administrador)"
+          >
+            {recalculando ? (
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
+            ) : (
+              <RefreshCcw className="w-4 h-4 text-indigo-200" />
+            )}
+            {recalculando ? 'Recalculando Existencias...' : (filtroProd ? 'Recalcular Saldo (Admin)' : 'Actualizar Saldos (Admin)')}
+          </button>
+        ) : (
+          <div className="px-3 py-2 bg-slate-100 border border-slate-200 text-slate-500 rounded-xl text-xs flex items-center gap-1.5 font-medium shadow-sm self-start sm:self-auto">
+            <Lock className="w-4 h-4 text-slate-400" />
+            <span>Recálculo de existencias exclusivo de Administrador</span>
+          </div>
+        )}
       </div>
 
       {mensajeExito && (
@@ -754,6 +769,75 @@ export default function Kardex() {
                 className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl shadow-sm transition-colors"
               >
                 Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Configuración y Control para Administrador */}
+      {showAdminModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
+            <div className="px-6 py-4 bg-gradient-to-r from-indigo-900 via-slate-900 to-indigo-950 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-indigo-400" />
+                <h3 className="font-bold text-sm">Control de Recálculo y Existencias (Admin)</h3>
+              </div>
+              <button onClick={() => setShowAdminModal(false)} className="text-slate-400 hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-3.5 text-xs text-indigo-900 leading-relaxed">
+                <p className="font-bold text-indigo-950 mb-1 flex items-center gap-1.5">
+                  <Info className="w-4 h-4 text-indigo-600" /> Autoridad sobre movimientos de inventario:
+                </p>
+                <span>Como Administrador, usted decide qué movimientos influyen en el saldo final de existencias maestras de sus productos.</span>
+              </div>
+
+              <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={incluirVentasSinBodega}
+                    onChange={e => setIncluirVentasSinBodega(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                  />
+                  <div className="text-xs">
+                    <span className="font-bold text-slate-800 block group-hover:text-indigo-600 transition-colors">
+                      Incluir ventas realizadas "Sin descontar inventario"
+                    </span>
+                    <span className="text-slate-500 text-[11px] block mt-0.5">
+                      Si está marcado, las facturas registradas sin bodega se asignarán a la bodega principal y descontarán existencias en este recálculo. Si no está marcado, solo se recalcularán los movimientos existentes en Kardex.
+                    </span>
+                  </div>
+                </label>
+              </div>
+
+              {filtroProd && (
+                <div className="text-xs text-slate-600 bg-amber-50 border border-amber-200 p-3 rounded-xl font-medium">
+                  Se ejecutará el recálculo únicamente para el producto seleccionado: <strong className="text-slate-800">[{productoSeleccionado?.codigo}] {productoSeleccionado?.nombre}</strong>.
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowAdminModal(false)}
+                className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRecalcularSaldos(incluirVentasSinBodega)}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all flex items-center gap-2"
+              >
+                <RefreshCcw className="w-3.5 h-3.5" />
+                Ejecutar Recálculo Maestro
               </button>
             </div>
           </div>

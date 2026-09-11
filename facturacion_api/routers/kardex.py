@@ -25,6 +25,7 @@ class RecalcularSaldosRequest(BaseModel):
     empresa_id: str
     producto_id: Optional[int] = None
     bodega_id: Optional[int] = None
+    incluir_ventas_sin_bodega: bool = True
 
 class KardexResponse(BaseModel):
     id: int
@@ -281,61 +282,62 @@ def recalcular_saldos(req: RecalcularSaldosRequest, db: Session = Depends(get_db
         if bodega_ids:
             bodegas = db.query(Bodega).filter(Bodega.id.in_(bodega_ids)).all()
 
-    # ── Retrofit: Asignar bodega a ventas huérfanas y registrar movimientos de Kardex faltantes ──
-    bodega_principal = db.query(Bodega).filter(Bodega.empresa_id == req.empresa_id, Bodega.es_principal == True).first()
-    if not bodega_principal:
-        bodega_principal = db.query(Bodega).filter(Bodega.empresa_id == req.empresa_id).first()
-    if not bodega_principal:
-        bodega_principal = Bodega(empresa_id=req.empresa_id, codigo="BOD-01", nombre="Bodega Principal", es_principal=True, activa=True)
-        db.add(bodega_principal)
+    # ── Retrofit: Asignar bodega a ventas huérfanas y registrar movimientos de Kardex faltantes (Si Admin lo autoriza) ──
+    if req.incluir_ventas_sin_bodega:
+        bodega_principal = db.query(Bodega).filter(Bodega.empresa_id == req.empresa_id, Bodega.es_principal == True).first()
+        if not bodega_principal:
+            bodega_principal = db.query(Bodega).filter(Bodega.empresa_id == req.empresa_id).first()
+        if not bodega_principal:
+            bodega_principal = Bodega(empresa_id=req.empresa_id, codigo="BOD-01", nombre="Bodega Principal", es_principal=True, activa=True)
+            db.add(bodega_principal)
+            db.flush()
+
+        facturas_sin_kardex = db.query(Factura).filter(
+            Factura.empresa_id == req.empresa_id,
+            Factura.estado != "anulada"
+        ).all()
+
+        for f in facturas_sin_kardex:
+            if not f.bodega_salida_id:
+                f.bodega_salida_id = bodega_principal.id
+            
+            for item in f.items:
+                if req.producto_id and item.producto_id != req.producto_id:
+                    continue
+
+                existe = db.query(Kardex).filter(
+                    Kardex.empresa_id == req.empresa_id,
+                    Kardex.referencia_tipo == "factura",
+                    Kardex.referencia_id == f.id,
+                    Kardex.producto_id == item.producto_id
+                ).first()
+
+                if not existe:
+                    m_retro = Kardex(
+                        empresa_id=req.empresa_id,
+                        bodega_id=f.bodega_salida_id,
+                        producto_id=item.producto_id,
+                        tipo_movimiento="SALIDA_VENTA",
+                        referencia_tipo="factura",
+                        referencia_id=f.id,
+                        cantidad=item.cantidad,
+                        costo_unitario=0.0,
+                        costo_total=0.0,
+                        stock_anterior=0.0,
+                        stock_resultante=0.0,
+                        usuario_id=f.usuario_id,
+                        fecha=f.fecha_emision,
+                        notas=f"Venta con {f.tipo_doc} {f.numero} (Recalculado de ventas sin bodega por Administrador)"
+                    )
+                    db.add(m_retro)
+
         db.flush()
 
-    facturas_sin_kardex = db.query(Factura).filter(
-        Factura.empresa_id == req.empresa_id,
-        Factura.estado != "anulada"
-    ).all()
-
-    for f in facturas_sin_kardex:
-        if not f.bodega_salida_id:
-            f.bodega_salida_id = bodega_principal.id
-        
-        for item in f.items:
-            if req.producto_id and item.producto_id != req.producto_id:
-                continue
-
-            existe = db.query(Kardex).filter(
-                Kardex.empresa_id == req.empresa_id,
-                Kardex.referencia_tipo == "factura",
-                Kardex.referencia_id == f.id,
-                Kardex.producto_id == item.producto_id
-            ).first()
-
-            if not existe:
-                m_retro = Kardex(
-                    empresa_id=req.empresa_id,
-                    bodega_id=f.bodega_salida_id,
-                    producto_id=item.producto_id,
-                    tipo_movimiento="SALIDA_VENTA",
-                    referencia_tipo="factura",
-                    referencia_id=f.id,
-                    cantidad=item.cantidad,
-                    costo_unitario=0.0,
-                    costo_total=0.0,
-                    stock_anterior=0.0,
-                    stock_resultante=0.0,
-                    usuario_id=f.usuario_id,
-                    fecha=f.fecha_emision,
-                    notas=f"Venta con {f.tipo_doc} {f.numero} (Recalculado de ventas sin bodega)"
-                )
-                db.add(m_retro)
-
-    db.flush()
-
-    # Re-consultar bodegas por si se creó la bodega principal en esta transacción
-    query_bodegas = db.query(Bodega).filter(Bodega.empresa_id == req.empresa_id)
-    if req.bodega_id:
-        query_bodegas = query_bodegas.filter(Bodega.id == req.bodega_id)
-    bodegas = query_bodegas.all()
+        # Re-consultar bodegas por si se creó la bodega principal en esta transacción
+        query_bodegas = db.query(Bodega).filter(Bodega.empresa_id == req.empresa_id)
+        if req.bodega_id:
+            query_bodegas = query_bodegas.filter(Bodega.id == req.bodega_id)
+        bodegas = query_bodegas.all()
 
     informe_negativos = []
     productos_actualizados = 0
