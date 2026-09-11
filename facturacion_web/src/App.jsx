@@ -48,7 +48,7 @@ const NombreEmpresa = () => {
       }).catch(() => {});
     }
   }, []);
-  return <p className="text-sm font-bold text-slate-800">{nombre}</p>;
+  return <p className="text-xs font-bold text-slate-800 truncate max-w-[160px] sm:max-w-[220px]">{nombre}</p>;
 };
 
 // ── Componentes del Sidebar ───────────────────────────────────────────────────
@@ -59,11 +59,11 @@ const SidebarLink = ({ to, icon: Icon, label, expanded }) => {
     <Link
       to={to}
       className={`flex items-center px-3 py-2.5 my-0.5 rounded-xl transition-all ${isActive
-        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-        : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}
+        ? 'bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700 text-white shadow-lg shadow-indigo-600/30 font-semibold border-l-4 border-amber-400'
+        : 'text-slate-300 hover:bg-white/10 hover:text-white font-medium'}`}
     >
-      <Icon className="w-5 h-5 flex-shrink-0" />
-      {expanded && <span className="ml-3 font-medium text-sm whitespace-nowrap">{label}</span>}
+      <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-amber-300' : 'text-slate-400 group-hover:text-white'}`} />
+      {expanded && <span className="ml-3 text-xs whitespace-nowrap tracking-wide">{label}</span>}
     </Link>
   );
 };
@@ -71,9 +71,9 @@ const SidebarLink = ({ to, icon: Icon, label, expanded }) => {
 const SidebarSection = ({ label, expanded, children }) => (
   <div className="mb-1">
     {expanded && (
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 pt-4 pb-1">{label}</p>
+      <p className="text-[10px] font-extrabold text-indigo-300 uppercase tracking-widest px-3 pt-3.5 pb-1 opacity-90">{label}</p>
     )}
-    {!expanded && <div className="border-t border-slate-100 my-2" />}
+    {!expanded && <div className="border-t border-slate-800 my-2" />}
     {children}
   </div>
 );
@@ -111,24 +111,24 @@ const Layout = ({ children }) => {
   const canSeeConfiguracion = isAdmin;
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans">
-      {/* Sidebar */}
-      <aside className={`bg-white border-r border-slate-200 transition-all duration-300 flex flex-col ${expanded ? 'w-56' : 'w-16'}`}>
+    <div className="flex h-screen bg-slate-100 font-sans">
+      {/* Sidebar - Dark Sapphire Theme */}
+      <aside className={`bg-gradient-to-b from-slate-950 via-indigo-950 to-slate-900 border-r border-slate-800 shadow-2xl transition-all duration-300 flex flex-col ${expanded ? 'w-56' : 'w-16'}`}>
         {/* Logo */}
-        <div className="h-14 flex items-center justify-between px-3 border-b border-slate-200 flex-shrink-0">
+        <div className="h-14 flex items-center justify-between px-3.5 border-b border-slate-800/80 bg-slate-950/60 flex-shrink-0">
           {expanded && (
             <div className="flex items-center gap-2 overflow-hidden">
-              <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-sm shrink-0">F</div>
-              <span className="font-bold text-base text-slate-800 whitespace-nowrap">Facturación</span>
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-amber-400 flex items-center justify-center text-white font-black text-base shadow-md shrink-0 border border-white/20">F</div>
+              <span className="font-extrabold text-base text-white tracking-tight whitespace-nowrap">Facturación</span>
             </div>
           )}
-          <button onClick={() => setExpanded(!expanded)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 ml-auto">
+          <button onClick={() => setExpanded(!expanded)} className="p-1.5 rounded-lg text-slate-400 hover:bg-white/10 hover:text-white ml-auto transition-colors">
             <Menu className="w-5 h-5" />
           </button>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto p-2">
+        <nav className="flex-1 overflow-y-auto p-2 scrollbar-thin">
           <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" expanded={expanded} />
 
           {canSeeVentas && (
@@ -181,33 +181,36 @@ const Layout = ({ children }) => {
         </nav>
 
         {/* Footer */}
-        <div className="p-2 border-t border-slate-200 flex-shrink-0">
+        <div className="p-2 border-t border-slate-800 bg-slate-950/40 flex-shrink-0">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center px-3 py-2.5 mt-0.5 rounded-xl text-red-500 hover:bg-red-50 transition-colors"
+            className="w-full flex items-center px-3 py-2.5 rounded-xl text-rose-400 hover:bg-rose-950/40 hover:text-rose-200 transition-colors"
           >
             <LogOut className="w-5 h-5 flex-shrink-0" />
-            {expanded && <span className="ml-3 font-medium text-sm whitespace-nowrap">Cerrar Sesión</span>}
+            {expanded && <span className="ml-3 font-medium text-xs whitespace-nowrap">Cerrar Sesión</span>}
           </button>
         </div>
       </aside>
 
       {/* Contenido principal */}
-      <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
-        <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 sm:px-6 justify-between sticky top-0 z-10">
+      <main className="flex-1 overflow-y-auto pb-16 md:pb-0 bg-slate-100">
+        <header className="h-14 bg-white/95 backdrop-blur-md border-b border-slate-200 flex items-center px-4 sm:px-6 justify-between sticky top-0 z-20 shadow-xs">
           <div className="flex items-center gap-2">
             <button onClick={() => setExpanded(!expanded)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 md:hidden">
               <Menu className="w-5 h-5" />
             </button>
-            <h2 className="text-xs font-semibold text-slate-400 tracking-wider uppercase hidden sm:block">Ambiente Seguro SaaS</h2>
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <h2 className="text-[11px] font-extrabold text-indigo-900 tracking-wider uppercase">Plataforma SaaS Corporativa</h2>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <CajaStateBanner />
             <div className="text-right hidden sm:block">
               <NombreEmpresa />
-              <p className="text-xs text-slate-500 uppercase">{localStorage.getItem('rol') || 'Usuario'}</p>
+              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">{localStorage.getItem('rol') || 'Usuario'}</p>
             </div>
-            <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center border border-indigo-200 text-sm uppercase">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-700 text-white font-black flex items-center justify-center border border-indigo-400 text-xs uppercase shadow-sm">
               {localStorage.getItem('rol') ? localStorage.getItem('rol').substring(0, 2) : 'US'}
             </div>
           </div>

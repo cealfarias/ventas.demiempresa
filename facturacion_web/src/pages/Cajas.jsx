@@ -387,38 +387,38 @@ export default function Cajas() {
                 </div>
                 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
-                    <p className="text-xs text-slate-500 uppercase font-semibold">Fondo Inicial (Efectivo)</p>
-                    <p className="text-xl font-bold text-slate-700 mt-1">{fmt(sesionActiva.saldo_inicial)}</p>
+                  <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm border-t-4 border-slate-400">
+                    <p className="text-xs text-slate-500 uppercase font-extrabold tracking-wider">Fondo Inicial (Efectivo)</p>
+                    <p className="text-2xl font-black text-slate-800 mt-1">{fmt(sesionActiva.saldo_inicial)}</p>
                   </div>
-                  <div className="bg-emerald-50/70 p-4 rounded-2xl border border-emerald-200/70">
-                    <p className="text-xs text-emerald-700 uppercase font-semibold">Efectivo Total en Caja</p>
-                    <p className="text-2xl font-bold text-emerald-700 mt-1">{fmt(sesionActiva.total_efectivo)}</p>
+                  <div className="bg-gradient-to-br from-emerald-600 to-teal-700 p-4.5 rounded-2xl shadow-md text-white border border-emerald-500 border-t-4 border-emerald-300">
+                    <p className="text-xs text-emerald-100 uppercase font-extrabold tracking-wider">Efectivo Total en Caja</p>
+                    <p className="text-3xl font-black text-white mt-1 tracking-tight">{fmt(sesionActiva.total_efectivo)}</p>
                   </div>
-                  <div className="bg-indigo-50/70 p-4 rounded-2xl border border-indigo-200/70">
-                    <p className="text-xs text-indigo-700 uppercase font-semibold">Total Transferencias</p>
-                    <p className="text-2xl font-bold text-indigo-700 mt-1">{fmt(sesionActiva.total_transferencia)}</p>
+                  <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm border-t-4 border-indigo-500">
+                    <p className="text-xs text-indigo-700 uppercase font-extrabold tracking-wider">Total Transferencias</p>
+                    <p className="text-2xl font-black text-indigo-700 mt-1">{fmt(sesionActiva.total_transferencia)}</p>
                   </div>
-                  <div className="bg-amber-50/70 p-4 rounded-2xl border border-amber-200/70">
-                    <p className="text-xs text-amber-700 uppercase font-semibold">Total Tarjetas</p>
-                    <p className="text-2xl font-bold text-amber-700 mt-1">{fmt(sesionActiva.total_tarjeta)}</p>
+                  <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-sm border-t-4 border-amber-500">
+                    <p className="text-xs text-amber-700 uppercase font-extrabold tracking-wider">Total Tarjetas</p>
+                    <p className="text-2xl font-black text-amber-700 mt-1">{fmt(sesionActiva.total_tarjeta)}</p>
                   </div>
                 </div>
                 
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mt-6">
-                  <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                      Movimientos del Turno
-                      <span className="text-xs font-semibold text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full">{movimientos.length}</span>
+                  <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-900 text-white">
+                    <h3 className="font-extrabold text-white flex items-center gap-2 text-sm tracking-wide">
+                      <Wallet className="w-4 h-4 text-emerald-400" /> Movimientos del Turno
+                      <span className="text-xs font-bold text-slate-900 bg-emerald-400 px-2 py-0.5 rounded-full">{movimientos.length}</span>
                     </h3>
-                    <button onClick={cargarSesion} className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-200 transition-colors" title="Actualizar">
+                    <button onClick={cargarSesion} className="p-1.5 text-slate-300 hover:text-white rounded-lg hover:bg-white/10 transition-colors" title="Actualizar">
                       <RefreshCcw className="w-4 h-4" />
                     </button>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase bg-slate-50">
+                        <tr className="border-b border-slate-200 text-[11px] font-extrabold text-slate-600 uppercase bg-slate-100 tracking-wider">
                           <th className="px-5 py-3.5 w-24">Hora</th>
                           <th className="px-5 py-3.5">Concepto / Transacción</th>
                           <th className="px-5 py-3.5 w-28">Método</th>

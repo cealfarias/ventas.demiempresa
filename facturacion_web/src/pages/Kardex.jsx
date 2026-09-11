@@ -608,7 +608,7 @@ export default function Kardex() {
               /* TABLA KARDEX GENERAL (Todos los productos) */
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50 border-b text-xs uppercase text-slate-500 font-semibold tracking-wider">
+                  <tr className="bg-slate-900 text-white border-b border-slate-800 text-[11px] uppercase font-extrabold tracking-wider">
                     <th className="px-5 py-3.5">Fecha</th>
                     <th className="px-5 py-3.5">Producto</th>
                     <th className="px-5 py-3.5">Bodega</th>

@@ -42,20 +42,20 @@ export default function Dashboard() {
     cargar();
   }, [periodo, anioSeleccionado]);
 
-  const KpiCard = ({ title, value, icon: Icon, color, subValue, subLabel }) => (
-    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+  const KpiCard = ({ title, value, icon: Icon, color, subValue, subLabel, borderAccent = "border-indigo-500", bgIcon = "bg-indigo-50 text-indigo-600" }) => (
+    <div className={`bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-lg transition-all relative overflow-hidden group border-t-4 ${borderAccent}`}>
       <div className="flex justify-between items-start mb-4">
         <div>
-          <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">{title}</p>
-          <h3 className={`text-3xl font-bold mt-1 ${color}`}>{value}</h3>
+          <p className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">{title}</p>
+          <h3 className={`text-3xl font-extrabold mt-1 tracking-tight ${color}`}>{value}</h3>
         </div>
-        <div className={`p-3 rounded-xl ${color.replace('text-', 'bg-').replace('600', '50').replace('700', '50')}`}>
-          <Icon className={`w-6 h-6 ${color}`} />
+        <div className={`p-3.5 rounded-xl shadow-xs transition-transform group-hover:scale-110 ${bgIcon}`}>
+          <Icon className="w-6 h-6" />
         </div>
       </div>
       {subValue && (
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <span className="font-semibold text-slate-700">{subValue}</span> {subLabel}
+        <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+          <span className="font-extrabold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">{subValue}</span> {subLabel}
         </div>
       )}
     </div>
@@ -132,6 +132,8 @@ export default function Dashboard() {
             value={fmt(kpis.ventas_totales)} 
             icon={TrendingUp} 
             color="text-emerald-600" 
+            borderAccent="border-emerald-500"
+            bgIcon="bg-emerald-50 text-emerald-600"
             subValue="DTE" subLabel="Emitidos"
           />
         </div>
@@ -141,6 +143,8 @@ export default function Dashboard() {
             value={fmt(kpis.compras_totales || 0)} 
             icon={Package} 
             color="text-indigo-600" 
+            borderAccent="border-indigo-500"
+            bgIcon="bg-indigo-50 text-indigo-600"
             subValue="Kardex" subLabel="Entradas"
           />
         </div>
@@ -148,7 +152,9 @@ export default function Dashboard() {
           title="Cuentas por Cobrar" 
           value={fmt(kpis.cuentas_por_cobrar)} 
           icon={CreditCard} 
-          color="text-indigo-600" 
+          color="text-violet-600" 
+          borderAccent="border-violet-500"
+          bgIcon="bg-violet-50 text-violet-600"
           subValue={kpis.clientes_activos} subLabel="Clientes activos"
         />
         <KpiCard 
@@ -156,6 +162,8 @@ export default function Dashboard() {
           value={fmt(kpis.cuentas_por_pagar)} 
           icon={ShoppingCart} 
           color="text-amber-600" 
+          borderAccent="border-amber-500"
+          bgIcon="bg-amber-50 text-amber-600"
           subValue={kpis.proveedores_activos} subLabel="Proveedores activos"
         />
       </div>

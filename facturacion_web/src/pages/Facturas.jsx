@@ -528,18 +528,21 @@ export default function Facturas() {
           <button onClick={agregarLinea} className="text-sm text-indigo-600 font-medium flex items-center gap-1"><Plus className="w-4 h-4" /> Agregar Producto</button>
           
           <div className="flex justify-end mt-6">
-            <div className="w-64 space-y-2 text-sm">
-              <div className="flex justify-between text-slate-500"><span>Subtotal:</span> <span>${(subtotal/100).toFixed(2)}</span></div>
-              <div className="flex justify-between text-slate-500"><span>IVA:</span> <span>${(iva/100).toFixed(2)}</span></div>
-              <div className="flex justify-between font-bold text-lg border-t pt-2"><span>Total:</span> <span>${(total/100).toFixed(2)}</span></div>
+            <div className="w-80 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-5 rounded-2xl shadow-xl border border-slate-800 space-y-3">
+              <div className="flex justify-between text-slate-300 text-xs font-semibold uppercase tracking-wider"><span>Subtotal:</span> <span className="font-mono text-sm text-white">${(subtotal/100).toFixed(2)}</span></div>
+              <div className="flex justify-between text-slate-300 text-xs font-semibold uppercase tracking-wider"><span>IVA (13%):</span> <span className="font-mono text-sm text-amber-300">${(iva/100).toFixed(2)}</span></div>
+              <div className="flex justify-between items-center font-extrabold text-xl border-t border-white/20 pt-3 text-emerald-400">
+                <span className="uppercase tracking-wider text-xs text-slate-200">Total a Pagar:</span> 
+                <span className="text-2xl font-mono text-emerald-400">${(total/100).toFixed(2)}</span>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="flex gap-4">
-          <button onClick={() => { setVista('lista'); setEditandoId(null); }} className="px-6 py-2.5 rounded-xl border font-medium">Cancelar</button>
-          <button onClick={intentarGuardar} disabled={guardando || !form.cliente_id || form.items.length === 0} className="flex-1 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium disabled:opacity-50">
-            {guardando ? (editandoId ? 'Actualizando...' : 'Emitiendo...') : (editandoId ? 'Actualizar Factura' : 'Emitir Factura')}
+          <button onClick={() => { setVista('lista'); setEditandoId(null); }} className="px-6 py-3 rounded-xl border border-slate-300 font-bold text-slate-700 bg-white hover:bg-slate-50 transition-colors">Cancelar</button>
+          <button onClick={intentarGuardar} disabled={guardando || !form.cliente_id || form.items.length === 0} className="flex-1 px-6 py-3 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl font-extrabold text-base shadow-lg shadow-emerald-600/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+            {guardando ? (editandoId ? 'Actualizando...' : 'Emitiendo...') : (editandoId ? 'Actualizar Factura' : '🧾 Emitir y Cobrar Factura')}
           </button>
         </div>
       </div>
