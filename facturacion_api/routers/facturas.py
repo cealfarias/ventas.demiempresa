@@ -276,7 +276,10 @@ def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Ses
         db.flush()
         
     if data.condicion_operacion == "CONTADO":
+        metodo = (data.metodo_pago or "efectivo").lower()
         sesion = db.query(SesionCaja).join(Caja).filter(SesionCaja.usuario_id == usuario_id, SesionCaja.estado == "abierta", Caja.empresa_id == empresa_id).first()
+        if metodo == "efectivo" and not sesion:
+            raise HTTPException(status_code=400, detail="No tiene una caja abierta para procesar ventas al contado en efectivo. Abra turno de caja para continuar.")
         if sesion:
             db.add(MovimientoCaja(sesion_caja_id=sesion.id, tipo="ingreso", metodo_pago=data.metodo_pago or "efectivo", monto=data.total, concepto=f"Venta Contado: {f.tipo_doc} {f.numero}", fecha=datetime.now(TIMEZONE), referencia_tipo="factura", referencia_id=f.id, usuario_id=usuario_id))
 

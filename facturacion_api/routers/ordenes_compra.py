@@ -314,26 +314,30 @@ def recibir_mercancia(oc_id: int, recepcion: RecepcionRequest, db: Session = Dep
         oc.proveedor.saldo_pendiente = (oc.proveedor.saldo_pendiente or 0) + total_recibido_valor
     elif not recepcion.crear_cuenta_pagar and total_recibido_valor > 0:
         # ES COMPRA DE CONTADO -> Descontar de la caja inmediatamente
+        from models import SesionCaja, Caja, MovimientoCaja
+        metodo = (getattr(recepcion, 'metodo_pago', 'efectivo') or "efectivo").lower()
+        sesion = None
         if recepcion.usuario_id:
-            from models import SesionCaja, Caja, MovimientoCaja
             sesion = db.query(SesionCaja).join(Caja).filter(
                 SesionCaja.usuario_id == recepcion.usuario_id,
                 SesionCaja.estado == "abierta",
                 Caja.empresa_id == recepcion.empresa_id
             ).first()
-            if sesion:
-                egreso = MovimientoCaja(
-                    sesion_caja_id=sesion.id,
-                    tipo="egreso",
-                    metodo_pago="efectivo",
-                    monto=total_recibido_valor,
-                    concepto=f"Compra Contado OC {oc.numero}",
-                    fecha=datetime.now(TIMEZONE),
-                    referencia_tipo="compra_contado",
-                    referencia_id=oc_id,
-                    usuario_id=recepcion.usuario_id
-                )
-                db.add(egreso)
+        if metodo == "efectivo" and not sesion:
+            raise HTTPException(status_code=400, detail="No tiene una caja abierta para procesar compras de contado en efectivo. Abra turno de caja para continuar.")
+        if sesion:
+            egreso = MovimientoCaja(
+                sesion_caja_id=sesion.id,
+                tipo="egreso",
+                metodo_pago=getattr(recepcion, 'metodo_pago', 'efectivo') or 'efectivo',
+                monto=total_recibido_valor,
+                concepto=f"Compra Contado OC #{oc.numero}",
+                fecha=datetime.now(TIMEZONE),
+                referencia_tipo="compra_contado",
+                referencia_id=oc_id,
+                usuario_id=recepcion.usuario_id or 1
+            )
+            db.add(egreso)
 
     db.commit()
     db.refresh(oc)

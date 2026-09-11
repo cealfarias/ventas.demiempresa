@@ -7,6 +7,7 @@ import jwt
 import pyotp
 import uuid
 from pydantic import BaseModel
+from typing import Optional
 from database import get_db
 from models import Empresa, Usuario
 
@@ -38,6 +39,7 @@ class TokenResponse(BaseModel):
     token_type: str
     rol: str
     empresa_id: str
+    usuario_id: Optional[int] = None
     require_2fa: bool = False
 
 # ================= UTILIDADES =================
@@ -141,6 +143,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
             "token_type": "bearer",
             "rol": user.rol,
             "empresa_id": empresa_id,
+            "usuario_id": user.id,
             "require_2fa": True
         }
         
@@ -155,6 +158,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         "token_type": "bearer",
         "rol": user.rol,
         "empresa_id": empresa_id,
+        "usuario_id": user.id,
         "require_2fa": False
     }
 

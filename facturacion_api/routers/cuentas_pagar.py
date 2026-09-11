@@ -108,10 +108,30 @@ def registrar_pago(cuenta_id: int, empresa_id: str, pago: PagoRequest, db: Sessi
     if cuenta.proveedor:
         cuenta.proveedor.saldo_pendiente = max(0, (cuenta.proveedor.saldo_pendiente or 0) - pago.monto)
 
+    metodo = (pago.metodo_pago or "efectivo").lower()
+    sesion = None
     if pago.usuario_id:
         sesion = db.query(SesionCaja).join(Caja).filter(SesionCaja.usuario_id == pago.usuario_id, SesionCaja.estado == "abierta", Caja.empresa_id == empresa_id).first()
-        if sesion:
-            db.add(MovimientoCaja(sesion_caja_id=sesion.id, tipo="egreso", metodo_pago=pago.metodo_pago, monto=pago.monto, concepto=f"Pago a Proveedor", fecha=datetime.now(TIMEZONE), referencia_tipo="pago_compra", referencia_id=nuevo_pago.id, usuario_id=pago.usuario_id))
+    
+    if metodo == "efectivo" and not sesion:
+        raise HTTPException(status_code=400, detail="No tiene una caja abierta para procesar pagos en efectivo a proveedores. Abra turno de caja para continuar.")
+
+    if sesion:
+        concepto_pago = f"Pago CxP: Proveedor {cuenta.proveedor.nombre}" if cuenta.proveedor else "Pago a Proveedor"
+        if getattr(cuenta, 'orden', None) and cuenta.orden.numero:
+            concepto_pago += f" (Orden #{cuenta.orden.numero})"
+            
+        db.add(MovimientoCaja(
+            sesion_caja_id=sesion.id,
+            tipo="egreso",
+            metodo_pago=pago.metodo_pago or "efectivo",
+            monto=pago.monto,
+            concepto=concepto_pago,
+            fecha=datetime.now(TIMEZONE),
+            referencia_tipo="pago_compra",
+            referencia_id=nuevo_pago.id,
+            usuario_id=pago.usuario_id or 1
+        ))
     db.commit()
     db.refresh(cuenta)
     

@@ -22,6 +22,7 @@ import CuentasCobrar from './pages/CuentasCobrar';
 import ConfiguracionDTE from './pages/ConfiguracionDTE';
 import Usuarios from './pages/Usuarios';
 import AvatarWidget from './components/AvatarWidget';
+import CajaStateBanner from './components/CajaStateBanner';
 import Acreedores from './pages/Acreedores';
 import Aportantes from './pages/Aportantes';
 import PagoPrestamos from './pages/PagoPrestamos';
@@ -197,9 +198,10 @@ const Layout = ({ children }) => {
             <button onClick={() => setExpanded(!expanded)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 md:hidden">
               <Menu className="w-5 h-5" />
             </button>
-            <h2 className="text-xs font-semibold text-slate-400 tracking-wider uppercase">Ambiente Seguro SaaS</h2>
+            <h2 className="text-xs font-semibold text-slate-400 tracking-wider uppercase hidden sm:block">Ambiente Seguro SaaS</h2>
           </div>
           <div className="flex items-center gap-3">
+            <CajaStateBanner />
             <div className="text-right hidden sm:block">
               <NombreEmpresa />
               <p className="text-xs text-slate-500 uppercase">{localStorage.getItem('rol') || 'Usuario'}</p>

@@ -45,14 +45,14 @@ def registrar_gasto(empresa_id: str, usuario_id: int, categoria_id: int, monto: 
     monto_centavos = int(monto * 100)
     sesion = None
     
-    if de_caja:
+    if de_caja or metodo_pago.lower() == "efectivo":
         sesion = db.query(SesionCaja).join(Caja).filter(
             SesionCaja.usuario_id == usuario_id,
             SesionCaja.estado == "abierta",
             Caja.empresa_id == empresa_id
         ).first()
-        if not sesion:
-            raise HTTPException(status_code=400, detail="No tiene un turno de caja abierto para registrar gastos operativos de caja.")
+        if not sesion and metodo_pago.lower() == "efectivo":
+            raise HTTPException(status_code=400, detail="No tiene un turno de caja abierto para registrar gastos en efectivo. Abra turno de caja para continuar.")
             
     gasto = Gasto(
         empresa_id=empresa_id,

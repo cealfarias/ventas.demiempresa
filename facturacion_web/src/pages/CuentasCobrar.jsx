@@ -220,6 +220,7 @@ export default function CuentasCobrar() {
       setModalAbierto(false);
       await cargar();
       setModalAbonoExitoso(infoAbono);
+      window.dispatchEvent(new CustomEvent("caja:updated"));
       window.dispatchEvent(new CustomEvent("avatar:say", { detail: { text: "Cobro registrado correctamente." }}));
     } catch (e) { alert(e.response?.data?.detail || 'Error al registrar cobro'); }
     finally { setGuardando(false); }

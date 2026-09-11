@@ -8,7 +8,7 @@ export default function Gastos() {
   const [gastos, setGastos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const empresaId = localStorage.getItem("empresa_id");
-  const usuarioId = 1;
+  const usuarioId = localStorage.getItem("usuario_id") ? parseInt(localStorage.getItem("usuario_id")) : 1;
 
   const [form, setForm] = useState({ monto: "", categoria_id: "", descripcion: "", metodo_pago: "efectivo" });
 
@@ -38,6 +38,7 @@ export default function Gastos() {
     
     try {
       await api.post(`/api/v1/gastos?empresa_id=${empresaId}&usuario_id=${usuarioId}&categoria_id=${form.categoria_id}&monto=${form.monto}&descripcion=${form.descripcion}&metodo_pago=${form.metodo_pago}`);
+      window.dispatchEvent(new CustomEvent("caja:updated"));
       window.dispatchEvent(new CustomEvent("avatar:say", { detail: { text: "Gasto registrado." }}));
       setForm({ monto: "", categoria_id: "", descripcion: "", metodo_pago: "efectivo" });
       cargar();

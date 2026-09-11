@@ -38,7 +38,7 @@ export default function Cajas() {
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
 
   const empresaId = localStorage.getItem("empresa_id");
-  const usuarioId = 1; // Simplificacion temporal
+  const usuarioId = localStorage.getItem("usuario_id") ? parseInt(localStorage.getItem("usuario_id")) : 1;
 
   const cargarCajas = async () => {
     const res = await api.get(`/api/v1/cajas?empresa_id=${empresaId}`);
@@ -88,6 +88,7 @@ export default function Cajas() {
       await api.post(`/api/v1/cajas/${caja_id}/abrir?empresa_id=${empresaId}&usuario_id=${usuarioId}&saldo_inicial=${saldoStr}`);
       cargarCajas();
       cargarSesion();
+      window.dispatchEvent(new CustomEvent("caja:updated"));
       window.dispatchEvent(new CustomEvent("avatar:say", { detail: { text: "Turno abierto exitosamente." }}));
     } catch (e) {
       window.dispatchEvent(new CustomEvent("avatar:say", { detail: { text: e.response?.data?.detail || "Error al abrir caja" }}));
@@ -121,6 +122,7 @@ export default function Cajas() {
       cargarCajas();
       cargarSesion();
       cargarHistorial();
+      window.dispatchEvent(new CustomEvent("caja:updated"));
       window.dispatchEvent(new CustomEvent("avatar:say", { detail: { text: "Turno cerrado y arqueo registrado correctamente." }}));
     } catch (e) {
       window.dispatchEvent(new CustomEvent("avatar:say", { detail: { text: e.response?.data?.detail || "Error al cerrar" }}));

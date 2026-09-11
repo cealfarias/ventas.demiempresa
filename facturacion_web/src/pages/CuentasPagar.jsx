@@ -60,6 +60,7 @@ export default function CuentasPagar() {
       }
       
       setModalAbierto(false);
+      window.dispatchEvent(new CustomEvent("caja:updated"));
       cargar();
     } catch (e) {
       alert(e.response?.data?.detail || 'Error al registrar pago consolidado');

@@ -86,9 +86,15 @@ def obtener_sesion_activa(empresa_id: str, usuario_id: int, db: Session = Depend
     
     saldo_calculado = sesion.saldo_inicial + ingresos - egresos
     
+    # Evaluar si la apertura fue en un día anterior
+    hoy = datetime.now(TIMEZONE).date()
+    fecha_ap = sesion.fecha_apertura.astimezone(TIMEZONE).date() if sesion.fecha_apertura else hoy
+    es_trasnochada = fecha_ap < hoy
+
     return {
         "activa": True,
         "sesion_id": sesion.id,
+        "caja_id": sesion.caja_id,
         "caja_nombre": sesion.caja.nombre,
         "fecha_apertura": sesion.fecha_apertura,
         "saldo_inicial": sesion.saldo_inicial,
@@ -96,7 +102,28 @@ def obtener_sesion_activa(empresa_id: str, usuario_id: int, db: Session = Depend
         "total_transferencia": total_transferencia,
         "total_tarjeta": total_tarjeta,
         "saldo_calculado": saldo_calculado,
-        "movimientos_count": len(movimientos)
+        "movimientos_count": len(movimientos),
+        "es_trasnochada": es_trasnochada
+    }
+
+@router.get("/estado-usuario")
+def obtener_estado_usuario(empresa_id: str, usuario_id: int, db: Session = Depends(get_db)):
+    activa_res = obtener_sesion_activa(empresa_id=empresa_id, usuario_id=usuario_id, db=db)
+    cajas_disponibles = db.query(Caja).filter(Caja.empresa_id == empresa_id, Caja.activa == True).all()
+    
+    cajas_list = []
+    for c in cajas_disponibles:
+        s = db.query(SesionCaja).filter(SesionCaja.caja_id == c.id, SesionCaja.estado == "abierta").first()
+        cajas_list.append({
+            "id": c.id,
+            "nombre": c.nombre,
+            "ocupada": s is not None,
+            "usuario_ocupante": s.usuario.username if s and s.usuario else None
+        })
+        
+    return {
+        "sesion": activa_res,
+        "cajas_disponibles": cajas_list
     }
 class CerrarTurnoRequest(BaseModel):
     notas: str = ""

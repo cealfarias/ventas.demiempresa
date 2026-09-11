@@ -18,24 +18,24 @@ const MODULOS_KNOWLEDGE = {
     faqs: "P: ¿Cómo anulo una factura?\nR: Presiona 'Anular' en el historial indicando el motivo."
   },
   "/cajas": {
-    titulo: "💼 Control de Caja & Financiamientos",
-    guia: "1. Presiona 'Aperturar Turno' con el saldo inicial.\n2. Para inyectar liquidez sin o con interés, usa 'Inyectar Capital'.\n3. Usa los botones de Editar o Eliminar para corregir movimientos.",
-    faqs: "P: ¿Qué es la inyección de capital?\nR: Aportes o préstamos para compras y gastos sin alterar ventas."
+    titulo: "💼 Control de Caja, Turnos y Movimientos",
+    guia: "1. Presiona 'Aperturar Turno' con el saldo inicial.\n2. Toda venta, cobro CxC, pago CxP o gasto en efectivo afectará tu caja activa.\n3. Para inyectar liquidez sin inflar ventas, usa 'Inyectar Capital'.\n4. Al finalizar la jornada, realiza el conteo de billetes/monedas y ejecuta el Cierre de Caja.",
+    faqs: "P: ¿Qué hago si dice 'Caja Cerrada'?\nR: Presiona el botón '[Abrir]' en el encabezado o en esta pantalla."
   },
   "/clientes": {
     titulo: "👥 Gestión de Clientes",
-    guia: "1. Haz clic en 'Nuevo Cliente'.\n2. Completa NIT/NRC/DUI y actividad económica (CAT-019).\n3. Define el límite de crédito si aplican ventas a plazo.",
+    guia: "1. Haz clic en 'Nuevo Cliente'.\n2. Completa NIT/NRC/DUI, Nombre y Teléfono.\n3. Define el límite de crédito si aplican ventas a plazo.",
     faqs: "P: ¿Quién es el cliente predeterminado?\nR: El cliente de venta rápida a consumidor final."
   },
   "/cuentas-cobrar": {
-    titulo: "💳 Cuentas por Cobrar",
-    guia: "1. Revisa los saldos pendientes por cliente.\n2. Presiona 'Registrar Cobro' para abonar o liquidar.\n3. El cobro recibido incrementa la disponibilidad de la caja activa.",
-    faqs: "P: ¿Cómo veo el historial de abonos?\nR: En la ficha de detalle de cada cliente."
+    titulo: "💳 Cuentas por Cobrar (CxC)",
+    guia: "1. Revisa los saldos pendientes agrupados por cliente.\n2. Presiona 'Registrar Cobro' para abonar o liquidar.\n3. Si cobras en efectivo, el monto incrementará tu caja activa automáticamente.",
+    faqs: "P: ¿Puedo imprimir el estado de cuenta?\nR: Sí, haz clic en 'Imprimir Estado de Cuenta' en la ficha del cliente."
   },
   "/gastos": {
-    titulo: "💸 Gastos Operativos",
-    guia: "1. Selecciona la categoría del gasto.\n2. Ingresa monto y concepto.\n3. Selecciona salida por Efectivo o Transferencia y guarda.",
-    faqs: "P: ¿Se descuenta del turno de caja?\nR: Sí, si se selecciona pago en Efectivo de Caja."
+    titulo: "💸 Gastos Operativos (Caja Chica / Banco)",
+    guia: "1. Selecciona la categoría del gasto (Servicios, Mantenimiento, Viáticos, etc.).\n2. Ingresa monto y concepto.\n3. Selecciona si sale de 'Efectivo de Caja' (requiere caja abierta) o 'Transferencia Bancaria'.",
+    faqs: "P: ¿Puedo crear categorías nuevas?\nR: Sí, presiona el botón '+' al lado de la categoría."
   },
   "/proveedores": {
     titulo: "🚚 Gestión de Proveedores",
@@ -44,13 +44,13 @@ const MODULOS_KNOWLEDGE = {
   },
   "/ordenes-compra": {
     titulo: "🛒 Órdenes de Compra & Recepción",
-    guia: "1. Crea la orden especificando proveedor e ítems.\n2. Al recibir los productos, marca el estado como 'Recibida'.\n3. El stock ingresará automáticamente a la bodega.",
-    faqs: "P: ¿Actualiza el costo promedio?\nR: Sí, recalcula el valor según el costo unitario de compra."
+    guia: "1. Crea la orden especificando proveedor e ítems.\n2. Al recibir los productos, marca el estado como 'Recibida'.\n3. El stock ingresará a la bodega y recalculará el costo promedio en Kardex.",
+    faqs: "P: ¿Qué pasa si es compra al contado en efectivo?\nR: Al recibir, desmarca 'Crear Cuenta por Pagar' y descontará de la caja activa."
   },
   "/cuentas-pagar": {
-    titulo: "📄 Cuentas por Pagar",
-    guia: "1. Consulta los compromisos financieros con proveedores.\n2. Registra abonos parciales o pagos totales.",
-    faqs: "P: ¿Cómo registro el egreso?\nR: Selecciona si el pago sale de caja o banco."
+    titulo: "📄 Cuentas por Pagar (CxP)",
+    guia: "1. Consulta las obligaciones financieras con proveedores.\n2. Presiona 'Registrar Pago' para abonos parciales o totales.\n3. Selecciona si el pago sale de caja en efectivo o banco.",
+    faqs: "P: ¿Genera egreso de caja?\nR: Sí, si eliges pago en Efectivo de Caja."
   },
   "/bodegas": {
     titulo: "🏬 Administración de Bodegas",
@@ -59,33 +59,58 @@ const MODULOS_KNOWLEDGE = {
   },
   "/existencias": {
     titulo: "📦 Existencias en Tiempo Real",
-    guia: "1. Consulta las unidades almacenadas por cada bodega.\n2. Filtra productos con alerta de stock mínimo.",
-    faqs: "P: ¿Cómo veo el valor del inventario?\nR: Multiplica las unidades por el costo promedio ponderado."
+    guia: "1. Consulta las unidades almacenadas por cada bodega.\n2. Filtra productos con alerta de stock mínimo en rojo.",
+    faqs: "P: ¿Cómo veo el valor del inventario?\nR: Multiplica las unidades físicas por su costo promedio ponderado."
   },
   "/kardex": {
-    titulo: "📋 Libro Kardex (Trazabilidad)",
-    guia: "1. Selecciona un producto para auditar su historial.\n2. Analiza las entradas, salidas y saldo valorizado.",
-    faqs: "P: ¿Qué método fiscal utiliza?\nR: Costo Promedio Ponderado."
+    titulo: "📋 Libro Kardex (Trazabilidad Físico-Valorada)",
+    guia: "1. Selecciona un producto para auditar su historial completo.\n2. Analiza las Entradas (compras), Salidas (ventas) y el saldo con su Costo Promedio Ponderado.",
+    faqs: "P: ¿Cumple normativa fiscal?\nR: Sí, 100% conforme al Código de Comercio y NIIF para Pymes."
   },
   "/productos": {
     titulo: "📦 Catálogo de Productos y Servicios",
-    guia: "1. Crea ítems ingresando código, precio y costo.\n2. Asigna imagen URL para visualización en facturación.",
+    guia: "1. Crea ítems ingresando Código, Nombre, Precio de Venta y Costo Inicial.\n2. Define si es 'Producto Físico' o 'Servicio'.\n3. Asigna imagen URL opcional para el POS.",
     faqs: "P: ¿Un servicio maneja stock?\nR: No, los servicios no descuentan unidades físicas."
   },
   "/despachos": {
-    titulo: "🚚 Logística y Rutas de Entrega",
-    guia: "1. Agrupa facturas emitidas por ruta de entrega.\n2. Actualiza los estados: Pendiente -> En Ruta -> Entregado.",
+    titulo: "🚚 Rutas y Entregas (Logística)",
+    guia: "1. Agrupa facturas emitidas por ruta de entrega y asigna un repartidor.\n2. Actualiza los estados: Pendiente -> En Ruta -> Entregado.",
     faqs: "P: ¿Se genera Guía DTE?\nR: Sí, se enlaza al documento de transporte de Hacienda."
   },
+  "/vendedores": {
+    titulo: "👤 Vendedores y Comisiones",
+    guia: "1. Administra tu fuerza de ventas.\n2. Define porcentajes de comisión por vendedor.",
+    faqs: "P: ¿Dónde se asigna?\nR: Al emitir la factura en el módulo de ventas."
+  },
   "/configuracion-dte": {
-    titulo: "⚙️ Configuración DTE (Hacienda)",
-    guia: "1. Carga tu archivo .p12 y contraseña de certificado.\n2. Ingresa la clave API otorgada por el Ministerio de Hacienda.\n3. Selecciona el Entorno (Pruebas / Producción).",
-    faqs: "P: ¿Qué hago si da error de firma?\nR: Revisa que la clave del .p12 coincida exactamente."
+    titulo: "⚙️ Configuración DTE (Hacienda El Salvador)",
+    guia: "1. Carga tu archivo de certificado digital `.p12` y contraseña.\n2. Ingresa la clave API otorgada por el Ministerio de Hacienda.\n3. Selecciona el Entorno (Pruebas / Producción) y prueba la firma.",
+    faqs: "P: ¿Qué hago si da error de firma?\nR: Revisa que la clave del .p12 y la clave API de Hacienda sean idénticas a las del portal MH."
   },
   "/usuarios": {
     titulo: "👥 Gestión de Usuarios y Roles (RBAC)",
-    guia: "1. Registra colaboradores con su username y correo.\n2. Asigna uno de los 8 roles predefinidos.\n3. Modifica estados o restablece contraseñas.",
-    faqs: "P: ¿Quién puede gestionar usuarios?\nR: Exclusivamente el usuario con rol 'admin'."
+    guia: "1. Registra colaboradores con username, correo y contraseña.\n2. Asigna uno de los roles (Admin, Cajera, Bodeguero, Contador, etc.).\n3. Controla estado activo/inactivo.",
+    faqs: "P: ¿Quién puede crear usuarios?\nR: Exclusivamente el perfil Administrador."
+  },
+  "/acreedores": {
+    titulo: "🏦 Acreedores y Préstamos",
+    guia: "1. Registra instituciones bancarias o financistas.\n2. Ingresa préstamos asignando monto, interés y plazo.",
+    faqs: "P: ¿Genera tabla de cuotas?\nR: Sí, calcula amortizaciones de capital e interés."
+  },
+  "/pago-prestamos": {
+    titulo: "🧮 Pago de Préstamos",
+    guia: "1. Selecciona la cuota del préstamo a saldar.\n2. Elige pago en Efectivo de Caja o Banco.\n3. Registra el abono para descontar el pasivo.",
+    faqs: "P: ¿Afecta caja?\nR: Sí, si seleccionas pago en Efectivo."
+  },
+  "/aportantes": {
+    titulo: "👥 Aportantes de Capital",
+    guia: "1. Registra socios inversionistas.\n2. Documenta aportes de capital sin interés o retiros de socios.",
+    faqs: "P: ¿Se refleja en finanzas?\nR: Sí, como patrimonio/efectivo."
+  },
+  "/backup-recovery": {
+    titulo: "🛡️ Copia de Seguridad y Restauración (HMAC-SHA256)",
+    guia: "1. **Exportar:** Presiona 'Exportar Backup' para descargar un respaldo firmado digitalmente.\n2. **Restaurar:** Sube el archivo `.json` de respaldo para verificar su firma criptográfica y restaurar los datos.",
+    faqs: "P: ¿Qué pasa si altero el archivo?\nR: La verificación HMAC fallará y la app protegerá los datos evitando la carga."
   }
 };
 

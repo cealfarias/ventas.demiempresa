@@ -184,7 +184,7 @@ export default function Facturas() {
         api.get(`/api/v1/facturacion/clientes/?empresa_id=${empresaId()}`),
         api.get(`/api/v1/facturacion/productos/?empresa_id=${empresaId()}`),
         api.get(`/api/v1/almacen/bodegas/?empresa_id=${empresaId()}`),
-        api.get(`/api/v1/cajas/sesion-activa?empresa_id=${empresaId()}&usuario_id=${usuarioId()}`).catch(() => ({ data: { activa: true } })),
+        api.get(`/api/v1/cajas/sesion-activa?empresa_id=${empresaId()}&usuario_id=${usuarioId()}`).catch(() => ({ data: { activa: false } })),
         api.get(`/api/v1/logistica/vendedores/?empresa_id=${empresaId()}&solo_activos=true`).catch(() => ({ data: [] }))
       ]);
 
