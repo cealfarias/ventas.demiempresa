@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { 
   BookOpen, Search, ArrowRightLeft, TrendingUp, TrendingDown, RefreshCcw, 
-  Eye, Filter, Loader2, X, Package, ChevronDown, Check, Info, DollarSign, Boxes, Tag 
+  Eye, Filter, Loader2, X, Package, ChevronDown, Check, Info, DollarSign, Boxes, Tag,
+  ShieldAlert, AlertTriangle, CheckCircle2
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -29,26 +30,61 @@ export default function Kardex() {
   // Estado para el modal de detalles
   const [movimientoActivo, setMovimientoActivo] = useState(null);
 
+  // Estado para recalculador de saldos e informe de stock negativo
+  const [recalculando, setRecalculando] = useState(false);
+  const [informeData, setInformeData] = useState(null);
+  const [showInformeModal, setShowInformeModal] = useState(false);
+  const [mensajeExito, setMensajeExito] = useState('');
+
+  const cargarDatos = async () => {
+    setCargando(true);
+    try {
+      const [resM, resP, resB] = await Promise.all([
+        api.get(`/api/v1/almacen/kardex/movimientos?empresa_id=${empresaId()}`),
+        api.get(`/api/v1/facturacion/productos/?empresa_id=${empresaId()}`),
+        api.get(`/api/v1/almacen/bodegas/?empresa_id=${empresaId()}`)
+      ]);
+      setMovimientos(resM.data || []);
+      setProductos(resP.data || []);
+      setBodegas(resB.data || []);
+    } catch (e) {
+      console.error("Error cargando Kardex:", e);
+    } finally {
+      setCargando(false);
+    }
+  };
+
   useEffect(() => {
-    const cargar = async () => {
-      setCargando(true);
-      try {
-        const [resM, resP, resB] = await Promise.all([
-          api.get(`/api/v1/almacen/kardex/movimientos?empresa_id=${empresaId()}`),
-          api.get(`/api/v1/facturacion/productos/?empresa_id=${empresaId()}`),
-          api.get(`/api/v1/almacen/bodegas/?empresa_id=${empresaId()}`)
-        ]);
-        setMovimientos(resM.data || []);
-        setProductos(resP.data || []);
-        setBodegas(resB.data || []);
-      } catch (e) {
-        console.error("Error cargando Kardex:", e);
-      } finally {
-        setCargando(false);
-      }
-    };
-    cargar();
+    cargarDatos();
   }, []);
+
+  const handleRecalcularSaldos = async () => {
+    setRecalculando(true);
+    setMensajeExito('');
+    try {
+      const payload = {
+        empresa_id: empresaId(),
+        producto_id: filtroProd ? parseInt(filtroProd) : null,
+        bodega_id: filtroBodega ? bodegas.find(b => b.nombre === filtroBodega)?.id : null
+      };
+
+      const res = await api.post('/api/v1/almacen/kardex/recalcular-saldos', payload);
+      await cargarDatos();
+
+      if (res.data?.tiene_negativos || res.data?.informe_negativos?.length > 0) {
+        setInformeData(res.data);
+        setShowInformeModal(true);
+      } else {
+        setMensajeExito(res.data?.mensaje || 'Saldos de kardex y existencias maestras recalculados exitosamente.');
+        setTimeout(() => setMensajeExito(''), 6000);
+      }
+    } catch (e) {
+      console.error("Error al recalcular saldos:", e);
+      alert("Error al recalcular saldos: " + (e.response?.data?.detail || e.message));
+    } finally {
+      setRecalculando(false);
+    }
+  };
 
   // Cerrar el dropdown de productos al hacer clic afuera
   useEffect(() => {
@@ -157,14 +193,40 @@ export default function Kardex() {
   return (
     <div className="p-8 max-w-7xl mx-auto pb-24">
       {/* Encabezado Principal */}
-      <div className="flex justify-between items-start mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <BookOpen className="w-6 h-6 text-indigo-600" /> Kardex (Libro Mayor de Inventario)
           </h1>
           <p className="text-sm text-slate-500 mt-1">Auditoría completa de movimientos de inventario, stock y costeo ponderado</p>
         </div>
+
+        <button
+          onClick={handleRecalcularSaldos}
+          disabled={recalculando}
+          className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl shadow-md font-semibold text-xs flex items-center gap-2 transition-all disabled:opacity-50 self-start sm:self-auto"
+          title="Buscar todos los movimientos en la base de datos y actualizar existencias maestras"
+        >
+          {recalculando ? (
+            <Loader2 className="w-4 h-4 animate-spin text-white" />
+          ) : (
+            <RefreshCcw className="w-4 h-4 text-indigo-200" />
+          )}
+          {recalculando ? 'Recalculando Existencias...' : (filtroProd ? 'Recalcular Saldo del Producto' : 'Actualizar Saldos (Maestro)')}
+        </button>
       </div>
+
+      {mensajeExito && (
+        <div className="mb-6 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl text-xs font-semibold flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <span>{mensajeExito}</span>
+          </div>
+          <button onClick={() => setMensajeExito('')} className="text-emerald-500 hover:text-emerald-700">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Barra de Filtros Inteligente */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 relative z-20">
@@ -619,6 +681,79 @@ export default function Kardex() {
                 className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl transition-colors shadow-sm"
               >
                 Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Informe de Stock Negativo / Descuadre */}
+      {showInformeModal && informeData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 bg-gradient-to-r from-amber-600 to-rose-600 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-6 h-6 text-amber-200" />
+                <div>
+                  <h3 className="font-bold text-base">Informe de Stock Negativo / Descuadre en Kardex</h3>
+                  <p className="text-xs text-amber-100">Se detectaron inconsistencias donde las salidas superan a las entradas</p>
+                </div>
+              </div>
+              <button onClick={() => setShowInformeModal(false)} className="text-amber-100 hover:text-white transition-colors">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4 flex-1">
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-900 space-y-1">
+                <p className="font-bold flex items-center gap-1.5 text-amber-800">
+                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+                  Protección de existencias maestras activa:
+                </p>
+                <p>
+                  El sistema NO ha modificado las existencias maestras a valores negativos para evitar alterar su inventario real. Por favor revise los siguientes productos y registre un ajuste de entrada o verifique si falta ingresar órdenes de compra:
+                </p>
+              </div>
+
+              <div className="border rounded-xl overflow-hidden bg-slate-50">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-600 font-bold uppercase tracking-wider border-b">
+                      <th className="p-3">Código</th>
+                      <th className="p-3">Producto</th>
+                      <th className="p-3">Bodega</th>
+                      <th className="p-3 text-right">Entradas</th>
+                      <th className="p-3 text-right">Salidas</th>
+                      <th className="p-3 text-right text-rose-700">Stock Resultante</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 bg-white">
+                    {informeData.informe_negativos.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-rose-50/50">
+                        <td className="p-3 font-mono font-bold text-slate-700">{item.producto_codigo}</td>
+                        <td className="p-3 font-semibold text-slate-800">{item.producto_nombre}</td>
+                        <td className="p-3 text-slate-600">{item.bodega_nombre}</td>
+                        <td className="p-3 text-right text-emerald-600 font-bold">+{item.total_entradas}</td>
+                        <td className="p-3 text-right text-rose-600 font-bold">-{item.total_salidas}</td>
+                        <td className="p-3 text-right text-rose-700 font-extrabold bg-rose-50 font-mono">
+                          {item.stock_calculado}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
+              <span className="text-xs text-slate-500">
+                Total de inconsistencias: <strong className="text-rose-600">{informeData.informe_negativos.length}</strong>
+              </span>
+              <button
+                onClick={() => setShowInformeModal(false)}
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl shadow-sm transition-colors"
+              >
+                Entendido
               </button>
             </div>
           </div>

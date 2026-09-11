@@ -21,6 +21,11 @@ class AjusteManualRequest(BaseModel):
     usuario_id: Optional[int] = None
     notas: Optional[str] = None
 
+class RecalcularSaldosRequest(BaseModel):
+    empresa_id: str
+    producto_id: Optional[int] = None
+    bodega_id: Optional[int] = None
+
 class KardexResponse(BaseModel):
     id: int
     bodega_nombre: str
@@ -248,3 +253,135 @@ def registrar_ajuste(ajuste: AjusteManualRequest, db: Session = Depends(get_db))
     )
     db.commit()
     return {"mensaje": "Ajuste registrado", "kardex_id": movimiento.id}
+
+
+@router.post("/recalcular-saldos")
+def recalcular_saldos(req: RecalcularSaldosRequest, db: Session = Depends(get_db)):
+    """
+    Recalcula cronológicamente los saldos de Kardex y actualiza las existencias maestras
+    en StockBodega y Producto.
+    Si el saldo recalculado es negativo (< 0), NO modifica el stock maestro a negativo
+    y genera un informe de auditoría con la inconsistencia para revisión del usuario.
+    """
+    query_prod = db.query(Producto).filter(Producto.empresa_id == req.empresa_id)
+    if req.producto_id:
+        query_prod = query_prod.filter(Producto.id_producto == req.producto_id)
+    
+    productos = query_prod.all()
+    if not productos and req.producto_id:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+
+    query_bodegas = db.query(Bodega).filter(Bodega.empresa_id == req.empresa_id)
+    if req.bodega_id:
+        query_bodegas = query_bodegas.filter(Bodega.id == req.bodega_id)
+    bodegas = query_bodegas.all()
+    
+    if not bodegas:
+        bodega_ids = [r[0] for r in db.query(Kardex.bodega_id).filter(Kardex.empresa_id == req.empresa_id).distinct().all()]
+        if bodega_ids:
+            bodegas = db.query(Bodega).filter(Bodega.id.in_(bodega_ids)).all()
+
+    informe_negativos = []
+    productos_actualizados = 0
+
+    for prod in productos:
+        prod_tiene_negativo = False
+        
+        for bod in bodegas:
+            movimientos = db.query(Kardex).filter(
+                Kardex.empresa_id == req.empresa_id,
+                Kardex.producto_id == prod.id_producto,
+                Kardex.bodega_id == bod.id
+            ).order_by(Kardex.fecha.asc(), Kardex.id.asc()).all()
+
+            if not movimientos:
+                continue
+
+            running_stock = 0.0
+            running_costo = 0.0
+            total_entradas = 0.0
+            total_salidas = 0.0
+
+            for m in movimientos:
+                m.stock_anterior = running_stock
+                tipo_u = (m.tipo_movimiento or "").upper()
+                
+                es_entrada = ("ENTRADA" in tipo_u or "POSITIVO" in tipo_u)
+                es_salida = ("SALIDA" in tipo_u or "NEGATIVO" in tipo_u)
+
+                if es_entrada:
+                    total_entradas += m.cantidad
+                    nuevo_stock = running_stock + m.cantidad
+                    if nuevo_stock > 0:
+                        running_costo = ((running_stock * running_costo) + (m.cantidad * m.costo_unitario)) / nuevo_stock
+                    running_stock = nuevo_stock
+                elif es_salida:
+                    total_salidas += m.cantidad
+                    running_stock = running_stock - m.cantidad
+                    if not m.costo_unitario or m.costo_unitario == 0:
+                        m.costo_unitario = running_costo
+                        m.costo_total = m.cantidad * running_costo
+                
+                m.stock_resultante = running_stock
+
+            if running_stock < 0:
+                prod_tiene_negativo = True
+                saldo_actual = db.query(StockBodega).filter(
+                    StockBodega.empresa_id == req.empresa_id,
+                    StockBodega.producto_id == prod.id_producto,
+                    StockBodega.bodega_id == bod.id
+                ).first()
+                
+                informe_negativos.append({
+                    "producto_id": prod.id_producto,
+                    "producto_codigo": prod.codigo,
+                    "producto_nombre": prod.nombre,
+                    "bodega_id": bod.id,
+                    "bodega_nombre": bod.nombre,
+                    "stock_actual_registrado": saldo_actual.stock_actual if saldo_actual else 0.0,
+                    "stock_calculado": round(running_stock, 4),
+                    "total_entradas": round(total_entradas, 4),
+                    "total_salidas": round(total_salidas, 4),
+                    "diferencia": round(running_stock, 4),
+                    "motivo": f"Inconsistencia: Total salidas ({total_salidas}) superan a entradas ({total_entradas}). Stock resultante sería {running_stock}."
+                })
+            else:
+                saldo_bod = db.query(StockBodega).filter(
+                    StockBodega.empresa_id == req.empresa_id,
+                    StockBodega.producto_id == prod.id_producto,
+                    StockBodega.bodega_id == bod.id
+                ).first()
+
+                if not saldo_bod:
+                    saldo_bod = StockBodega(
+                        empresa_id=req.empresa_id,
+                        producto_id=prod.id_producto,
+                        bodega_id=bod.id,
+                        stock_actual=running_stock,
+                        costo_promedio=running_costo
+                    )
+                    db.add(saldo_bod)
+                else:
+                    saldo_bod.stock_actual = running_stock
+                    saldo_bod.costo_promedio = running_costo
+
+        if not prod_tiene_negativo:
+            total_stock_global = db.query(func.sum(StockBodega.stock_actual)).filter(
+                StockBodega.empresa_id == req.empresa_id,
+                StockBodega.producto_id == prod.id_producto
+            ).scalar() or 0.0
+
+            prod.stock = total_stock_global
+            productos_actualizados += 1
+
+    db.commit()
+
+    return {
+        "status": "inconsistencia_detectada" if informe_negativos else "success",
+        "mensaje": f"Recálculo completado. {productos_actualizados} productos actualizados." if not informe_negativos else f"Se detectaron {len(informe_negativos)} inconsistencias de stock negativo.",
+        "total_procesados": len(productos),
+        "total_actualizados": productos_actualizados,
+        "tiene_negativos": len(informe_negativos) > 0,
+        "informe_negativos": informe_negativos
+    }
+
