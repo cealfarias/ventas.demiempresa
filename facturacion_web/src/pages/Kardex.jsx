@@ -129,18 +129,42 @@ export default function Kardex() {
     return codigo.includes(term) || nombre.includes(term);
   }).slice(0, 40);
 
+  // Helper seguro para extraer fecha YYYY-MM-DD sin lanzar excepciones
+  const getFechaIso = (fecha) => {
+    if (!fecha) return '';
+    if (typeof fecha === 'string' && fecha.length >= 10 && fecha[4] === '-' && fecha[7] === '-') {
+      return fecha.slice(0, 10);
+    }
+    try {
+      const d = new Date(fecha);
+      if (isNaN(d.getTime())) return '';
+      return d.toISOString().slice(0, 10);
+    } catch (e) {
+      return '';
+    }
+  };
+
+  const getFechaDisplay = (fecha) => {
+    if (!fecha) return '-';
+    try {
+      const d = new Date(fecha);
+      return isNaN(d.getTime()) ? String(fecha) : d.toLocaleString();
+    } catch (e) {
+      return String(fecha || '-');
+    }
+  };
+
   // 1. Filtrar por producto, bodega, fecha y búsqueda inteligente
   const movimientosFiltrados = movimientos.filter(m => {
     let cumple = true;
     if (filtroProd && m.producto_id?.toString() !== filtroProd) cumple = false;
     if (filtroBodega && m.bodega_nombre !== filtroBodega) cumple = false;
     
-    if (filtroFechaDesde) {
-      const fMov = new Date(m.fecha).toISOString().slice(0, 10);
+    const fMov = getFechaIso(m.fecha);
+    if (filtroFechaDesde && fMov) {
       if (fMov < filtroFechaDesde) cumple = false;
     }
-    if (filtroFechaHasta) {
-      const fMov = new Date(m.fecha).toISOString().slice(0, 10);
+    if (filtroFechaHasta && fMov) {
       if (fMov > filtroFechaHasta) cumple = false;
     }
 
@@ -160,26 +184,27 @@ export default function Kardex() {
   // 2. Calcular movimientos procesados (Promedio Ponderado / Saldos)
   const getMovimientosProcesados = () => {
     if (!filtroProd) {
-      return movimientosFiltrados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+      return movimientosFiltrados.sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
     }
 
-    const ordenadosAsc = [...movimientosFiltrados].sort((a, b) => new Date(a.fecha) - new Date(a.fecha));
+    const ordenadosAsc = [...movimientosFiltrados].sort((a, b) => new Date(a.fecha || 0) - new Date(b.fecha || 0));
     let saldo_cant = 0;
     let saldo_valor = 0;
     
     const procesados = ordenadosAsc.map(m => {
       let in_cant = 0, in_unit = 0, in_total = 0;
       let out_cant = 0, out_unit = 0, out_total = 0;
+      const tipoMov = (m.tipo_movimiento || '').toUpperCase();
       
-      if (m.tipo_movimiento.includes('ENTRADA') || m.tipo_movimiento.includes('POSITIVO')) {
-        in_cant = m.cantidad;
-        in_unit = m.costo_unitario;
-        in_total = (m.costo_total && m.costo_total > 0) ? m.costo_total : (m.cantidad * m.costo_unitario);
+      if (tipoMov.includes('ENTRADA') || tipoMov.includes('POSITIVO')) {
+        in_cant = m.cantidad || 0;
+        in_unit = m.costo_unitario || 0;
+        in_total = (m.costo_total && m.costo_total > 0) ? m.costo_total : (in_cant * in_unit);
         saldo_cant += in_cant;
         saldo_valor += in_total;
       } else {
-        out_cant = m.cantidad;
-        out_unit = m.costo_unitario > 0 ? m.costo_unitario : (saldo_cant > 0 ? saldo_valor / saldo_cant : 0);
+        out_cant = m.cantidad || 0;
+        out_unit = (m.costo_unitario || 0) > 0 ? m.costo_unitario : (saldo_cant > 0 ? saldo_valor / saldo_cant : 0);
         out_total = out_cant * out_unit;
         saldo_cant -= out_cant;
         saldo_valor -= out_total;
@@ -212,8 +237,9 @@ export default function Kardex() {
   );
 
   const getMovIcon = (tipo) => {
-    if (tipo.includes('ENTRADA') || tipo.includes('COMPRA')) return <TrendingUp className="w-4 h-4 text-emerald-500" />;
-    if (tipo.includes('SALIDA') || tipo.includes('VENTA')) return <TrendingDown className="w-4 h-4 text-red-500" />;
+    const t = (tipo || '').toUpperCase();
+    if (t.includes('ENTRADA') || t.includes('COMPRA')) return <TrendingUp className="w-4 h-4 text-emerald-500" />;
+    if (t.includes('SALIDA') || t.includes('VENTA')) return <TrendingDown className="w-4 h-4 text-red-500" />;
     return <RefreshCcw className="w-4 h-4 text-amber-500" />;
   };
 
@@ -549,10 +575,10 @@ export default function Kardex() {
                   {paginatedMovimientos.map(m => (
                     <tr key={m.id} className="hover:bg-slate-50 text-sm">
                       <td className="px-4 py-3 border-r">
-                        <div className="text-xs text-slate-500 font-medium">{new Date(m.fecha).toLocaleString()}</div>
+                        <div className="text-xs text-slate-500 font-medium">{getFechaDisplay(m.fecha)}</div>
                         <div className="flex items-center gap-1.5 mt-1">
                           {getMovIcon(m.tipo_movimiento)}
-                          <span className="font-semibold text-slate-700 text-xs">{m.tipo_movimiento.replace('_', ' ')}</span>
+                          <span className="font-semibold text-slate-700 text-xs">{(m.tipo_movimiento || '').replace('_', ' ')}</span>
                         </div>
                         {m.referencia_tipo && (
                           <div className="text-[10px] text-indigo-600 font-bold mt-0.5">{m.referencia_tipo} #{m.referencia_id}</div>
@@ -562,18 +588,18 @@ export default function Kardex() {
                       
                       {/* Entradas */}
                       <td className="px-2 py-3 text-right border-r font-semibold text-emerald-600 bg-emerald-50/10">{m.in_cant > 0 ? m.in_cant : ''}</td>
-                      <td className="px-2 py-3 text-right border-r text-slate-500 text-xs bg-emerald-50/10">{m.in_cant > 0 ? '$' + Number(m.in_unit).toFixed(4) : ''}</td>
-                      <td className="px-2 py-3 text-right border-r font-semibold text-emerald-700 text-xs bg-emerald-50/10">{m.in_cant > 0 ? '$' + Number(m.in_total).toFixed(2) : ''}</td>
+                      <td className="px-2 py-3 text-right border-r text-slate-500 text-xs bg-emerald-50/10">{m.in_cant > 0 ? '$' + Number(m.in_unit || 0).toFixed(4) : ''}</td>
+                      <td className="px-2 py-3 text-right border-r font-semibold text-emerald-700 text-xs bg-emerald-50/10">{m.in_cant > 0 ? '$' + Number(m.in_total || 0).toFixed(2) : ''}</td>
                       
                       {/* Salidas */}
                       <td className="px-2 py-3 text-right border-r font-semibold text-rose-600 bg-rose-50/10">{m.out_cant > 0 ? m.out_cant : ''}</td>
-                      <td className="px-2 py-3 text-right border-r text-slate-500 text-xs bg-rose-50/10">{m.out_cant > 0 ? '$' + Number(m.out_unit).toFixed(4) : ''}</td>
-                      <td className="px-2 py-3 text-right border-r font-semibold text-rose-700 text-xs bg-rose-50/10">{m.out_cant > 0 ? '$' + Number(m.out_total).toFixed(2) : ''}</td>
+                      <td className="px-2 py-3 text-right border-r text-slate-500 text-xs bg-rose-50/10">{m.out_cant > 0 ? '$' + Number(m.out_unit || 0).toFixed(4) : ''}</td>
+                      <td className="px-2 py-3 text-right border-r font-semibold text-rose-700 text-xs bg-rose-50/10">{m.out_cant > 0 ? '$' + Number(m.out_total || 0).toFixed(2) : ''}</td>
                       
                       {/* Saldos */}
-                      <td className="px-2 py-3 text-right border-r font-bold text-indigo-700 bg-indigo-50/30">{Number(Number(m.saldo_cant).toFixed(4)).toString()}</td>
-                      <td className="px-2 py-3 text-right border-r text-slate-700 text-xs bg-indigo-50/30 font-mono">{'$' + Number(m.saldo_unit).toFixed(4)}</td>
-                      <td className="px-2 py-3 text-right font-extrabold text-indigo-800 text-xs bg-indigo-50/30">{'$' + Number(m.saldo_total).toFixed(2)}</td>
+                      <td className="px-2 py-3 text-right border-r font-bold text-indigo-700 bg-indigo-50/30">{Number(Number(m.saldo_cant || 0).toFixed(4)).toString()}</td>
+                      <td className="px-2 py-3 text-right border-r text-slate-700 text-xs bg-indigo-50/30 font-mono">{'$' + Number(m.saldo_unit || 0).toFixed(4)}</td>
+                      <td className="px-2 py-3 text-right font-extrabold text-indigo-800 text-xs bg-indigo-50/30">{'$' + Number(m.saldo_total || 0).toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -596,7 +622,7 @@ export default function Kardex() {
                 <tbody className="divide-y divide-slate-100">
                   {paginatedMovimientos.map(m => (
                     <tr key={m.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-5 py-4 text-xs text-slate-500 whitespace-nowrap">{new Date(m.fecha).toLocaleString()}</td>
+                      <td className="px-5 py-4 text-xs text-slate-500 whitespace-nowrap">{getFechaDisplay(m.fecha)}</td>
                       <td className="px-5 py-4">
                         <div className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
                           <span className="px-1.5 py-0.5 bg-slate-100 border text-[11px] font-mono text-slate-600 rounded">
@@ -609,13 +635,13 @@ export default function Kardex() {
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
                           {getMovIcon(m.tipo_movimiento)}
-                          <span className="text-xs font-bold text-slate-700">{m.tipo_movimiento.replace('_', ' ')}</span>
+                          <span className="text-xs font-bold text-slate-700">{(m.tipo_movimiento || '').replace('_', ' ')}</span>
                         </div>
                         {m.referencia_tipo && <p className="text-[10px] text-indigo-600 font-bold mt-0.5">{m.referencia_tipo} #{m.referencia_id}</p>}
                       </td>
                       <td className="px-5 py-4 text-right font-bold text-slate-800">
-                        <span className={m.tipo_movimiento.includes('SALIDA') ? 'text-rose-600' : 'text-emerald-600'}>
-                          {m.tipo_movimiento.includes('SALIDA') ? '-' : '+'}{m.cantidad}
+                        <span className={(m.tipo_movimiento || '').includes('SALIDA') ? 'text-rose-600' : 'text-emerald-600'}>
+                          {(m.tipo_movimiento || '').includes('SALIDA') ? '-' : '+'}{m.cantidad}
                         </span>
                       </td>
                       <td className="px-5 py-4 text-right text-sm text-slate-600 font-mono">
@@ -707,7 +733,7 @@ export default function Kardex() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Fecha</p>
-                  <p className="font-medium text-slate-700 text-xs">{new Date(movimientoActivo.fecha).toLocaleString()}</p>
+                  <p className="font-medium text-slate-700 text-xs">{getFechaDisplay(movimientoActivo.fecha)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Bodega</p>
@@ -718,7 +744,7 @@ export default function Kardex() {
               <div className="bg-slate-50 rounded-xl p-4 border border-slate-200/80">
                 <div className="flex items-center gap-2 mb-3">
                   {getMovIcon(movimientoActivo.tipo_movimiento)}
-                  <span className="font-bold text-slate-800 text-sm">{movimientoActivo.tipo_movimiento.replace('_', ' ')}</span>
+                  <span className="font-bold text-slate-800 text-sm">{(movimientoActivo.tipo_movimiento || '').replace('_', ' ')}</span>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-y-2 text-xs">

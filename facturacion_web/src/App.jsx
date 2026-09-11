@@ -32,6 +32,7 @@ import Dashboard from './pages/Dashboard';
 import Despachos from './pages/Despachos';
 import Vendedores from './pages/Vendedores';
 import Kardex from './pages/Kardex';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { api } from './services/api';
 
 const NombreEmpresa = () => {
@@ -251,50 +252,52 @@ function App() {
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "564147336188-mdfp0vsvn8na8bllflsm8ntrv91cfinp.apps.googleusercontent.com";
 
   return (
-    <GoogleOAuthProvider clientId={clientId}>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/registro" element={<Registro />} />
+    <ErrorBoundary>
+      <GoogleOAuthProvider clientId={clientId}>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/registro" element={<Registro />} />
 
-          <Route path="/*" element={
-            <PrivateRoute>
-              <Layout>
-                <Routes>
-                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  {/* Fase 1 — Almacén */}
-                  <Route path="/bodegas" element={<Bodegas />} />
-                  <Route path="/existencias" element={<Existencias />} />
-                  <Route path="/kardex" element={<Kardex />} />
-                  <Route path="/productos" element={<Productos />} />
-                  {/* Fase 2 — Compras */}
-                  <Route path="/proveedores" element={<Proveedores />} />
-                  <Route path="/ordenes-compra" element={<OrdenesCompra />} />
-                  <Route path="/cuentas-pagar" element={<CuentasPagar />} />
-                  <Route path="/cajas" element={<Cajas />} />
-                  <Route path="/gastos" element={<Gastos />} />
-                  <Route path="/acreedores" element={<Acreedores />} />
-                  <Route path="/pago-prestamos" element={<PagoPrestamos />} />
-                  <Route path="/aportantes" element={<Aportantes />} />
-                  {/* Fase 3 — Ventas */}
-                  <Route path="/clientes" element={<Clientes />} />
-                  <Route path="/facturas" element={<Facturas />} />
-                  <Route path="/cuentas-cobrar" element={<CuentasCobrar />} />
-                  {/* Fase 4 — DTE */}
-                  <Route path="/configuracion-dte" element={<ConfiguracionDTE />} />
-                  <Route path="/usuarios" element={<Usuarios />} />
-                  <Route path="/backup-recovery" element={<BackupRecovery />} />
-                  {/* Fase 5 — Logística */}
-                  <Route path="/despachos" element={<Despachos />} />
-                  <Route path="/vendedores" element={<Vendedores />} />
-                </Routes>
-              </Layout>
-            </PrivateRoute>
-          } />
-        </Routes>
-      </Router>
-    </GoogleOAuthProvider>
+            <Route path="/*" element={
+              <PrivateRoute>
+                <Layout>
+                  <Routes>
+                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    {/* Fase 1 — Almacén */}
+                    <Route path="/bodegas" element={<Bodegas />} />
+                    <Route path="/existencias" element={<Existencias />} />
+                    <Route path="/kardex" element={<Kardex />} />
+                    <Route path="/productos" element={<Productos />} />
+                    {/* Fase 2 — Compras */}
+                    <Route path="/proveedores" element={<Proveedores />} />
+                    <Route path="/ordenes-compra" element={<OrdenesCompra />} />
+                    <Route path="/cuentas-pagar" element={<CuentasPagar />} />
+                    <Route path="/cajas" element={<Cajas />} />
+                    <Route path="/gastos" element={<Gastos />} />
+                    <Route path="/acreedores" element={<Acreedores />} />
+                    <Route path="/pago-prestamos" element={<PagoPrestamos />} />
+                    <Route path="/aportantes" element={<Aportantes />} />
+                    {/* Fase 3 — Ventas */}
+                    <Route path="/clientes" element={<Clientes />} />
+                    <Route path="/facturas" element={<Facturas />} />
+                    <Route path="/cuentas-cobrar" element={<CuentasCobrar />} />
+                    {/* Fase 4 — DTE */}
+                    <Route path="/configuracion-dte" element={<ConfiguracionDTE />} />
+                    <Route path="/usuarios" element={<Usuarios />} />
+                    <Route path="/backup-recovery" element={<BackupRecovery />} />
+                    {/* Fase 5 — Logística */}
+                    <Route path="/despachos" element={<Despachos />} />
+                    <Route path="/vendedores" element={<Vendedores />} />
+                  </Routes>
+                </Layout>
+              </PrivateRoute>
+            } />
+          </Routes>
+        </Router>
+      </GoogleOAuthProvider>
+    </ErrorBoundary>
   );
 }
 
