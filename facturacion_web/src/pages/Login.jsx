@@ -208,9 +208,10 @@ export default function Login() {
                       localStorage.setItem('token', res.data.access_token);
                       localStorage.setItem('rol', res.data.rol);
                       localStorage.setItem('empresa_id', res.data.empresa_id);
+                      if (res.data.usuario_id) localStorage.setItem('usuario_id', res.data.usuario_id.toString());
                       navigate('/');
                     } catch (err) {
-                      setError(err.response?.data?.detail || 'Error al autenticar con Google. ¿Ya creaste tu empresa?');
+                      setError(err.response?.data?.detail || 'Error al autenticar con Google. Por favor, intenta de nuevo.');
                     } finally {
                       setLoading(false);
                     }

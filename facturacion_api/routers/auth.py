@@ -193,22 +193,59 @@ class GoogleLoginSchema(BaseModel):
 def google_login(data: GoogleLoginSchema, db: Session = Depends(get_db)):
     user = db.query(Usuario).filter(Usuario.email == data.email).first()
     if not user:
-        raise HTTPException(status_code=404, detail="Correo no registrado. Por favor, crea tu empresa primero.")
-        
+        # Auto-crear usuario y empresa automáticamente para usuarios de Google
+        username_gen = data.email.split("@")[0].replace(".", "_") + "_" + str(uuid.uuid4())[:4]
+        empresa_uuid = str(uuid.uuid4())
+        nombre_empresa = f"Empresa de {data.email.split('@')[0].capitalize()}"
+
+        user = Usuario(
+            username=username_gen,
+            email=data.email,
+            hashed_password=pwd_context.hash(str(uuid.uuid4())),
+            rol="admin",
+            two_factor_secret=pyotp.random_base32(),
+            usuario_creacion=username_gen
+        )
+        db.add(user)
+
+        empresa = Empresa(
+            id=empresa_uuid,
+            razon_social=nombre_empresa,
+            usuario_creacion=username_gen,
+            terminal_ip="127.0.0.1"
+        )
+        db.add(empresa)
+        db.commit()
+        db.refresh(user)
+        db.refresh(empresa)
+
     empresa = db.query(Empresa).filter(Empresa.usuario_creacion == user.username).first()
+    if not empresa:
+        empresa_uuid = str(uuid.uuid4())
+        nombre_empresa = f"Empresa de {user.username}"
+        empresa = Empresa(
+            id=empresa_uuid,
+            razon_social=nombre_empresa,
+            usuario_creacion=user.username,
+            terminal_ip="127.0.0.1"
+        )
+        db.add(empresa)
+        db.commit()
+        db.refresh(empresa)
+
     empresa_id = empresa.id if empresa else ""
-        
+
     access_token = create_access_token(
         data={"sub": user.username, "emp": empresa_id, "rol": user.rol},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    
+
     return {
-        "access_token": access_token, 
+        "access_token": access_token,
         "token_type": "bearer",
         "rol": user.rol,
         "empresa_id": empresa_id,
-        "empresa_nombre": empresa.razon_social if empresa else "Mi Empresa",
+        "usuario_id": user.id,
         "require_2fa": False
     }
 
