@@ -303,7 +303,11 @@ def crear_prestamo(empresa_id: str, usuario_id: int, data: PrestamoCreate, db: S
     fecha_inicio = datetime.now(TIMEZONE)
     if data.fecha_desembolso:
         try:
-            fecha_inicio = datetime.fromisoformat(data.fecha_desembolso)
+            if "T" in data.fecha_desembolso:
+                fecha_inicio = datetime.fromisoformat(data.fecha_desembolso)
+            else:
+                partes = [int(x) for x in data.fecha_desembolso.split("-")]
+                fecha_inicio = datetime(partes[0], partes[1], partes[2], 12, 0, 0, tzinfo=TIMEZONE)
         except Exception:
             pass
 

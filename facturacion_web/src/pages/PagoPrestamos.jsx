@@ -6,6 +6,15 @@ import { api } from '../services/api';
 const empresaId = () => localStorage.getItem('empresa_id') || '';
 const usuarioId = () => localStorage.getItem('usuario_id') ? parseInt(localStorage.getItem('usuario_id')) : 1;
 const fmt = (cents) => `$${((cents || 0) / 100).toFixed(2)}`;
+const fmtDate = (dateStr) => {
+  if (!dateStr) return '';
+  const clean = dateStr.split('T')[0];
+  const parts = clean.split('-');
+  if (parts.length === 3) {
+    return `${parseInt(parts[2])}/${parseInt(parts[1])}/${parts[0]}`;
+  }
+  return new Date(dateStr).toLocaleDateString();
+};
 
 export default function PagoPrestamos() {
   const location = useLocation();
@@ -368,7 +377,7 @@ export default function PagoPrestamos() {
                     <tr key={c.id} className={`transition-colors ${esPagada ? 'bg-emerald-50/20' : esSiguiente ? 'bg-indigo-50/30 font-medium' : 'hover:bg-slate-50/50'}`}>
                       <td className="py-3 px-4 font-bold text-slate-800">Cuota #{c.numero_cuota}</td>
                       <td className="py-3 px-4 text-xs text-slate-500">
-                        {new Date(c.fecha_vencimiento).toLocaleDateString()}
+                        {fmtDate(c.fecha_vencimiento)}
                       </td>
                       <td className="py-3 px-4 text-right font-medium text-slate-700">{fmt(c.monto_capital_teorico)}</td>
                       <td className="py-3 px-4 text-right font-medium text-indigo-600">{fmt(c.monto_interes_teorico)}</td>
@@ -381,7 +390,7 @@ export default function PagoPrestamos() {
                               <CheckCircle className="w-3 h-3" /> PAGADA
                             </span>
                             <span className="text-[10px] text-slate-400 mt-0.5">
-                              {c.fecha_pago_real ? new Date(c.fecha_pago_real).toLocaleDateString() : ''} ({c.metodo_pago})
+                              {c.fecha_pago_real ? fmtDate(c.fecha_pago_real) : ''} ({c.metodo_pago})
                             </span>
                           </div>
                         ) : esSiguiente ? (
