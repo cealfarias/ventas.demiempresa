@@ -6,8 +6,16 @@ from routers import productos, clientes, facturas, auth, bodegas, kardex, provee
 from routers import cajas, gastos, usuarios, avatar_ai, acreedores, aportantes, backup
 import uvicorn
 
+from sqlalchemy import text
+
 # Inicializar Tablas (Render / Local)
 Base.metadata.create_all(bind=engine)
+
+try:
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE prestamos_acreedores ADD COLUMN IF NOT EXISTS unidad_plazo VARCHAR(10) DEFAULT 'meses';"))
+except Exception as e:
+    print("Migration check note:", e)
 
 app = FastAPI(
     title="Facturación SaaS Multi-Tenant"

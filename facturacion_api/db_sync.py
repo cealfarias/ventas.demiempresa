@@ -21,8 +21,12 @@ for table_name in Base.metadata.tables.keys():
             # Generate column type
             col_type = column.type.compile(engine.dialect)
             # Add constraints
-            nullable = "" if column.nullable else ""
-            default = f" DEFAULT {column.default.arg}" if column.default and isinstance(column.default.arg, (int, str, bool, float)) else ""
+            if column.default and isinstance(column.default.arg, str):
+                default = f" DEFAULT '{column.default.arg}'"
+            elif column.default and isinstance(column.default.arg, (int, bool, float)):
+                default = f" DEFAULT {column.default.arg}"
+            else:
+                default = ""
             
             sql = f"ALTER TABLE {table_name} ADD COLUMN {column.name} {col_type}{default}"
             print(f"Executing: {sql}")
