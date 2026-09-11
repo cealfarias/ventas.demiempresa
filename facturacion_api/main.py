@@ -9,7 +9,10 @@ import uvicorn
 from sqlalchemy import text
 
 # Inicializar Tablas (Render / Local)
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print("Database create_all warning:", e)
 
 try:
     with engine.begin() as conn:

@@ -13,10 +13,24 @@ if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 is_sqlite = DATABASE_URL.startswith("sqlite")
+
+if not is_sqlite and "sslmode" not in DATABASE_URL:
+    delimiter = "&" if "?" in DATABASE_URL else "?"
+    DATABASE_URL += f"{delimiter}sslmode=require"
+
 connect_args = {"check_same_thread": False} if is_sqlite else {}
+engine_kwargs = {"connect_args": connect_args}
+
+if not is_sqlite:
+    engine_kwargs.update({
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+        "pool_size": 10,
+        "max_overflow": 20
+    })
 
 engine = create_engine(
-    DATABASE_URL, connect_args=connect_args
+    DATABASE_URL, **engine_kwargs
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
