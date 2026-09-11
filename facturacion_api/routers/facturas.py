@@ -151,19 +151,8 @@ def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Ses
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
-    # Garantizar bodega de salida (si no viene en la petición, usar la principal o primera de la empresa)
-    bodega_salida_id = data.bodega_salida_id
-    if not bodega_salida_id:
-        bodega_def = db.query(Bodega).filter(Bodega.empresa_id == empresa_id, Bodega.es_principal == True).first()
-        if not bodega_def:
-            bodega_def = db.query(Bodega).filter(Bodega.empresa_id == empresa_id).first()
-        if not bodega_def:
-            bodega_def = Bodega(empresa_id=empresa_id, codigo="BOD-01", nombre="Bodega Principal", es_principal=True, activa=True)
-            db.add(bodega_def)
-            db.flush()
-        bodega_salida_id = bodega_def.id
-    else:
-        bodega = db.query(Bodega).filter(Bodega.id == bodega_salida_id, Bodega.empresa_id == empresa_id).first()
+    if data.bodega_salida_id:
+        bodega = db.query(Bodega).filter(Bodega.id == data.bodega_salida_id, Bodega.empresa_id == empresa_id).first()
         if not bodega:
             raise HTTPException(status_code=404, detail="Bodega no encontrada")
 
@@ -175,7 +164,7 @@ def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Ses
         usuario_id=usuario_id,
         numero=numero,
         cliente_id=data.cliente_id,
-        bodega_salida_id=bodega_salida_id,
+        bodega_salida_id=data.bodega_salida_id,
         vendedor_id=data.vendedor_id,
         tipo_doc=data.tipo_doc,
         condicion_operacion=data.condicion_operacion,
@@ -202,7 +191,7 @@ def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Ses
     db.add(f)
     db.flush()
 
-    # 2. Agregar ítems y registrar movimiento en Kardex
+    # 2. Agregar ítems y descontar de inventario si hay bodega especificada
     for item in data.items:
         db.add(ItemFactura(
             factura_id=f.id,
@@ -212,22 +201,23 @@ def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Ses
             subtotal=item.subtotal
         ))
         
-        try:
-            registrar_movimiento(
-                db=db,
-                empresa_id=empresa_id,
-                bodega_id=bodega_salida_id,
-                producto_id=item.producto_id,
-                tipo_movimiento="SALIDA_VENTA",
-                cantidad=item.cantidad,
-                costo_unitario=0,
-                referencia_tipo="factura",
-                referencia_id=f.id,
-                usuario_id=usuario_id,
-                notas=f"Venta con {f.tipo_doc} {f.numero}"
-            )
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=str(e))
+        if data.bodega_salida_id:
+            try:
+                registrar_movimiento(
+                    db=db,
+                    empresa_id=empresa_id,
+                    bodega_id=data.bodega_salida_id,
+                    producto_id=item.producto_id,
+                    tipo_movimiento="SALIDA_VENTA",
+                    cantidad=item.cantidad,
+                    costo_unitario=0,
+                    referencia_tipo="factura",
+                    referencia_id=f.id,
+                    usuario_id=usuario_id,
+                    notas=f"Venta con {f.tipo_doc} {f.numero}"
+                )
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=str(e))
 
     # 3. Generar Cuenta por Cobrar si es al crédito
     if data.condicion_operacion == "CREDITO":
