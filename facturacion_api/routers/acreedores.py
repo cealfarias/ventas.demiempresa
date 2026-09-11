@@ -173,6 +173,28 @@ def actualizar_acreedor(acreedor_id: int, empresa_id: str, data: AcreedorCreate,
     return obtener_acreedor_response(a, db)
 
 
+@router.delete("/{acreedor_id}")
+def eliminar_acreedor(acreedor_id: int, empresa_id: str, db: Session = Depends(get_db)):
+    a = db.query(Acreedor).filter(Acreedor.id == acreedor_id, Acreedor.empresa_id == empresa_id).first()
+    if not a:
+        raise HTTPException(status_code=404, detail="Acreedor no encontrado")
+
+    # Eliminar préstamos y cuotas de amortización del acreedor
+    prestamos = db.query(PrestamoAcreedor).filter(PrestamoAcreedor.acreedor_id == acreedor_id, PrestamoAcreedor.empresa_id == empresa_id).all()
+    for p in prestamos:
+        db.query(CuotaAmortizacion).filter(CuotaAmortizacion.prestamo_id == p.id).delete()
+        db.delete(p)
+
+    # Eliminar movimientos del acreedor
+    db.query(MovimientoAcreedor).filter(MovimientoAcreedor.acreedor_id == acreedor_id).delete()
+
+    # Eliminar acreedor
+    db.delete(a)
+    db.commit()
+
+    return {"mensaje": "Acreedor y sus registros asociados fueron eliminados exitosamente"}
+
+
 @router.get("/{acreedor_id}/movimientos", response_model=List[MovimientoAcreedorResponse])
 def listar_movimientos_acreedor(acreedor_id: int, empresa_id: str, db: Session = Depends(get_db)):
     a = db.query(Acreedor).filter(Acreedor.id == acreedor_id, Acreedor.empresa_id == empresa_id).first()

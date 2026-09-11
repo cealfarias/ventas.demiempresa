@@ -33,26 +33,45 @@ export default function PagoPrestamos() {
 
   const cargarDatosIniciales = async () => {
     try {
-      const [resAc, resPr] = await Promise.all([
-        api.get(`/api/v1/finanzas/acreedores/?empresa_id=${empresaId()}`),
-        api.get(`/api/v1/finanzas/acreedores/prestamos?empresa_id=${empresaId()}`)
-      ]);
-      setAcreedores(resAc.data);
-      setPrestamos(resPr.data);
+      let dataAc = [];
+      let dataPr = [];
+
+      try {
+        const resAc = await api.get(`/api/v1/finanzas/acreedores?empresa_id=${empresaId()}`);
+        dataAc = resAc.data;
+      } catch (err) {
+        try {
+          const resAc = await api.get(`/api/v1/acreedores?empresa_id=${empresaId()}`);
+          dataAc = resAc.data;
+        } catch (e) { console.error("Error cargando acreedores:", e); }
+      }
+
+      try {
+        const resPr = await api.get(`/api/v1/finanzas/acreedores/prestamos?empresa_id=${empresaId()}`);
+        dataPr = resPr.data;
+      } catch (err) {
+        try {
+          const resPr = await api.get(`/api/v1/acreedores/prestamos?empresa_id=${empresaId()}`);
+          dataPr = resPr.data;
+        } catch (e) { console.error("Error cargando préstamos:", e); }
+      }
+
+      setAcreedores(dataAc);
+      setPrestamos(dataPr);
 
       const queryParams = new URLSearchParams(location.search);
       const targetAcreedorId = queryParams.get('acreedor_id');
 
       if (targetAcreedorId) {
-        const prestamoDeAcreedor = resPr.data.find(p => p.acreedor_id === parseInt(targetAcreedorId));
+        const prestamoDeAcreedor = dataPr.find(p => p.acreedor_id === parseInt(targetAcreedorId));
         if (prestamoDeAcreedor) {
           setPrestamoSeleccionadoId(prestamoDeAcreedor.id);
         } else {
-          // Pre-abrir modal de nuevo préstamo con ese acreedor
+          const acTarget = dataAc.find(a => a.id === parseInt(targetAcreedorId));
           setFormPrestamo({
             acreedor_id: targetAcreedorId,
             monto_prestamo: '',
-            tasa_interes_anual: 12.0,
+            tasa_interes_anual: acTarget ? acTarget.tasa_interes_anual : 12.0,
             plazo: 12,
             plazo_meses: 12,
             unidad_plazo: 'meses',
@@ -62,8 +81,8 @@ export default function PagoPrestamos() {
           });
           setModalNuevoPrestamo(true);
         }
-      } else if (resPr.data.length > 0 && !prestamoSeleccionadoId) {
-        setPrestamoSeleccionadoId(resPr.data[0].id);
+      } else if (dataPr.length > 0 && !prestamoSeleccionadoId) {
+        setPrestamoSeleccionadoId(dataPr[0].id);
       }
     } catch (e) {
       console.error(e);
@@ -94,11 +113,22 @@ export default function PagoPrestamos() {
     }
   }, [prestamoSeleccionadoId]);
 
-  const abrirModalNuevoPrestamo = () => {
+  const abrirModalNuevoPrestamo = async () => {
+    let listaAcreedores = acreedores;
+    if (listaAcreedores.length === 0) {
+      try {
+        const resAc = await api.get(`/api/v1/finanzas/acreedores?empresa_id=${empresaId()}`);
+        listaAcreedores = resAc.data;
+        setAcreedores(listaAcreedores);
+      } catch (e) { console.error(e); }
+    }
+
+    const primerAcreedor = listaAcreedores.length > 0 ? listaAcreedores[0] : null;
+
     setFormPrestamo({
-      acreedor_id: acreedores.length > 0 ? acreedores[0].id : '',
+      acreedor_id: primerAcreedor ? primerAcreedor.id : '',
       monto_prestamo: '',
-      tasa_interes_anual: 12.0,
+      tasa_interes_anual: primerAcreedor ? (primerAcreedor.tasa_interes_anual || 12.0) : 12.0,
       plazo: 12,
       plazo_meses: 12,
       unidad_plazo: 'meses',
@@ -385,12 +415,20 @@ export default function PagoPrestamos() {
                 <label className="block font-semibold text-slate-700 mb-1">Acreedor / Prestamista *</label>
                 <select
                   value={formPrestamo.acreedor_id}
-                  onChange={(e) => setFormPrestamo({ ...formPrestamo, acreedor_id: e.target.value })}
-                  className="w-full border rounded-xl p-2.5 outline-none focus:border-indigo-500 bg-white"
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    const ac = acreedores.find(a => a.id === parseInt(selectedId));
+                    setFormPrestamo({
+                      ...formPrestamo,
+                      acreedor_id: selectedId,
+                      tasa_interes_anual: ac ? (ac.tasa_interes_anual || 12.0) : formPrestamo.tasa_interes_anual
+                    });
+                  }}
+                  className="w-full border rounded-xl p-2.5 outline-none focus:border-indigo-500 bg-white font-medium text-slate-800"
                 >
                   <option value="">Seleccione Acreedor...</option>
                   {acreedores.map((a) => (
-                    <option key={a.id} value={a.id}>{a.nombre} (Tasa: {a.tasa_interes_anual}%)</option>
+                    <option key={a.id} value={a.id}>{a.nombre} (Tasa Referencial: {a.tasa_interes_anual}%)</option>
                   ))}
                 </select>
               </div>
