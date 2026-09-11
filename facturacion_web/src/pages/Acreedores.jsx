@@ -264,8 +264,8 @@ export default function Acreedores() {
 
       {/* MODAL CREAR / EDITAR ACREEDOR */}
       {modalAcreedor && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 border border-slate-100">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 border border-slate-100 max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-bold text-slate-800 mb-4">{acreedorEditando ? 'Editar Acreedor' : 'Registrar Nuevo Acreedor'}</h2>
             <div className="space-y-3.5">
               <div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { Calendar, CreditCard, DollarSign, Plus, CheckCircle, Clock, AlertCircle, Lock, Percent, History, Calculator, ArrowRight, UserCheck, Trash2 } from 'lucide-react';
+import { Calendar, CreditCard, DollarSign, Plus, CheckCircle, Clock, AlertCircle, Lock, Percent, History, Calculator, ArrowRight, UserCheck, Trash2, X } from 'lucide-react';
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
@@ -425,12 +425,21 @@ export default function PagoPrestamos() {
 
       {/* MODAL NUEVO PRÉSTAMO */}
       {modalNuevoPrestamo && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
-            <div className="p-6 border-b border-slate-100">
-              <h3 className="text-lg font-bold text-slate-800">Registrar Nuevo Préstamo y Generar Amortizaciones</h3>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="p-5 border-b border-slate-100 shrink-0 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">Registrar Nuevo Préstamo y Generar Amortizaciones</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Defina las condiciones del crédito y tabla de cuotas</p>
+              </div>
+              <button
+                onClick={() => setModalNuevoPrestamo(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <div className="p-6 space-y-4 text-sm">
+            <div className="p-6 space-y-4 text-sm overflow-y-auto flex-1">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Acreedor / Prestamista *</label>
                 <select
@@ -621,7 +630,7 @@ export default function PagoPrestamos() {
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 flex justify-end gap-2">
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2 shrink-0">
               <button onClick={() => setModalNuevoPrestamo(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-xl font-medium">Cancelar</button>
               <button onClick={crearPrestamo} disabled={guardando} className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-all shadow-sm">
                 {guardando ? 'Generando...' : 'Generar Préstamo'}
@@ -633,16 +642,24 @@ export default function PagoPrestamos() {
 
       {/* MODAL PAGAR CUOTA */}
       {modalPagoCuota && cuotaAPagar && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="p-6 border-b border-slate-100">
-              <h3 className="text-lg font-bold text-slate-800">
-                Pagar Cuota #{cuotaAPagar.numero_cuota} del Préstamo
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">Se registrará automáticamente el Egreso en la Caja Abierta</p>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="p-5 border-b border-slate-100 shrink-0 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800">
+                  Pagar Cuota #{cuotaAPagar.numero_cuota} del Préstamo
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">Se registrará automáticamente el Egreso en la Caja Abierta</p>
+              </div>
+              <button
+                onClick={() => setModalPagoCuota(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            <div className="p-6 space-y-4 text-sm">
+            <div className="p-6 space-y-4 text-sm overflow-y-auto flex-1">
               <div className="bg-slate-50 p-4 rounded-xl space-y-2 border border-slate-100">
                 <div className="flex justify-between text-xs text-slate-600">
                   <span>Abono a Capital:</span>
@@ -694,7 +711,7 @@ export default function PagoPrestamos() {
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 flex justify-end gap-2">
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2 shrink-0">
               <button onClick={() => setModalPagoCuota(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-xl font-medium">Cancelar</button>
               <button onClick={ejecutarPagoCuota} disabled={guardando} className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all shadow-sm flex items-center gap-1">
                 <CheckCircle className="w-4 h-4" /> {guardando ? 'Procesando...' : 'Confirmar y Pagar'}
