@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, CreditCard, DollarSign, Plus, CheckCircle, Clock, AlertCircle, Lock, Percent, History, Calculator, ArrowRight } from 'lucide-react';
+import { useLocation, Link } from 'react-router-dom';
+import { Calendar, CreditCard, DollarSign, Plus, CheckCircle, Clock, AlertCircle, Lock, Percent, History, Calculator, ArrowRight, UserCheck } from 'lucide-react';
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
@@ -7,6 +8,7 @@ const usuarioId = () => localStorage.getItem('usuario_id') ? parseInt(localStora
 const fmt = (cents) => `$${((cents || 0) / 100).toFixed(2)}`;
 
 export default function PagoPrestamos() {
+  const location = useLocation();
   const [acreedores, setAcreedores] = useState([]);
   const [prestamos, setPrestamos] = useState([]);
   const [prestamoSeleccionadoId, setPrestamoSeleccionadoId] = useState('');
@@ -38,7 +40,27 @@ export default function PagoPrestamos() {
       setAcreedores(resAc.data);
       setPrestamos(resPr.data);
 
-      if (resPr.data.length > 0 && !prestamoSeleccionadoId) {
+      const queryParams = new URLSearchParams(location.search);
+      const targetAcreedorId = queryParams.get('acreedor_id');
+
+      if (targetAcreedorId) {
+        const prestamoDeAcreedor = resPr.data.find(p => p.acreedor_id === parseInt(targetAcreedorId));
+        if (prestamoDeAcreedor) {
+          setPrestamoSeleccionadoId(prestamoDeAcreedor.id);
+        } else {
+          // Pre-abrir modal de nuevo préstamo con ese acreedor
+          setFormPrestamo({
+            acreedor_id: targetAcreedorId,
+            monto_prestamo: '',
+            tasa_interes_anual: 12.0,
+            plazo_meses: 12,
+            tipo_amortizacion: 'saldos_frances',
+            fecha_desembolso: new Date().toISOString().split('T')[0],
+            notas: ''
+          });
+          setModalNuevoPrestamo(true);
+        }
+      } else if (resPr.data.length > 0 && !prestamoSeleccionadoId) {
         setPrestamoSeleccionadoId(resPr.data[0].id);
       }
     } catch (e) {
@@ -48,7 +70,7 @@ export default function PagoPrestamos() {
 
   useEffect(() => {
     cargarDatosIniciales();
-  }, []);
+  }, [location.search]);
 
   const cargarTablaAmortizacion = async (prestamoId) => {
     if (!prestamoId) return;
@@ -151,9 +173,17 @@ export default function PagoPrestamos() {
           </h1>
           <p className="text-sm text-slate-500 mt-1">Gestión de amortizaciones teóricas vs. reales con pagos correlativos y desembolsos automáticos en caja</p>
         </div>
-        <button onClick={abrirModalNuevoPrestamo} className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 shadow-sm transition-all">
-          <Plus className="w-4 h-4" /> Nuevo Préstamo
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/acreedores"
+            className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl text-sm flex items-center gap-2 border border-slate-200 transition-all"
+          >
+            <UserCheck className="w-4 h-4" /> Maestro de Acreedores
+          </Link>
+          <button onClick={abrirModalNuevoPrestamo} className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 shadow-md shadow-indigo-600/20 transition-all">
+            <Plus className="w-4 h-4" /> Nuevo Préstamo
+          </button>
+        </div>
       </div>
 
       {/* SELECTOR DE PRÉSTAMO */}

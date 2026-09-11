@@ -141,9 +141,9 @@ const Layout = ({ children }) => {
           <SidebarSection label="Finanzas" expanded={expanded}>
             <SidebarLink to="/cajas" icon={Wallet} label="Control de Caja" expanded={expanded} />
             <SidebarLink to="/gastos" icon={DollarSign} label="Gastos Operativos" expanded={expanded} />
-            <SidebarLink to="/acreedores" icon={CreditCard} label="Acreedores (Préstamos)" expanded={expanded} />
-            <SidebarLink to="/pago-prestamos" icon={Calculator} label="Pago de Préstamos" expanded={expanded} />
-            <SidebarLink to="/aportantes" icon={Users} label="Aportantes (Sin Interés)" expanded={expanded} />
+            <SidebarLink to="/acreedores" icon={CreditCard} label="Acreedores (Maestro)" expanded={expanded} />
+            <SidebarLink to="/pago-prestamos" icon={Calculator} label="Préstamos y Amortizaciones" expanded={expanded} />
+            <SidebarLink to="/aportantes" icon={Users} label="Aportantes de Capital" expanded={expanded} />
           </SidebarSection>
 
           {canSeeCompras && (

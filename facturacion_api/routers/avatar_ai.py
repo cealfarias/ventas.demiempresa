@@ -208,6 +208,18 @@ PROCEDIMIENTOS_KNOWLEDGE = [
         "redirect": "/usuarios"
     },
     {
+        "intent": "acreedores_maestro",
+        "keywords": ["acreedor", "acreedores", "prestamista", "catalogo acreedores", "maestro acreedores"],
+        "respuesta": "🏦 **Directorio Maestro de Acreedores (`/acreedores`):**\n\n1. Esta pantalla es exclusivamente el **Catálogo Maestro** de prestamistas (Bancos, Financieras, Personas).\n2. Registra y edita Nombre, DUI/NIT, Teléfono y datos de contacto.\n3. Presiona **'👁️ Ver Préstamos'** en cualquier acreedor para ir a la central de Préstamos y Amortizaciones.",
+        "redirect": "/acreedores"
+    },
+    {
+        "intent": "prestamos_cuotas",
+        "keywords": ["prestamo", "prestamos", "cuotas", "amortizacion", "pagar cuota", "tabla amortizacion"],
+        "respuesta": "🧮 **Préstamos y Amortizaciones (`/pago-prestamos`):**\n\n1. Esta pantalla es el **Módulo Gestor de Préstamos y Pago de Cuotas**.\n2. Presiona **'Nuevo Préstamo'** para crear un contrato eligiendo el Acreedor del maestro, monto, plazo e interés.\n3. Selecciona cualquier préstamo para ver su **Tabla de Amortización** (Sistema Francés o Interés Simple).\n4. Presiona **'$ Pagar Cuota'** para liquidar en orden correlativo descontando de caja chica o banco.",
+        "redirect": "/pago-prestamos"
+    },
+    {
         "intent": "configuracion_dte",
         "keywords": ["configurar dte", "certificado p12", "firma hacienda", "llave api mh"],
         "respuesta": "⚙️ **¿Cómo configurar la Facturación Electrónica DTE?**\n\n1. Ve a **Configuración -> Configuración DTE** (`/configuracion-dte`).\n2. Carga tu archivo de **Certificado Digital `.p12`** y escribe su contraseña.\n3. Ingresa tu **Clave API de Hacienda** (otorgada por el MH El Salvador).\n4. Selecciona el **Entorno** (Pruebas o Producción).\n5. Presiona 'Guardar Configuración' y realiza la prueba de firma.",
