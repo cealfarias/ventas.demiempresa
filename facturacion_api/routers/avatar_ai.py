@@ -271,11 +271,6 @@ def avatar_chat(req: ChatRequest):
 
     msg_lower = msg.lower()
 
-    # Mensajes personalizados divertidos
-    if "mario" in msg_lower or "janeth" in msg_lower or "abrazando" in msg_lower:
-        ans = "Hola Mario, hoy no andas abrazando a nadie, mejor tráeme a la Janeth 😄"
-        return ChatResponse(response=ans)
-
     # Verificar si está fuera de ámbito
     if not es_consulta_erp(msg):
         return ChatResponse(

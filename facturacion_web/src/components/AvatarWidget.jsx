@@ -424,15 +424,8 @@ export default function AvatarWidget() {
       "financiamiento", "préstamo", "aporte", "impuesto", "nit", "nrc", "iva",
       "ayuda", "hola", "buenos dias", "buenas tardes", "buenas noches", "gracias",
       "opciones", "manual", "configuración", "certificación", "token", "sucursal",
-      "inicio", "dashboard", "sesión", "turno", "arqueo", "guia", "como", "usar", "que haces", "sirves", "funciones",
-      "mario", "janeth", "abrazando"
+      "inicio", "dashboard", "sesión", "turno", "arqueo", "guia", "como", "usar", "que haces", "sirves", "funciones"
     ];
-
-    if (msgLower.includes("mario") || msgLower.includes("janeth") || msgLower.includes("abrazando")) {
-      return {
-        text: "Hola Mario, hoy no andas abrazando a nadie, mejor tráeme a la Janeth 😄"
-      };
-    }
 
     const isErpQuery = ERP_KEYWORDS.some(kw => msgLower.includes(kw)) || msgLower.split(' ').length <= 3;
 
@@ -516,15 +509,6 @@ export default function AvatarWidget() {
       setMessages((prev) => [...prev, botMsg]);
       setLastInstruction(fallback.text);
       speakText(fallback.text);
-      return;
-    }
-
-    if (query === 'mario_janeth') {
-      const phrase = "Hola Mario, hoy no andas abrazando a nadie, mejor tráeme a la Janeth 😄";
-      const botMsg = { sender: 'bot', text: phrase, isOffTopic: false };
-      setMessages((prev) => [...prev, botMsg]);
-      setLastInstruction(phrase);
-      speakText(phrase);
       return;
     }
 
