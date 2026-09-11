@@ -20,7 +20,7 @@ export default function PagoPrestamos() {
   // Modales
   const [modalNuevoPrestamo, setModalNuevoPrestamo] = useState(false);
   const [formPrestamo, setFormPrestamo] = useState({
-    acreedor_id: '', monto_prestamo: '', tasa_interes_anual: 12.0, plazo_meses: 12, tipo_amortizacion: 'saldos_frances', fecha_desembolso: '', notas: ''
+    acreedor_id: '', monto_prestamo: '', tasa_interes_anual: 12.0, plazo: 12, plazo_meses: 12, unidad_plazo: 'meses', tipo_amortizacion: 'saldos_frances', fecha_desembolso: '', notas: ''
   });
 
   const [modalPagoCuota, setModalPagoCuota] = useState(false);
@@ -53,7 +53,9 @@ export default function PagoPrestamos() {
             acreedor_id: targetAcreedorId,
             monto_prestamo: '',
             tasa_interes_anual: 12.0,
+            plazo: 12,
             plazo_meses: 12,
+            unidad_plazo: 'meses',
             tipo_amortizacion: 'saldos_frances',
             fecha_desembolso: new Date().toISOString().split('T')[0],
             notas: ''
@@ -97,7 +99,9 @@ export default function PagoPrestamos() {
       acreedor_id: acreedores.length > 0 ? acreedores[0].id : '',
       monto_prestamo: '',
       tasa_interes_anual: 12.0,
+      plazo: 12,
       plazo_meses: 12,
+      unidad_plazo: 'meses',
       tipo_amortizacion: 'saldos_frances',
       fecha_desembolso: new Date().toISOString().split('T')[0],
       notas: ''
@@ -108,7 +112,9 @@ export default function PagoPrestamos() {
   const crearPrestamo = async () => {
     if (!formPrestamo.acreedor_id) return alert('Seleccione un acreedor');
     if (!formPrestamo.monto_prestamo || parseFloat(formPrestamo.monto_prestamo) <= 0) return alert('Ingrese un monto válido');
-    if (!formPrestamo.plazo_meses || parseInt(formPrestamo.plazo_meses) <= 0) return alert('Ingrese un plazo válido en meses');
+    
+    const plazoNum = parseInt(formPrestamo.plazo || formPrestamo.plazo_meses);
+    if (!plazoNum || plazoNum <= 0) return alert(`Ingrese un plazo válido en ${formPrestamo.unidad_plazo === 'dias' ? 'días' : 'meses'}`);
 
     setGuardando(true);
     try {
@@ -116,7 +122,9 @@ export default function PagoPrestamos() {
         acreedor_id: parseInt(formPrestamo.acreedor_id),
         monto_prestamo: Math.round(parseFloat(formPrestamo.monto_prestamo) * 100),
         tasa_interes_anual: parseFloat(formPrestamo.tasa_interes_anual || 0),
-        plazo_meses: parseInt(formPrestamo.plazo_meses),
+        plazo: plazoNum,
+        plazo_meses: plazoNum,
+        unidad_plazo: formPrestamo.unidad_plazo || 'meses',
         tipo_amortizacion: formPrestamo.tipo_amortizacion,
         fecha_desembolso: formPrestamo.fecha_desembolso || null,
         notas: formPrestamo.notas
@@ -257,7 +265,7 @@ export default function PagoPrestamos() {
           <div>
             <div className="text-xs text-indigo-300 font-medium">Monto Original / Tasa / Plazo</div>
             <div className="text-lg font-bold">{fmt(detallePrestamo.monto_prestamo)}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">{detallePrestamo.tasa_interes_anual}% Anual — {detallePrestamo.plazo_meses} Meses</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">{detallePrestamo.tasa_interes_anual}% Anual — {detallePrestamo.plazo_meses} {detallePrestamo.unidad_plazo === 'dias' ? 'Días' : 'Meses'}</div>
           </div>
           <div>
             <div className="text-xs text-indigo-300 font-medium">Saldo Pendiente Restante</div>
@@ -412,15 +420,45 @@ export default function PagoPrestamos() {
                 </div>
               </div>
 
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1.5">Unidad de Plazo *</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className={`p-2.5 rounded-xl border cursor-pointer flex items-center justify-center gap-2 font-bold text-xs transition-all ${formPrestamo.unidad_plazo === 'meses' ? 'border-indigo-600 bg-indigo-50/60 text-indigo-900 shadow-sm' : 'border-slate-200 text-slate-600 bg-white'}`}>
+                    <input
+                      type="radio"
+                      name="unidad_plazo"
+                      value="meses"
+                      checked={formPrestamo.unidad_plazo === 'meses'}
+                      onChange={(e) => setFormPrestamo({ ...formPrestamo, unidad_plazo: e.target.value })}
+                      className="text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span>Meses</span>
+                  </label>
+                  <label className={`p-2.5 rounded-xl border cursor-pointer flex items-center justify-center gap-2 font-bold text-xs transition-all ${formPrestamo.unidad_plazo === 'dias' ? 'border-indigo-600 bg-indigo-50/60 text-indigo-900 shadow-sm' : 'border-slate-200 text-slate-600 bg-white'}`}>
+                    <input
+                      type="radio"
+                      name="unidad_plazo"
+                      value="dias"
+                      checked={formPrestamo.unidad_plazo === 'dias'}
+                      onChange={(e) => setFormPrestamo({ ...formPrestamo, unidad_plazo: e.target.value })}
+                      className="text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span>Días</span>
+                  </label>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Plazo en Meses *</label>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    {formPrestamo.unidad_plazo === 'dias' ? 'Plazo en Días *' : 'Plazo en Meses *'}
+                  </label>
                   <input
                     type="number"
-                    value={formPrestamo.plazo_meses}
-                    onChange={(e) => setFormPrestamo({ ...formPrestamo, plazo_meses: e.target.value })}
-                    className="w-full border rounded-xl p-2.5 outline-none focus:border-indigo-500"
-                    placeholder="12"
+                    value={formPrestamo.plazo || formPrestamo.plazo_meses}
+                    onChange={(e) => setFormPrestamo({ ...formPrestamo, plazo: e.target.value, plazo_meses: e.target.value })}
+                    className="w-full border rounded-xl p-2.5 outline-none focus:border-indigo-500 font-semibold"
+                    placeholder={formPrestamo.unidad_plazo === 'dias' ? '30' : '12'}
                   />
                 </div>
                 <div>

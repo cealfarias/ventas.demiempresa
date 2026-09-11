@@ -701,7 +701,8 @@ class PrestamoAcreedor(Base):
 
     monto_prestamo = Column(Integer, nullable=False)       # centavos
     tasa_interes_anual = Column(Float, nullable=False)     # Ej: 12.0 (%)
-    plazo_meses = Column(Integer, nullable=False)          # Ej: 12 (meses)
+    plazo_meses = Column(Integer, nullable=False)          # Ej: 12 (meses o días según unidad_plazo)
+    unidad_plazo = Column(String(10), default="meses", nullable=True) # meses | dias
     tipo_amortizacion = Column(String(30), nullable=False) # saldos_frances | interes_simple
     fecha_desembolso = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
     

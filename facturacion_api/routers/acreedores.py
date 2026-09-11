@@ -4,7 +4,7 @@ from database import get_db
 from models import Acreedor, MovimientoAcreedor, SesionCaja, MovimientoCaja, Caja, PrestamoAcreedor, CuotaAmortizacion
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 
 TIMEZONE = pytz.timezone("America/El_Salvador")
@@ -74,7 +74,9 @@ class PrestamoCreate(BaseModel):
     acreedor_id: int
     monto_prestamo: int # centavos
     tasa_interes_anual: float # ej 12.0
-    plazo_meses: int # ej 12
+    plazo_meses: Optional[int] = None # compatibilidad previa
+    plazo: Optional[int] = None # plazo numérico
+    unidad_plazo: Optional[str] = "meses" # meses | dias
     tipo_amortizacion: str # saldos_frances | interes_simple
     fecha_desembolso: Optional[str] = None
     notas: Optional[str] = None
@@ -269,7 +271,10 @@ def crear_prestamo(empresa_id: str, usuario_id: int, data: PrestamoCreate, db: S
     if not acreedor:
         raise HTTPException(status_code=404, detail="Acreedor no encontrado")
 
-    if data.monto_prestamo <= 0 or data.plazo_meses <= 0:
+    unidad = data.unidad_plazo or "meses"
+    n = data.plazo if data.plazo is not None and data.plazo > 0 else (data.plazo_meses or 0)
+
+    if data.monto_prestamo <= 0 or n <= 0:
         raise HTTPException(status_code=400, detail="Monto y plazo deben ser mayores a cero")
 
     fecha_inicio = datetime.now(TIMEZONE)
@@ -281,9 +286,12 @@ def crear_prestamo(empresa_id: str, usuario_id: int, data: PrestamoCreate, db: S
 
     # Generación de la Tabla de Amortización Teórica
     P = data.monto_prestamo # centavos
-    n = data.plazo_meses
     r = data.tasa_interes_anual / 100.0 # tasa anual decimal
-    i = r / 12.0 # tasa mensual decimal
+
+    if unidad == "dias":
+        i = r / 365.0 # tasa diaria decimal
+    else:
+        i = r / 12.0 # tasa mensual decimal
 
     cuotas_teoricas = []
     saldo_restante = P
@@ -311,7 +319,11 @@ def crear_prestamo(empresa_id: str, usuario_id: int, data: PrestamoCreate, db: S
                 cuota_k = capital_k + interes_k
                 saldo_restante -= capital_k
 
-            vencimiento = add_months(fecha_inicio, k)
+            if unidad == "dias":
+                vencimiento = fecha_inicio + timedelta(days=k)
+            else:
+                vencimiento = add_months(fecha_inicio, k)
+
             cuotas_teoricas.append({
                 "numero_cuota": k,
                 "fecha_vencimiento": vencimiento,
@@ -322,8 +334,11 @@ def crear_prestamo(empresa_id: str, usuario_id: int, data: PrestamoCreate, db: S
             })
 
     else: # interes_simple (Flat Rate)
-        # Interés total = P * (r) * (n/12)
-        interes_total = P * r * (n / 12.0)
+        if unidad == "dias":
+            interes_total = P * r * (n / 365.0)
+        else:
+            interes_total = P * r * (n / 12.0)
+
         interes_cuota = round(interes_total / n)
         capital_cuota_base = round(P / n)
 
@@ -336,7 +351,11 @@ def crear_prestamo(empresa_id: str, usuario_id: int, data: PrestamoCreate, db: S
                 saldo_restante -= capital_k
 
             cuota_k = capital_k + interes_cuota
-            vencimiento = add_months(fecha_inicio, k)
+            if unidad == "dias":
+                vencimiento = fecha_inicio + timedelta(days=k)
+            else:
+                vencimiento = add_months(fecha_inicio, k)
+
             cuotas_teoricas.append({
                 "numero_cuota": k,
                 "fecha_vencimiento": vencimiento,
@@ -354,6 +373,7 @@ def crear_prestamo(empresa_id: str, usuario_id: int, data: PrestamoCreate, db: S
         monto_prestamo=P,
         tasa_interes_anual=data.tasa_interes_anual,
         plazo_meses=n,
+        unidad_plazo=unidad,
         tipo_amortizacion=data.tipo_amortizacion,
         fecha_desembolso=fecha_inicio,
         monto_cuota_mensual=cuota_mensual_estimada,
@@ -429,6 +449,7 @@ def listar_prestamos(empresa_id: str, db: Session = Depends(get_db)):
             "monto_prestamo": p.monto_prestamo,
             "tasa_interes_anual": p.tasa_interes_anual,
             "plazo_meses": p.plazo_meses,
+            "unidad_plazo": getattr(p, "unidad_plazo", None) or "meses",
             "tipo_amortizacion": p.tipo_amortizacion,
             "fecha_desembolso": p.fecha_desembolso,
             "monto_cuota_mensual": p.monto_cuota_mensual,
@@ -482,6 +503,7 @@ def obtener_tabla_amortizacion(prestamo_id: int, empresa_id: str, db: Session = 
             "monto_prestamo": prestamo.monto_prestamo,
             "tasa_interes_anual": prestamo.tasa_interes_anual,
             "plazo_meses": prestamo.plazo_meses,
+            "unidad_plazo": getattr(prestamo, "unidad_plazo", None) or "meses",
             "tipo_amortizacion": prestamo.tipo_amortizacion,
             "fecha_desembolso": prestamo.fecha_desembolso,
             "saldo_pendiente": prestamo.saldo_pendiente,
