@@ -26,6 +26,8 @@ class RecalcularSaldosRequest(BaseModel):
     producto_id: Optional[int] = None
     bodega_id: Optional[int] = None
     incluir_ventas_sin_bodega: bool = True
+    fecha_desde: Optional[date] = None
+    fecha_hasta: Optional[date] = None
 
 class KardexResponse(BaseModel):
     id: int
@@ -292,10 +294,18 @@ def recalcular_saldos(req: RecalcularSaldosRequest, db: Session = Depends(get_db
             db.add(bodega_principal)
             db.flush()
 
-        facturas_sin_kardex = db.query(Factura).filter(
+        query_fac = db.query(Factura).filter(
             Factura.empresa_id == req.empresa_id,
             Factura.estado != "anulada"
-        ).all()
+        )
+        if req.fecha_desde:
+            inicio_dt = datetime.combine(req.fecha_desde, datetime.min.time())
+            query_fac = query_fac.filter(Factura.fecha_emision >= inicio_dt)
+        if req.fecha_hasta:
+            fin_dt = datetime.combine(req.fecha_hasta, datetime.max.time())
+            query_fac = query_fac.filter(Factura.fecha_emision <= fin_dt)
+
+        facturas_sin_kardex = query_fac.all()
 
         for f in facturas_sin_kardex:
             if not f.bodega_salida_id:

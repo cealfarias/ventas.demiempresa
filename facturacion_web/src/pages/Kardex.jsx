@@ -35,11 +35,14 @@ export default function Kardex() {
   const esAdmin = !userRole || userRole === 'admin' || userRole === 'administrador' || userRole === 'propietario' || userRole === 'superadmin';
 
   // Estado para recalculador de saldos e informe de stock negativo
+  const anioActual = new Date().getFullYear();
   const [recalculando, setRecalculando] = useState(false);
   const [informeData, setInformeData] = useState(null);
   const [showInformeModal, setShowInformeModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [incluirVentasSinBodega, setIncluirVentasSinBodega] = useState(true);
+  const [fechaDesdeRetro, setFechaDesdeRetro] = useState(`${anioActual}-01-01`);
+  const [fechaHastaRetro, setFechaHastaRetro] = useState(new Date().toISOString().slice(0, 10));
   const [mensajeExito, setMensajeExito] = useState('');
 
   const cargarDatos = async () => {
@@ -73,7 +76,9 @@ export default function Kardex() {
         empresa_id: empresaId(),
         producto_id: filtroProd ? parseInt(filtroProd) : null,
         bodega_id: filtroBodega ? bodegas.find(b => b.nombre === filtroBodega)?.id : null,
-        incluir_ventas_sin_bodega: incluirVentas
+        incluir_ventas_sin_bodega: incluirVentas,
+        fecha_desde: incluirVentas && fechaDesdeRetro ? fechaDesdeRetro : null,
+        fecha_hasta: incluirVentas && fechaHastaRetro ? fechaHastaRetro : null
       };
 
       const res = await api.post('/api/v1/almacen/kardex/recalcular-saldos', payload);
@@ -810,10 +815,41 @@ export default function Kardex() {
                       Incluir ventas realizadas "Sin descontar inventario"
                     </span>
                     <span className="text-slate-500 text-[11px] block mt-0.5">
-                      Si está marcado, las facturas registradas sin bodega se asignarán a la bodega principal y descontarán existencias en este recálculo. Si no está marcado, solo se recalcularán los movimientos existentes en Kardex.
+                      Si está marcado, las facturas registradas sin bodega se asignarán a la bodega principal y descontarán existencias en este recálculo.
                     </span>
                   </div>
                 </label>
+
+                {incluirVentasSinBodega && (
+                  <div className="pt-2 border-t border-slate-200 space-y-2">
+                    <label className="text-[11px] font-bold text-indigo-900 uppercase tracking-wider block">
+                      Rango de Fechas de las Ventas a Incluir:
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <span className="text-[10px] font-semibold text-slate-500 block mb-1">Desde Fecha</span>
+                        <input
+                          type="date"
+                          value={fechaDesdeRetro}
+                          onChange={e => setFechaDesdeRetro(e.target.value)}
+                          className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-semibold text-slate-500 block mb-1">Hasta Fecha</span>
+                        <input
+                          type="date"
+                          value={fechaHastaRetro}
+                          onChange={e => setFechaHastaRetro(e.target.value)}
+                          className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-500">
+                      Por defecto predeterminado al año en curso ({anioActual}). Solo se integrarán las facturas emitidas dentro de este periodo.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {filtroProd && (
