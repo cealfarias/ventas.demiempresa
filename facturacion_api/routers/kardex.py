@@ -368,10 +368,17 @@ def recalcular_saldos(req: RecalcularSaldosRequest, db: Session = Depends(get_db
                 fin_dt = datetime.combine(req.fecha_hasta, datetime.max.time())
                 query_mov = query_mov.filter(Kardex.fecha <= fin_dt)
 
-            movimientos = query_mov.order_by(Kardex.fecha.asc(), Kardex.id.asc()).all()
-
-            if not movimientos:
+            movimientos_raw = query_mov.all()
+            if not movimientos_raw:
                 continue
+
+            def sort_key_kardex(m):
+                tipo_u = (m.tipo_movimiento or "").upper()
+                es_ent = 0 if ("ENTRADA" in tipo_u or "POSITIVO" in tipo_u or "COMPRA" in tipo_u) else 1
+                f_dia = m.fecha.date() if isinstance(m.fecha, datetime) else m.fecha
+                return (f_dia, es_ent, m.fecha, m.id)
+
+            movimientos = sorted(movimientos_raw, key=sort_key_kardex)
 
             running_stock = 0.0
             running_costo = 0.0

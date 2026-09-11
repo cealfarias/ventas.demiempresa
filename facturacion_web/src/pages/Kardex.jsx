@@ -185,11 +185,53 @@ export default function Kardex() {
 
   // 2. Calcular movimientos procesados (Promedio Ponderado / Saldos)
   const getMovimientosProcesados = () => {
+    const getEsEntrada = (tipo) => {
+      const t = (tipo || '').toUpperCase();
+      return (t.includes('ENTRADA') || t.includes('POSITIVO') || t.includes('COMPRA')) ? 0 : 1;
+    };
+
+    const getFechaDiaStr = (f) => {
+      if (!f) return '';
+      if (typeof f === 'string' && f.length >= 10 && f[4] === '-' && f[7] === '-') {
+        return f.slice(0, 10);
+      }
+      try {
+        const d = new Date(f);
+        return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+      } catch (e) {
+        return '';
+      }
+    };
+
     if (!filtroProd) {
-      return movimientosFiltrados.sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
+      return [...movimientosFiltrados].sort((a, b) => {
+        const dA = getFechaDiaStr(a.fecha);
+        const dB = getFechaDiaStr(b.fecha);
+        if (dA !== dB) return dB.localeCompare(dA);
+        const entA = getEsEntrada(a.tipo_movimiento);
+        const entB = getEsEntrada(b.tipo_movimiento);
+        if (entA !== entB) return entA - entB;
+        const tA = new Date(a.fecha || 0).getTime();
+        const tB = new Date(b.fecha || 0).getTime();
+        if (tA !== tB) return tB - tA;
+        return (b.id || 0) - (a.id || 0);
+      });
     }
 
-    const ordenadosAsc = [...movimientosFiltrados].sort((a, b) => new Date(a.fecha || 0) - new Date(b.fecha || 0));
+    // Ordenamiento cronológico estricto: Día ASC -> ENTRADA (0) antes que SALIDA (1) -> Hora ASC -> ID ASC
+    const ordenadosAsc = [...movimientosFiltrados].sort((a, b) => {
+      const dA = getFechaDiaStr(a.fecha);
+      const dB = getFechaDiaStr(b.fecha);
+      if (dA !== dB) return dA.localeCompare(dB);
+      const entA = getEsEntrada(a.tipo_movimiento);
+      const entB = getEsEntrada(b.tipo_movimiento);
+      if (entA !== entB) return entA - entB;
+      const tA = new Date(a.fecha || 0).getTime();
+      const tB = new Date(b.fecha || 0).getTime();
+      if (tA !== tB) return tA - tB;
+      return (a.id || 0) - (b.id || 0);
+    });
+
     let saldo_cant = 0;
     let saldo_valor = 0;
     
@@ -198,7 +240,7 @@ export default function Kardex() {
       let out_cant = 0, out_unit = 0, out_total = 0;
       const tipoMov = (m.tipo_movimiento || '').toUpperCase();
       
-      if (tipoMov.includes('ENTRADA') || tipoMov.includes('POSITIVO')) {
+      if (tipoMov.includes('ENTRADA') || tipoMov.includes('POSITIVO') || tipoMov.includes('COMPRA')) {
         in_cant = m.cantidad || 0;
         in_unit = m.costo_unitario || 0;
         in_total = (m.costo_total && m.costo_total > 0) ? m.costo_total : (in_cant * in_unit);
