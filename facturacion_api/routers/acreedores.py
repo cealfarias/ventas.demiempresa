@@ -77,6 +77,7 @@ class PrestamoCreate(BaseModel):
     plazo_meses: Optional[int] = None # compatibilidad previa
     plazo: Optional[int] = None # plazo numérico
     unidad_plazo: Optional[str] = "meses" # meses | dias
+    monto_cuota_manual: Optional[int] = None # cuota ingresada en USD (centavos)
     tipo_amortizacion: str # saldos_frances | interes_simple
     fecha_desembolso: Optional[str] = None
     notas: Optional[str] = None
@@ -308,18 +309,48 @@ def crear_prestamo(empresa_id: str, usuario_id: int, data: PrestamoCreate, db: S
 
     # Generación de la Tabla de Amortización Teórica
     P = data.monto_prestamo # centavos
-    r = data.tasa_interes_anual / 100.0 # tasa anual decimal
-
-    if unidad == "dias":
-        i = r / 365.0 # tasa diaria decimal
-    else:
-        i = r / 12.0 # tasa mensual decimal
+    r = data.tasa_interes_anual / 100.0 # tasa en decimal
 
     cuotas_teoricas = []
     saldo_restante = P
 
-    if data.tipo_amortizacion == "saldos_frances":
+    if data.monto_cuota_manual and data.monto_cuota_manual > 0:
+        # Modo Cuota Fija Manual ($ USD)
+        cuota_fija = data.monto_cuota_manual
+        total_a_pagar = cuota_fija * n
+        interes_total = max(0, total_a_pagar - P)
+        interes_cuota_base = round(interes_total / n)
+        capital_cuota_base = cuota_fija - interes_cuota_base
+
+        for k in range(1, n + 1):
+            if k == n:
+                capital_k = saldo_restante
+                interes_k = max(0, cuota_fija - capital_k)
+                cuota_k = capital_k + interes_k
+                saldo_restante = 0
+            else:
+                capital_k = min(saldo_restante, capital_cuota_base)
+                interes_k = max(0, cuota_fija - capital_k)
+                cuota_k = cuota_fija
+                saldo_restante -= capital_k
+
+            if unidad == "dias":
+                vencimiento = fecha_inicio + timedelta(days=k)
+            else:
+                vencimiento = add_months(fecha_inicio, k)
+
+            cuotas_teoricas.append({
+                "numero_cuota": k,
+                "fecha_vencimiento": vencimiento,
+                "monto_cuota_teorica": cuota_k,
+                "monto_capital_teorico": capital_k,
+                "monto_interes_teorico": interes_k,
+                "saldo_teorico": max(0, saldo_restante)
+            })
+
+    elif data.tipo_amortizacion == "saldos_frances":
         # Sistema Francés: Cuota fija sobre saldos
+        i = (r / 365.0) if unidad == "dias" else (r / 12.0)
         if i > 0:
             C_float = P * (i * ((1 + i) ** n)) / (((1 + i) ** n) - 1)
         else:
@@ -328,7 +359,6 @@ def crear_prestamo(empresa_id: str, usuario_id: int, data: PrestamoCreate, db: S
 
         for k in range(1, n + 1):
             if k == n:
-                # Última cuota ajusta capital exacto al saldo restante
                 interes_k = round(saldo_restante * i)
                 capital_k = saldo_restante
                 cuota_k = capital_k + interes_k
@@ -357,7 +387,8 @@ def crear_prestamo(empresa_id: str, usuario_id: int, data: PrestamoCreate, db: S
 
     else: # interes_simple (Flat Rate)
         if unidad == "dias":
-            interes_total = P * r * (n / 365.0)
+            # Para préstamos en días, la tasa % simple aplica directa sobre el capital del período (Flat Rate)
+            interes_total = P * r
         else:
             interes_total = P * r * (n / 12.0)
 

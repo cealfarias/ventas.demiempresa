@@ -20,8 +20,27 @@ export default function PagoPrestamos() {
   // Modales
   const [modalNuevoPrestamo, setModalNuevoPrestamo] = useState(false);
   const [formPrestamo, setFormPrestamo] = useState({
-    acreedor_id: '', monto_prestamo: '', tasa_interes_anual: 12.0, plazo: 12, plazo_meses: 12, unidad_plazo: 'meses', tipo_amortizacion: 'saldos_frances', fecha_desembolso: '', notas: ''
+    acreedor_id: '', monto_prestamo: '', tasa_interes_anual: 12.0, plazo: 12, plazo_meses: 12, unidad_plazo: 'meses', monto_cuota: '', tipo_amortizacion: 'saldos_frances', fecha_desembolso: '', notas: ''
   });
+
+  const calcularCuotaEstimada = (monto, tasa, plazo, unidad, tipo) => {
+    const p = parseFloat(monto || 0);
+    const r = parseFloat(tasa || 0) / 100.0;
+    const n = parseInt(plazo || 0);
+    if (p <= 0 || n <= 0) return '';
+
+    if (tipo === 'interes_simple') {
+      const interesTotal = unidad === 'dias' ? p * r : p * r * (n / 12.0);
+      return ((p + interesTotal) / n).toFixed(2);
+    } else {
+      const i = unidad === 'dias' ? r / 365.0 : r / 12.0;
+      if (i > 0) {
+        const c = p * (i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1);
+        return c.toFixed(2);
+      }
+      return (p / n).toFixed(2);
+    }
+  };
 
   const [modalPagoCuota, setModalPagoCuota] = useState(false);
   const [cuotaAPagar, setCuotaAPagar] = useState(null);
@@ -155,6 +174,7 @@ export default function PagoPrestamos() {
         plazo: plazoNum,
         plazo_meses: plazoNum,
         unidad_plazo: formPrestamo.unidad_plazo || 'meses',
+        monto_cuota_manual: formPrestamo.monto_cuota ? Math.round(parseFloat(formPrestamo.monto_cuota) * 100) : null,
         tipo_amortizacion: formPrestamo.tipo_amortizacion,
         fecha_desembolso: formPrestamo.fecha_desembolso || null,
         notas: formPrestamo.notas
@@ -440,7 +460,11 @@ export default function PagoPrestamos() {
                     type="number"
                     step="0.01"
                     value={formPrestamo.monto_prestamo}
-                    onChange={(e) => setFormPrestamo({ ...formPrestamo, monto_prestamo: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const c = calcularCuotaEstimada(val, formPrestamo.tasa_interes_anual, formPrestamo.plazo || formPrestamo.plazo_meses, formPrestamo.unidad_plazo, formPrestamo.tipo_amortizacion);
+                      setFormPrestamo({ ...formPrestamo, monto_prestamo: val, monto_cuota: c });
+                    }}
                     className="w-full border rounded-xl p-2.5 outline-none focus:border-indigo-500 font-bold"
                     placeholder="1000.00"
                   />
@@ -451,7 +475,11 @@ export default function PagoPrestamos() {
                     type="number"
                     step="0.1"
                     value={formPrestamo.tasa_interes_anual}
-                    onChange={(e) => setFormPrestamo({ ...formPrestamo, tasa_interes_anual: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const c = calcularCuotaEstimada(formPrestamo.monto_prestamo, val, formPrestamo.plazo || formPrestamo.plazo_meses, formPrestamo.unidad_plazo, formPrestamo.tipo_amortizacion);
+                      setFormPrestamo({ ...formPrestamo, tasa_interes_anual: val, monto_cuota: c });
+                    }}
                     className="w-full border rounded-xl p-2.5 outline-none focus:border-indigo-500 font-semibold"
                     placeholder="12.0"
                   />
@@ -467,7 +495,11 @@ export default function PagoPrestamos() {
                       name="unidad_plazo"
                       value="meses"
                       checked={formPrestamo.unidad_plazo === 'meses'}
-                      onChange={(e) => setFormPrestamo({ ...formPrestamo, unidad_plazo: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const c = calcularCuotaEstimada(formPrestamo.monto_prestamo, formPrestamo.tasa_interes_anual, formPrestamo.plazo || formPrestamo.plazo_meses, val, formPrestamo.tipo_amortizacion);
+                        setFormPrestamo({ ...formPrestamo, unidad_plazo: val, monto_cuota: c });
+                      }}
                       className="text-indigo-600 focus:ring-indigo-500"
                     />
                     <span>Meses</span>
@@ -478,7 +510,11 @@ export default function PagoPrestamos() {
                       name="unidad_plazo"
                       value="dias"
                       checked={formPrestamo.unidad_plazo === 'dias'}
-                      onChange={(e) => setFormPrestamo({ ...formPrestamo, unidad_plazo: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const c = calcularCuotaEstimada(formPrestamo.monto_prestamo, formPrestamo.tasa_interes_anual, formPrestamo.plazo || formPrestamo.plazo_meses, val, formPrestamo.tipo_amortizacion);
+                        setFormPrestamo({ ...formPrestamo, unidad_plazo: val, monto_cuota: c });
+                      }}
                       className="text-indigo-600 focus:ring-indigo-500"
                     />
                     <span>Días</span>
@@ -494,7 +530,11 @@ export default function PagoPrestamos() {
                   <input
                     type="number"
                     value={formPrestamo.plazo || formPrestamo.plazo_meses}
-                    onChange={(e) => setFormPrestamo({ ...formPrestamo, plazo: e.target.value, plazo_meses: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const c = calcularCuotaEstimada(formPrestamo.monto_prestamo, formPrestamo.tasa_interes_anual, val, formPrestamo.unidad_plazo, formPrestamo.tipo_amortizacion);
+                      setFormPrestamo({ ...formPrestamo, plazo: val, plazo_meses: val, monto_cuota: c });
+                    }}
                     className="w-full border rounded-xl p-2.5 outline-none focus:border-indigo-500 font-semibold"
                     placeholder={formPrestamo.unidad_plazo === 'dias' ? '30' : '12'}
                   />
@@ -511,6 +551,24 @@ export default function PagoPrestamos() {
               </div>
 
               <div>
+                <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                  <span>Monto Cuota ($ USD) *</span>
+                  <span className="text-[11px] font-normal text-indigo-600">(Editable / Calculado)</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formPrestamo.monto_cuota}
+                  onChange={(e) => setFormPrestamo({ ...formPrestamo, monto_cuota: e.target.value })}
+                  className="w-full border rounded-xl p-2.5 outline-none focus:border-indigo-500 font-black text-emerald-600 text-base bg-emerald-50/20"
+                  placeholder="10.00"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Monto de cada cuota a amortizar. Puede escribir un valor exacto en USD si lo desea.
+                </p>
+              </div>
+
+              <div>
                 <label className="block font-semibold text-slate-700 mb-2">Sistema de Amortización *</label>
                 <div className="grid grid-cols-2 gap-3">
                   <label className={`p-3 rounded-xl border cursor-pointer flex flex-col transition-all ${formPrestamo.tipo_amortizacion === 'saldos_frances' ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900' : 'border-slate-200'}`}>
@@ -520,7 +578,11 @@ export default function PagoPrestamos() {
                         name="tipo_amort"
                         value="saldos_frances"
                         checked={formPrestamo.tipo_amortizacion === 'saldos_frances'}
-                        onChange={(e) => setFormPrestamo({ ...formPrestamo, tipo_amortizacion: e.target.value })}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const c = calcularCuotaEstimada(formPrestamo.monto_prestamo, formPrestamo.tasa_interes_anual, formPrestamo.plazo || formPrestamo.plazo_meses, formPrestamo.unidad_plazo, val);
+                          setFormPrestamo({ ...formPrestamo, tipo_amortizacion: val, monto_cuota: c });
+                        }}
                       />
                       Intereses s/ Saldos
                     </div>
@@ -534,7 +596,11 @@ export default function PagoPrestamos() {
                         name="tipo_amort"
                         value="interes_simple"
                         checked={formPrestamo.tipo_amortizacion === 'interes_simple'}
-                        onChange={(e) => setFormPrestamo({ ...formPrestamo, tipo_amortizacion: e.target.value })}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const c = calcularCuotaEstimada(formPrestamo.monto_prestamo, formPrestamo.tasa_interes_anual, formPrestamo.plazo || formPrestamo.plazo_meses, formPrestamo.unidad_plazo, val);
+                          setFormPrestamo({ ...formPrestamo, tipo_amortizacion: val, monto_cuota: c });
+                        }}
                       />
                       Interés Simple
                     </div>
