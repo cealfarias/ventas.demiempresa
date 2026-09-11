@@ -43,6 +43,7 @@ export default function Kardex() {
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [incluirVentasSinBodega, setIncluirVentasSinBodega] = useState(true);
   const [fechaDesdeRetro, setFechaDesdeRetro] = useState(`${anioActual}-01-01`);
+  const [fechaHastaRetro, setFechaHastaRetro] = useState(new Date().toISOString().slice(0, 10));
   // Filtros de fecha principal en pantalla de Kardex
   const [filtroFechaDesde, setFiltroFechaDesde] = useState(`${anioActual}-01-01`);
   const [filtroFechaHasta, setFiltroFechaHasta] = useState('');
