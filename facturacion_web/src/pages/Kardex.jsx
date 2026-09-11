@@ -37,6 +37,7 @@ export default function Kardex() {
   // Estado para recalculador de saldos e informe de stock negativo
   const anioActual = new Date().getFullYear();
   const [recalculando, setRecalculando] = useState(false);
+  const [mensajeExito, setMensajeExito] = useState('');
   const [informeData, setInformeData] = useState(null);
   const [showInformeModal, setShowInformeModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
