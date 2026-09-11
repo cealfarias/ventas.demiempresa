@@ -1,0 +1,15 @@
+{
+  "appId": "online.demiempresa.ventas",
+  "appName": "demiempresa Ventas & POS",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#4f46e5"
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, NavLink, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Receipt, Package, Users, Settings, LogOut, Menu,
   Warehouse, BarChart3, ChevronDown, ChevronRight, Truck, ShoppingCart, CreditCard, BookOpen
@@ -191,9 +191,14 @@ const Layout = ({ children }) => {
       </aside>
 
       {/* Contenido principal */}
-      <main className="flex-1 overflow-y-auto">
-        <header className="h-14 bg-white border-b border-slate-200 flex items-center px-6 justify-between sticky top-0 z-10">
-          <h2 className="text-xs font-semibold text-slate-400 tracking-wider uppercase">Ambiente Seguro SaaS</h2>
+      <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
+        <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 sm:px-6 justify-between sticky top-0 z-10">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setExpanded(!expanded)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 md:hidden">
+              <Menu className="w-5 h-5" />
+            </button>
+            <h2 className="text-xs font-semibold text-slate-400 tracking-wider uppercase">Ambiente Seguro SaaS</h2>
+          </div>
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
               <NombreEmpresa />
@@ -211,6 +216,30 @@ const Layout = ({ children }) => {
         {/* Widget del Avatar IA Interactivo */}
         <AvatarWidget />
       </main>
+
+      {/* Barra de Navegación Inferior Móvil (Android / iOS Touch) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 flex items-center justify-around py-1.5 px-2 shadow-lg">
+        <NavLink to="/dashboard" className={({isActive}) => `flex flex-col items-center p-1 text-[10px] font-semibold ${isActive ? 'text-indigo-600 font-bold' : 'text-slate-500'}`}>
+          <LayoutDashboard className="w-5 h-5 mb-0.5" />
+          <span>Inicio</span>
+        </NavLink>
+        <NavLink to="/facturas" className={({isActive}) => `flex flex-col items-center p-1 text-[10px] font-semibold ${isActive ? 'text-indigo-600 font-bold' : 'text-slate-500'}`}>
+          <Receipt className="w-5 h-5 mb-0.5" />
+          <span>POS/DTE</span>
+        </NavLink>
+        <NavLink to="/cajas" className={({isActive}) => `flex flex-col items-center p-1 text-[10px] font-semibold ${isActive ? 'text-indigo-600 font-bold' : 'text-slate-500'}`}>
+          <Wallet className="w-5 h-5 mb-0.5" />
+          <span>Caja</span>
+        </NavLink>
+        <NavLink to="/kardex" className={({isActive}) => `flex flex-col items-center p-1 text-[10px] font-semibold ${isActive ? 'text-indigo-600 font-bold' : 'text-slate-500'}`}>
+          <BookOpen className="w-5 h-5 mb-0.5" />
+          <span>Kardex</span>
+        </NavLink>
+        <button onClick={() => setExpanded(!expanded)} className="flex flex-col items-center p-1 text-[10px] font-semibold text-slate-500 hover:text-indigo-600">
+          <Menu className="w-5 h-5 mb-0.5" />
+          <span>Menú</span>
+        </button>
+      </nav>
     </div>
   );
 };
