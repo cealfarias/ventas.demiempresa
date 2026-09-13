@@ -273,6 +273,10 @@ export default function Facturas() {
       setShowModalCajaRequerida(true);
       return;
     }
+    const itemsValidos = form.items.filter(i => i.producto_id !== '' && i.producto_id !== null && i.producto_id !== undefined);
+    if (itemsValidos.length === 0) {
+      return window.dispatchEvent(new CustomEvent('avatar:say', { detail: { text: 'Agregue al menos un producto válido', options: [{label:'Aceptar', action:null}] }}));
+    }
     if (form.condicion_operacion === "CONTADO" && form.metodo_pago === "efectivo") {
       setEfectivoRecibido((total/100).toFixed(2));
       setModalVuelto(true);
@@ -284,8 +288,10 @@ export default function Facturas() {
   const guardar = async () => {
     setModalVuelto(false);
 
+    const itemsValidos = form.items.filter(i => i.producto_id !== '' && i.producto_id !== null && i.producto_id !== undefined);
+
     if (!form.cliente_id) return window.dispatchEvent(new CustomEvent('avatar:say', { detail: { text: 'Seleccione un cliente', options: [{label:'Aceptar', action:null}] }}));
-    if (form.items.length === 0) return window.dispatchEvent(new CustomEvent('avatar:say', { detail: { text: 'Agregue al menos un producto', options: [{label:'Aceptar', action:null}] }}));
+    if (itemsValidos.length === 0) return window.dispatchEvent(new CustomEvent('avatar:say', { detail: { text: 'Agregue al menos un producto', options: [{label:'Aceptar', action:null}] }}));
 
     const clienteSel = clientes.find(c => String(c.id_cliente) === String(form.cliente_id));
     if (form.condicion_operacion === 'CREDITO' && clienteSel) {
@@ -319,10 +325,11 @@ export default function Facturas() {
         subtotal: subtotal,
         iva: iva,
         total: total,
-        items: form.items.map(i => ({ 
+        items: itemsValidos.map(i => ({ 
           ...i, 
-          precio_unitario: parseFloat(i.precio_unitario), 
-          subtotal: Math.round(i.cantidad * parseFloat(i.precio_unitario) * 100) 
+          producto_id: parseInt(i.producto_id),
+          precio_unitario: parseFloat(i.precio_unitario) || 0, 
+          subtotal: Math.round((i.cantidad || 0) * (parseFloat(i.precio_unitario) || 0) * 100) 
         }))
       };
       if (editandoId) {
@@ -339,7 +346,8 @@ export default function Facturas() {
     finally { setGuardando(false); }
   };
 
-  const sumItems = form.items.reduce((acc, i) => acc + (i.cantidad * (parseFloat(i.precio_unitario) || 0) * 100), 0);
+  const itemsValidos = form.items.filter(i => i.producto_id !== '' && i.producto_id !== null && i.producto_id !== undefined);
+  const sumItems = itemsValidos.reduce((acc, i) => acc + ((i.cantidad || 0) * (parseFloat(i.precio_unitario) || 0) * 100), 0);
   let subtotal = Math.round(sumItems);
   let iva = 0;
   
@@ -541,7 +549,7 @@ export default function Facturas() {
 
         <div className="flex gap-4">
           <button onClick={() => { setVista('lista'); setEditandoId(null); }} className="px-6 py-3 rounded-xl border border-slate-300 font-bold text-slate-700 bg-white hover:bg-slate-50 transition-colors">Cancelar</button>
-          <button onClick={intentarGuardar} disabled={guardando || !form.cliente_id || form.items.length === 0} className="flex-1 px-6 py-3 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl font-extrabold text-base shadow-lg shadow-emerald-600/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+          <button onClick={intentarGuardar} disabled={guardando || !form.cliente_id || itemsValidos.length === 0} className="flex-1 px-6 py-3 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl font-extrabold text-base shadow-lg shadow-emerald-600/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
             {guardando ? (editandoId ? 'Actualizando...' : 'Emitiendo...') : (editandoId ? 'Actualizar Factura' : '🧾 Emitir y Cobrar Factura')}
           </button>
         </div>
