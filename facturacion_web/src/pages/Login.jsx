@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 import { GoogleLogin } from '@react-oauth/google';
@@ -17,6 +17,23 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [show2FA, setShow2FA] = useState(false);
   const [otpCode, setOtpCode] = useState('');
+
+  useEffect(() => {
+    if (isExpired) {
+      const speechText = "Hola, tu sesión ha sido cerrada automáticamente por inactividad para proteger la seguridad de tu empresa. Por favor, ingresa tus credenciales nuevamente.";
+      if ('speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(speechText);
+          utterance.lang = 'es-ES';
+          utterance.rate = 1.0;
+          window.speechSynthesis.speak(utterance);
+        } catch (e) {
+          console.error("Error al sintetizar voz del avatar", e);
+        }
+      }
+    }
+  }, [isExpired]);
 
   const handleChange = (e) => {
     setFormData(prev => ({ ...prev, [name]: e.target.value }));
@@ -149,8 +166,41 @@ export default function Login() {
 
             <form onSubmit={handleLoginSubmit}>
               {isExpired && (
-                <div style={{ backgroundColor: '#fffbeb', color: '#b45309', padding: '0.75rem', marginBottom: '1rem', borderRadius: '0.5rem', border: '1px solid #fde68a', fontSize: '0.875rem' }}>
-                  Tu sesión ha expirado por inactividad. Por favor, inicia sesión nuevamente.
+                <div style={{
+                  backgroundColor: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '1rem',
+                  padding: '1rem',
+                  marginBottom: '1.25rem',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '0.875rem',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.12)'
+                }}>
+                  <div style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#ffffff',
+                    fontSize: '1.35rem',
+                    flexShrink: 0,
+                    boxShadow: '0 2px 8px rgba(79, 70, 229, 0.3)'
+                  }}>
+                    🤖
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#166534', display: 'flex', items: 'center', gap: '0.35rem', marginBottom: '0.25rem' }}>
+                      <span>Avatar IA Asistente</span>
+                      <span style={{ fontSize: '0.65rem', background: '#dcfce7', color: '#15803d', padding: '0.1rem 0.4rem', borderRadius: '9999px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Seguridad</span>
+                    </div>
+                    <p style={{ fontSize: '0.8125rem', color: '#15803d', lineHeight: '1.4', margin: 0 }}>
+                      ¡Hola! Se ha cerrado tu sesión automáticamente por inactividad para proteger los datos de tu empresa. Por favor, ingresa tus credenciales para continuar.
+                    </p>
+                  </div>
                 </div>
               )}
               {error && <div className="login-error">{error}</div>}

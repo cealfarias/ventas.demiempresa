@@ -78,6 +78,44 @@ const SidebarSection = ({ label, expanded, children }) => (
   </div>
 );
 
+// ── Listener de Inactividad de Sesión (15 Minutos) ────────────────────────────
+const SessionTimeoutListener = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const TIMEOUT_MS = 15 * 60 * 1000; // 15 minutos
+    let timer = null;
+
+    const resetTimer = () => {
+      if (timer) clearTimeout(timer);
+      const token = localStorage.getItem('token');
+      if (token && location.pathname !== '/login' && location.pathname !== '/registro') {
+        timer = setTimeout(() => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('rol');
+          localStorage.removeItem('empresa_id');
+          localStorage.removeItem('usuario_id');
+          sessionStorage.removeItem('avatar_session_greeted');
+          navigate('/login?expired=true');
+        }, TIMEOUT_MS);
+      }
+    };
+
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+    events.forEach(evt => window.addEventListener(evt, resetTimer));
+
+    resetTimer();
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      events.forEach(evt => window.removeEventListener(evt, resetTimer));
+    };
+  }, [location.pathname, navigate]);
+
+  return null;
+};
+
 // ── Guard de autenticación ────────────────────────────────────────────────────
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -258,6 +296,7 @@ function App() {
     <ErrorBoundary>
       <GoogleOAuthProvider clientId={clientId}>
         <Router>
+          <SessionTimeoutListener />
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/registro" element={<Registro />} />
