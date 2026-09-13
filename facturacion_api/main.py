@@ -17,6 +17,11 @@ except Exception as e:
 try:
     with engine.begin() as conn:
         conn.execute(text("ALTER TABLE prestamos_acreedores ADD COLUMN IF NOT EXISTS unidad_plazo VARCHAR(10) DEFAULT 'meses';"))
+        conn.execute(text("ALTER TABLE productos ADD COLUMN IF NOT EXISTS categoria_id INTEGER;"))
+        conn.execute(text("ALTER TABLE productos ADD COLUMN IF NOT EXISTS subcategoria VARCHAR(100);"))
+        conn.execute(text("ALTER TABLE productos ADD COLUMN IF NOT EXISTS marca VARCHAR(100);"))
+        conn.execute(text("ALTER TABLE productos ADD COLUMN IF NOT EXISTS tipo_item VARCHAR(20) DEFAULT 'BIEN';"))
+        conn.execute(text("ALTER TABLE productos ADD COLUMN IF NOT EXISTS unidad_medida VARCHAR(50) DEFAULT 'UNIDAD';"))
 except Exception as e:
     print("Migration check note:", e)
 

@@ -79,6 +79,21 @@ class Cliente(Base):
     cuentas_cobrar = relationship("CuentaPorCobrar", back_populates="cliente")
 
 
+class CategoriaProducto(Base):
+    __tablename__ = "categorias_producto"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    empresa_id = Column(String, index=True, nullable=False)
+    nombre = Column(String(100), nullable=False)
+    codigo_prefijo = Column(String(10), nullable=True)
+    descripcion = Column(Text, nullable=True)
+    cuenta_contable_ventas = Column(String(50), nullable=True)
+    cuenta_contable_inventario = Column(String(50), nullable=True)
+    cuenta_contable_costo = Column(String(50), nullable=True)
+
+    productos = relationship("Producto", back_populates="categoria_obj")
+
+
 class Producto(Base):
     __tablename__ = "productos"
 
@@ -94,8 +109,15 @@ class Producto(Base):
     costo_promedio = Column(Float, default=0.0)
     stock = Column(Float, default=0.0)
     
+    categoria_id = Column(Integer, ForeignKey("categorias_producto.id"), nullable=True)
+    subcategoria = Column(String(100), nullable=True)
+    marca = Column(String(100), nullable=True)
+    tipo_item = Column(String(20), default="BIEN") # BIEN | SERVICIO | INSUMO
+    unidad_medida = Column(String(50), default="UNIDAD")
+    
     activo = Column(Boolean, default=True)
     
+    categoria_obj = relationship("CategoriaProducto", back_populates="productos")
     kardex = relationship("Kardex", back_populates="producto")
 
 
