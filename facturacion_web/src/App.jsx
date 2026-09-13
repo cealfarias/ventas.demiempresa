@@ -155,9 +155,12 @@ const Layout = ({ children }) => {
         {/* Logo */}
         <div className="h-14 flex items-center justify-between px-3.5 border-b border-slate-800/80 bg-slate-950/60 flex-shrink-0">
           {expanded && (
-            <div className="flex items-center gap-2 overflow-hidden">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-amber-400 flex items-center justify-center text-white font-black text-base shadow-md shrink-0 border border-white/20">F</div>
-              <span className="font-extrabold text-base text-white tracking-tight whitespace-nowrap">Facturación</span>
+            <div className="flex items-center gap-2.5 overflow-hidden">
+              <img src="/favicon.png" alt="Logo" className="w-8 h-8 rounded-xl object-contain bg-white p-0.5 shadow-md border border-white/20 shrink-0" />
+              <div className="flex flex-col">
+                <span className="font-extrabold text-sm text-white tracking-tight leading-none">Facturación</span>
+                <span className="text-[9px] text-amber-300 font-semibold tracking-wider italic mt-0.5">¿Dónde está mi dinero?</span>
+              </div>
             </div>
           )}
           <button onClick={() => setExpanded(!expanded)} className="p-1.5 rounded-lg text-slate-400 hover:bg-white/10 hover:text-white ml-auto transition-colors">
@@ -239,7 +242,7 @@ const Layout = ({ children }) => {
             </button>
             <div className="hidden sm:flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <h2 className="text-[11px] font-extrabold text-indigo-900 tracking-wider uppercase">Plataforma SaaS Corporativa</h2>
+              <h2 className="text-[11px] font-extrabold text-indigo-900 tracking-wider uppercase">Plataforma SaaS Corporativa <span className="text-indigo-600 font-bold lowercase italic tracking-normal border-l border-slate-300 pl-2 ml-1">"¿Dónde está mi dinero?"</span></h2>
             </div>
           </div>
           <div className="flex items-center gap-3">
