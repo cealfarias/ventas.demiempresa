@@ -766,3 +766,40 @@ class CuotaAmortizacion(Base):
     usuario = relationship("Usuario")
 
 
+# ==========================================
+# MÓDULO DE SOPORTE TÉCNICO Y MENSAJERÍA
+# ==========================================
+
+class TicketSoporte(Base):
+    __tablename__ = "sop_ticket"
+
+    id = Column(Integer, primary_key=True, index=True)
+    empresa_id = Column(String, ForeignKey("empresas.id"), nullable=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    asunto = Column(String(200), nullable=False)
+    categoria = Column(String(50), default="Soporte Técnico")
+    prioridad = Column(String(20), default="Media")
+    estado = Column(String(20), default="ABIERTO")
+    fecha_creacion = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
+    fecha_actualizacion = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE), onupdate=lambda: datetime.now(TIMEZONE))
+
+    empresa = relationship("Empresa")
+    usuario = relationship("Usuario")
+    mensajes = relationship("MensajeTicket", back_populates="ticket", cascade="all, delete-orphan", order_by="MensajeTicket.fecha_envio.asc()")
+
+
+class MensajeTicket(Base):
+    __tablename__ = "sop_mensaje"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ticket_id = Column(Integer, ForeignKey("sop_ticket.id"), nullable=False)
+    remitente_usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    es_propietario = Column(Boolean, default=False)
+    contenido = Column(Text, nullable=False)
+    fecha_envio = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
+
+    ticket = relationship("TicketSoporte", back_populates="mensajes")
+    remitente = relationship("Usuario")
+
+
+

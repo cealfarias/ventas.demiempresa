@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, NavLink, useLocation, Nav
 import {
   LayoutDashboard, Receipt, Package, Users, Settings, LogOut, Menu,
   Warehouse, BarChart3, ChevronDown, ChevronRight, Truck, ShoppingCart, CreditCard, BookOpen
-, Wallet, DollarSign, Calculator, ShieldCheck, UserCheck } from 'lucide-react';
+, Wallet, DollarSign, Calculator, ShieldCheck, UserCheck, Headphones } from 'lucide-react';
 import Productos from './pages/Productos';
 import Login from './pages/Login';
 import Registro from './pages/Registro';
@@ -27,6 +27,7 @@ import Acreedores from './pages/Acreedores';
 import Aportantes from './pages/Aportantes';
 import PagoPrestamos from './pages/PagoPrestamos';
 import BackupRecovery from './pages/BackupRecovery';
+import SoporteModal from './components/SoporteModal';
 
 import Dashboard from './pages/Dashboard';
 import Despachos from './pages/Despachos';
@@ -126,7 +127,25 @@ const PrivateRoute = ({ children }) => {
 // ── Layout principal ──────────────────────────────────────────────────────────
 const Layout = ({ children }) => {
   const [expanded, setExpanded] = useState(true);
+  const [showSoporteModal, setShowSoporteModal] = useState(false);
+  const [unreadSoporte, setUnreadSoporte] = useState(0);
   const navigate = useNavigate();
+
+  const fetchUnreadSoporte = async () => {
+    const eid = localStorage.getItem('empresa_id');
+    const uid = localStorage.getItem('usuario_id') ? parseInt(localStorage.getItem('usuario_id')) : 1;
+    if (!eid) return;
+    try {
+      const res = await api.get(`/api/v1/soporte/unread?empresa_id=${eid}&usuario_id=${uid}`);
+      setUnreadSoporte(res.data || 0);
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    fetchUnreadSoporte();
+    const interval = setInterval(fetchUnreadSoporte, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -212,6 +231,23 @@ const Layout = ({ children }) => {
             </SidebarSection>
           )}
 
+          <SidebarSection label="Ayuda & Soporte" expanded={expanded}>
+            <button
+              onClick={() => setShowSoporteModal(true)}
+              className="w-full flex items-center px-3 py-2.5 my-0.5 rounded-xl transition-all text-indigo-300 hover:bg-white/10 hover:text-white font-medium relative group"
+            >
+              <Headphones className="w-5 h-5 flex-shrink-0 text-indigo-400 group-hover:text-white" />
+              {expanded && (
+                <span className="ml-3 text-xs whitespace-nowrap tracking-wide flex-1 text-left flex items-center justify-between">
+                  <span>Soporte Técnico</span>
+                  {unreadSoporte > 0 && (
+                    <span className="bg-amber-400 text-slate-950 font-extrabold text-[10px] px-1.5 py-0.2 rounded-full animate-pulse">{unreadSoporte}</span>
+                  )}
+                </span>
+              )}
+            </button>
+          </SidebarSection>
+
           {canSeeConfiguracion && (
             <SidebarSection label="Configuración" expanded={expanded}>
               <SidebarLink to="/configuracion-dte" icon={Settings} label="Configuración DTE" expanded={expanded} />
@@ -246,6 +282,16 @@ const Layout = ({ children }) => {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowSoporteModal(true)}
+              className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all relative"
+            >
+              <Headphones className="w-4 h-4 text-indigo-600" />
+              <span className="hidden md:inline">Soporte Técnico</span>
+              {unreadSoporte > 0 && (
+                <span className="bg-red-500 text-white font-black text-[10px] px-1.5 py-0.2 rounded-full animate-bounce">{unreadSoporte}</span>
+              )}
+            </button>
             <CajaStateBanner />
             <div className="text-right hidden sm:block">
               <NombreEmpresa />
@@ -262,6 +308,9 @@ const Layout = ({ children }) => {
 
         {/* Widget del Avatar IA Interactivo */}
         <AvatarWidget />
+
+        {/* Modal de Soporte Técnico */}
+        <SoporteModal isOpen={showSoporteModal} onClose={() => { setShowSoporteModal(false); fetchUnreadSoporte(); }} />
       </main>
 
       {/* Barra de Navegación Inferior Móvil (Android / iOS Touch) */}
