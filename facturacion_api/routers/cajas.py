@@ -177,8 +177,34 @@ def cerrar_caja(sesion_id: int, empresa_id: str, data: CerrarTurnoRequest, db: S
         Caja.empresa_id == empresa_id
     ).first()
     if not sesion or sesion.estado == "cerrada":
-        raise HTTPException(status_code=400, detail="Sesion invalida o ya cerrada")
+        raise HTTPException(status_code=400, detail="Sesión inválida o ya cerrada")
         
+    # Registrar movimiento automático de ajuste si hay sobrante o faltante de caja
+    if data.diferencia and data.diferencia != 0:
+        if data.diferencia > 0:
+            # Sobrante de caja -> Movimiento de ingreso
+            mov_sobrante = MovimientoCaja(
+                sesion_caja_id=sesion.id,
+                tipo="ingreso",
+                monto=data.diferencia,
+                concepto=f"Ajuste por Sobrante de Caja en Arqueo (+${data.diferencia/100:.2f})",
+                metodo_pago="efectivo",
+                notas=data.notas or "Sobrante de caja al cierre de turno"
+            )
+            db.add(mov_sobrante)
+        elif data.diferencia < 0:
+            # Faltante de caja -> Movimiento de egreso imputable a cajero
+            monto_faltante = abs(data.diferencia)
+            mov_faltante = MovimientoCaja(
+                sesion_caja_id=sesion.id,
+                tipo="egreso",
+                monto=monto_faltante,
+                concepto=f"Ajuste por Faltante de Caja en Arqueo (-${monto_faltante/100:.2f}) - Imputable a Cajero",
+                metodo_pago="efectivo",
+                notas=data.notas or "Faltante de caja al cierre de turno"
+            )
+            db.add(mov_faltante)
+
     sesion.estado = "cerrada"
     sesion.fecha_cierre = datetime.now(TIMEZONE)
     sesion.notas = data.notas

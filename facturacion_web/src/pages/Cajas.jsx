@@ -16,6 +16,7 @@ export default function Cajas() {
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
   
   const [showArqueoModal, setShowArqueoModal] = useState(false);
+  const [notasArqueo, setNotasArqueo] = useState("");
   const [arqueoData, setArqueoData] = useState({
     b100: 0, b50: 0, b20: 0, b10: 0, b5: 0, b1: 0,
     m1: 0, m025: 0, m010: 0, m005: 0, m001: 0
@@ -135,18 +136,24 @@ export default function Cajas() {
     const expectedCents = sesionActiva.total_efectivo;
     const diferencia = totalFisicoCents - expectedCents;
 
+    if (diferencia < 0 && !notasArqueo.trim()) {
+      alert(`⚠️ Faltante de Caja de ${fmt(Math.abs(diferencia))}.\nDebe ingresar una nota de justificación explicando la causa del faltante antes de cerrar el turno.`);
+      return;
+    }
+
     if (diferencia !== 0) {
       const msg = diferencia > 0 ? `sobrante de ${fmt(diferencia)}` : `faltante de ${fmt(Math.abs(diferencia))}`;
-      if (!window.confirm(`Hay un ${msg}. ¿Desea cerrar el turno de todos modos y registrar la diferencia?`)) return;
+      if (!window.confirm(`Existe un ${msg}. Se registrará automáticamente el movimiento de ajuste de arqueo. ¿Desea continuar y cerrar el turno?`)) return;
     }
 
     try {
       await api.post(`/api/v1/cajas/sesiones/${sesionActiva.sesion_id}/cerrar?empresa_id=${empresaId}`, {
-        notas: "Arqueo cerrado por el sistema",
+        notas: notasArqueo || (diferencia > 0 ? "Sobrante de caja en arqueo físico" : diferencia < 0 ? "Faltante de caja en arqueo físico" : "Arqueo cuadrado sin diferencias"),
         detalle_arqueo: arqueoData,
         diferencia: diferencia
       });
       setShowArqueoModal(false);
+      setNotasArqueo("");
       cargarCajas();
       cargarSesion();
       cargarHistorial();
@@ -760,7 +767,7 @@ export default function Cajas() {
               </div>
             </div>
 
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-6">
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-4">
               <div className="flex justify-between items-center mb-2">
                 <span className="font-medium text-slate-600 text-sm">Total Físico Calculado:</span>
                 <span className="text-xl font-bold text-slate-800">${calculateTotalArqueo().toFixed(2)}</span>
@@ -770,11 +777,45 @@ export default function Cajas() {
                 <span className="text-xl font-bold text-slate-800">{fmt(sesionActiva.total_efectivo)}</span>
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-slate-200">
-                <span className="font-medium text-slate-600 text-sm">Diferencia:</span>
-                <span className={`text-xl font-bold ${Math.round(calculateTotalArqueo()*100) - sesionActiva.total_efectivo < 0 ? 'text-red-500' : Math.round(calculateTotalArqueo()*100) - sesionActiva.total_efectivo > 0 ? 'text-emerald-500' : 'text-slate-800'}`}>
+                <span className="font-medium text-slate-600 text-sm">Diferencia de Arqueo:</span>
+                <span className={`text-xl font-bold ${Math.round(calculateTotalArqueo()*100) - sesionActiva.total_efectivo < 0 ? 'text-rose-600' : Math.round(calculateTotalArqueo()*100) - sesionActiva.total_efectivo > 0 ? 'text-emerald-600' : 'text-slate-800'}`}>
                   {fmt(Math.round(calculateTotalArqueo()*100) - sesionActiva.total_efectivo)}
                 </span>
               </div>
+            </div>
+
+            {/* Aviso explicativo Sobrante / Faltante */}
+            {Math.round(calculateTotalArqueo()*100) - sesionActiva.total_efectivo > 0 && (
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 text-xs mb-4 flex items-start gap-2.5">
+                <span className="text-lg leading-none">🟢</span>
+                <div>
+                  <p className="font-bold text-emerald-900">Sobrante de Caja (+{fmt(Math.round(calculateTotalArqueo()*100) - sesionActiva.total_efectivo)})</p>
+                  <p className="mt-0.5 opacity-90 leading-relaxed">Existe dinero en efectivo excedente no registrado en sistema. Se generará un <strong>Movimiento de Ingreso por Sobrante</strong> para respaldar la auditoría de caja.</p>
+                </div>
+              </div>
+            )}
+
+            {Math.round(calculateTotalArqueo()*100) - sesionActiva.total_efectivo < 0 && (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 text-xs mb-4 flex items-start gap-2.5">
+                <span className="text-lg leading-none">🔴</span>
+                <div>
+                  <p className="font-bold text-rose-900">Faltante de Caja (-{fmt(Math.abs(Math.round(calculateTotalArqueo()*100) - sesionActiva.total_efectivo))})</p>
+                  <p className="mt-0.5 opacity-90 leading-relaxed">Hace falta dinero en la caja física respecto al sistema. Se generará un <strong>Movimiento de Egreso por Faltante (Imputable al Cajero)</strong>. Es obligatorio justificar la causa a continuación.</p>
+                </div>
+              </div>
+            )}
+
+            <div className="mb-6">
+              <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">
+                Nota de Justificación / Observación de Arqueo {Math.round(calculateTotalArqueo()*100) - sesionActiva.total_efectivo < 0 && <span className="text-rose-600 font-bold">* Obligatorio por Faltante</span>}
+              </label>
+              <textarea 
+                value={notasArqueo}
+                onChange={e => setNotasArqueo(e.target.value)}
+                placeholder={Math.round(calculateTotalArqueo()*100) - sesionActiva.total_efectivo < 0 ? "Describa obligatoriamente la causa del faltante de dinero..." : "Observaciones o notas adicionales del turno..."}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                rows={2}
+              />
             </div>
 
             <div className="flex justify-end gap-3">
