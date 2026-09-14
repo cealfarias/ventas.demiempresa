@@ -311,7 +311,12 @@ export default function SoporteModal({ isOpen, onClose }) {
                         <span className="font-bold text-slate-800 text-xs truncate max-w-[160px]">{t.asunto}</span>
                         {getEstadoBadge(t.estado)}
                       </div>
-                      <p className="text-[11px] text-slate-500 truncate">{t.categoria}</p>
+                      <div className="flex items-center gap-1 text-[11px] text-slate-600 font-medium truncate">
+                        <User className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span className="truncate">{t.nombre_usuario}</span>
+                        <span className="text-slate-300">•</span>
+                        <span className="truncate text-slate-500">{t.nombre_empresa}</span>
+                      </div>
                       <p className="text-[10px] text-slate-400 text-right mt-0.5">{new Date(t.fecha_actualizacion).toLocaleString()}</p>
                     </button>
                   ))
@@ -406,26 +411,43 @@ export default function SoporteModal({ isOpen, onClose }) {
               (isOwner ? selectedUserGroup : selectedTicket) ? (
                 <div className="flex-1 flex flex-col overflow-hidden">
                   
-                  {/* Banner Header Chat */}
-                  <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-                    <div>
-                      <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-                        {isOwner ? selectedUserGroup.nombre_usuario : selectedTicket.asunto}
-                        {getEstadoBadge(isOwner ? selectedUserGroup.tickets[0]?.estado : selectedTicket.estado)}
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        {isOwner 
-                          ? `Empresa: ${selectedUserGroup.nombre_empresa}` 
-                          : `Categoría: ${selectedTicket.categoria} | Prioridad: ${selectedTicket.prioridad}`}
-                      </p>
+                  {/* Banner Header Chat con Ficha Completa de Contacto */}
+                  <div className="p-4 border-b border-slate-200 bg-slate-900 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-extrabold text-base text-white">
+                          {selectedTicket?.asunto || (selectedUserGroup?.tickets[0]?.asunto)}
+                        </span>
+                        {getEstadoBadge(isOwner ? selectedUserGroup?.tickets[0]?.estado : selectedTicket?.estado)}
+                      </div>
+                      
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                        <span className="flex items-center gap-1.5 font-semibold text-emerald-300 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700">
+                          <User className="w-3.5 h-3.5 text-emerald-400" />
+                          Contacto: <strong className="text-white font-bold">{selectedTicket?.nombre_usuario || selectedUserGroup?.nombre_usuario}</strong>
+                          {selectedTicket?.email_usuario && <span className="text-slate-300 font-normal">({selectedTicket.email_usuario})</span>}
+                        </span>
+                        
+                        <span className="flex items-center gap-1.5 font-semibold text-indigo-300 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700">
+                          <Building className="w-3.5 h-3.5 text-indigo-400" />
+                          Empresa: <strong className="text-white font-bold">{selectedTicket?.nombre_empresa || selectedUserGroup?.nombre_empresa}</strong>
+                          {selectedTicket?.nit_empresa && <span className="text-slate-300 font-normal">(NIT: {selectedTicket.nit_empresa})</span>}
+                        </span>
+                      </div>
+
+                      <div className="text-[11px] text-slate-400 flex items-center gap-3 pt-0.5">
+                        <span>Categoría: <strong className="text-slate-200">{selectedTicket?.categoria || selectedUserGroup?.tickets[0]?.categoria}</strong></span>
+                        <span>•</span>
+                        <span>Prioridad: <strong className="text-slate-200">{selectedTicket?.prioridad || selectedUserGroup?.tickets[0]?.prioridad}</strong></span>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       <button 
                         onClick={() => handleCambiarEstado("RESUELTO")}
-                        className="bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-colors"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3.5 py-2 rounded-xl font-bold flex items-center gap-1.5 transition-colors shadow-md"
                       >
-                        <Check className="w-3.5 h-3.5" /> Marcar Resuelto
+                        <Check className="w-4 h-4" /> Marcar Resuelto
                       </button>
                     </div>
                   </div>

@@ -60,7 +60,9 @@ def crear_ticket(
     empresa = db.query(Empresa).filter(Empresa.id == empresa_id).first()
     res = schemas_soporte.TicketSoporteResponse.from_orm(ticket)
     res.nombre_empresa = empresa.nombre_comercial or empresa.razon_social if empresa else "Empresa"
+    res.nit_empresa = empresa.nit if empresa else None
     res.nombre_usuario = usuario.username if usuario else "Usuario"
+    res.email_usuario = usuario.email if usuario else None
     
     mensajes_fmt = []
     for m in ticket.mensajes:
@@ -92,7 +94,9 @@ def listar_tickets(
     for t in tickets:
         item = schemas_soporte.TicketSoporteResponse.from_orm(t)
         item.nombre_empresa = t.empresa.nombre_comercial or t.empresa.razon_social if t.empresa else "Empresa"
+        item.nit_empresa = t.empresa.nit if t.empresa else None
         item.nombre_usuario = t.usuario.username if t.usuario else "Usuario"
+        item.email_usuario = t.usuario.email if t.usuario else None
 
         mensajes_fmt = []
         for m in t.mensajes:

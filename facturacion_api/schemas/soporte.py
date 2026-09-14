@@ -27,8 +27,10 @@ class TicketSoporteResponse(BaseModel):
     id: int
     empresa_id: Optional[str] = None
     nombre_empresa: Optional[str] = "Empresa"
+    nit_empresa: Optional[str] = None
     usuario_id: int
     nombre_usuario: Optional[str] = "Usuario"
+    email_usuario: Optional[str] = None
     asunto: str
     categoria: str
     prioridad: str
