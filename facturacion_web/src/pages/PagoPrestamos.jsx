@@ -205,7 +205,12 @@ export default function PagoPrestamos() {
 
   const abrirModalPagoCuota = (cuota) => {
     setCuotaAPagar(cuota);
-    setFormPago({ metodo_pago: 'efectivo', referencia: '', notas: '' });
+    setFormPago({
+      metodo_pago: 'efectivo',
+      referencia: '',
+      notas: '',
+      fecha_pago: new Date().toISOString().split('T')[0]
+    });
     setModalPagoCuota(true);
   };
 
@@ -215,7 +220,8 @@ export default function PagoPrestamos() {
       const payload = {
         metodo_pago: formPago.metodo_pago,
         referencia: formPago.referencia,
-        notas: formPago.notas
+        notas: formPago.notas,
+        fecha_pago: formPago.fecha_pago || null
       };
       await api.post(
         `/api/v1/finanzas/acreedores/prestamos/${detallePrestamo.id}/pagar-cuota/${cuotaAPagar.numero_cuota}?empresa_id=${empresaId()}&usuario_id=${usuarioId()}`,
@@ -733,6 +739,16 @@ export default function PagoPrestamos() {
                   <option value="transferencia">Transferencia Bancaria</option>
                   <option value="cheque">Cheque</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Fecha de Aplicación *</label>
+                <input
+                  type="date"
+                  value={formPago.fecha_pago || ''}
+                  onChange={(e) => setFormPago({ ...formPago, fecha_pago: e.target.value })}
+                  className="w-full border rounded-xl p-2.5 outline-none focus:border-indigo-500 font-medium"
+                />
               </div>
 
               <div>

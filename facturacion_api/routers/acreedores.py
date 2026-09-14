@@ -623,7 +623,11 @@ def pagar_cuota_prestamo(prestamo_id: int, numero_cuota: int, empresa_id: str, u
     fecha_pago = datetime.now(TIMEZONE)
     if data.fecha_pago:
         try:
-            fecha_pago = datetime.fromisoformat(data.fecha_pago)
+            if "T" in data.fecha_pago:
+                fecha_pago = datetime.fromisoformat(data.fecha_pago)
+            else:
+                partes = [int(x) for x in data.fecha_pago.split("-")]
+                fecha_pago = datetime(partes[0], partes[1], partes[2], 12, 0, 0, tzinfo=TIMEZONE)
         except Exception:
             pass
 
@@ -654,7 +658,8 @@ def pagar_cuota_prestamo(prestamo_id: int, numero_cuota: int, empresa_id: str, u
         metodo_pago=data.metodo_pago or "efectivo",
         referencia=data.referencia,
         notas=f"Pago de Cuota #{numero_cuota}/{prestamo.plazo_meses} de Préstamo #{prestamo.id}",
-        usuario_id=usuario_id
+        usuario_id=usuario_id,
+        fecha=fecha_pago
     )
     db.add(mov)
     db.flush()
@@ -670,7 +675,8 @@ def pagar_cuota_prestamo(prestamo_id: int, numero_cuota: int, empresa_id: str, u
             concepto=f"Pago Cuota #{numero_cuota} Préstamo #{prestamo.id}: {prestamo.acreedor.nombre if prestamo.acreedor else ''}",
             referencia_tipo="acreedor",
             referencia_id=mov.id,
-            usuario_id=usuario_id
+            usuario_id=usuario_id,
+            fecha=fecha_pago
         ))
 
     db.commit()
