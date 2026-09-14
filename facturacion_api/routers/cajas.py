@@ -124,6 +124,7 @@ def obtener_sesion_activa(empresa_id: str, usuario_id: int, db: Session = Depend
     total_transferencia = sum(m.monto for m in movimientos if m.tipo == "ingreso" and m.metodo_pago == "transferencia") - sum(m.monto for m in movimientos if m.tipo == "egreso" and m.metodo_pago == "transferencia")
     total_tarjeta = sum(m.monto for m in movimientos if m.tipo == "ingreso" and m.metodo_pago == "tarjeta") - sum(m.monto for m in movimientos if m.tipo == "egreso" and m.metodo_pago == "tarjeta")
     
+    total_remesas = sum(m.monto for m in movimientos if m.tipo == "egreso" and ("remesa" in (m.concepto or "").lower() or getattr(m, "referencia_tipo", "") == "remesa_banco"))
     saldo_calculado = sesion.saldo_inicial + ingresos - egresos
     
     # Evaluar si la apertura fue en un día anterior
@@ -141,6 +142,7 @@ def obtener_sesion_activa(empresa_id: str, usuario_id: int, db: Session = Depend
         "total_efectivo": total_efectivo,
         "total_transferencia": total_transferencia,
         "total_tarjeta": total_tarjeta,
+        "total_remesas": total_remesas,
         "saldo_calculado": saldo_calculado,
         "movimientos_count": len(movimientos),
         "es_trasnochada": es_trasnochada
@@ -330,6 +332,48 @@ def inyectar_capital(sesion_id: int, empresa_id: str, usuario_id: int, data: Iny
     db.refresh(mov)
 
     return {"mensaje": "Inyección de capital registrada exitosamente", "movimiento_id": mov.id}
+
+class RemesaBancoRequest(BaseModel):
+    monto: float
+    banco: str
+    numero_comprobante: str
+    notas: Optional[str] = ""
+
+@router.post("/sesiones/{sesion_id}/remesa-banco")
+def registrar_remesa_banco(
+    sesion_id: int, 
+    empresa_id: str, 
+    usuario_id: int, 
+    data: RemesaBancoRequest, 
+    db: Session = Depends(get_db)
+):
+    sesion = db.query(SesionCaja).join(Caja).filter(
+        SesionCaja.id == sesion_id,
+        Caja.empresa_id == empresa_id,
+        SesionCaja.estado == "abierta"
+    ).first()
+    if not sesion:
+        raise HTTPException(status_code=400, detail="Sesión de caja no encontrada o ya cerrada")
+
+    if data.monto <= 0:
+        raise HTTPException(status_code=400, detail="El monto de la remesa debe ser mayor a 0")
+
+    monto_centavos = int(round(data.monto * 100))
+
+    mov = MovimientoCaja(
+        sesion_caja_id=sesion.id,
+        tipo="egreso",
+        metodo_pago="efectivo",
+        monto=monto_centavos,
+        concepto=f"Remesa Bancaria - {data.banco} (Nº {data.numero_comprobante})",
+        referencia_tipo="remesa_banco",
+        usuario_id=usuario_id
+    )
+    db.add(mov)
+    db.commit()
+    db.refresh(mov)
+
+    return {"mensaje": "Remesa al banco registrada exitosamente", "movimiento_id": mov.id}
 
 class EditarMovimientoSchema(BaseModel):
     monto: float
