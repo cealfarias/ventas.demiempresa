@@ -17,11 +17,9 @@ def es_usuario_propietario(usuario: Usuario) -> bool:
         return False
     email = (usuario.email or "").lower()
     username = (usuario.username or "").lower()
-    rol = (usuario.rol or "").lower()
     return (
         email == "cealfarias@gmail.com" or 
-        username in ["cealfarias", "admin", "propietario", "superadmin", "cesar", "cesararias", "soporte"] or 
-        rol in ["admin", "propietario", "superadmin"]
+        username in ["cealfarias", "cesararias", "propietario_global"]
     )
 
 @router.post("/tickets", response_model=schemas_soporte.TicketSoporteResponse)

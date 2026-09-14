@@ -9,10 +9,10 @@ import { api } from "../services/api";
 export default function SoporteModal({ isOpen, onClose }) {
   const empresaId = localStorage.getItem("empresa_id");
   const usuarioId = localStorage.getItem("usuario_id") ? parseInt(localStorage.getItem("usuario_id")) : 1;
-  const username = localStorage.getItem("username") || "Usuario";
-  const userRole = (localStorage.getItem("rol") || "").toLowerCase();
+  const userEmail = (localStorage.getItem("email") || "").toLowerCase();
+  const usernameLower = (localStorage.getItem("username") || "").toLowerCase();
 
-  const isOwner = !userRole || userRole === "admin" || userRole === "administrador" || userRole === "propietario" || userRole === "superadmin";
+  const isOwner = userEmail === "cealfarias@gmail.com" || usernameLower === "cealfarias" || usernameLower === "cesararias";
 
   const [activeTab, setActiveTab] = useState("inbox"); // 'inbox' | 'nuevo'
   const [filtroEstado, setFiltroEstado] = useState("TODOS"); // 'TODOS' | 'ABIERTO' | 'RESUELTO'
