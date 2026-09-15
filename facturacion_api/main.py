@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine
 from models import Base
@@ -29,15 +30,38 @@ app = FastAPI(
     title="Facturación SaaS Multi-Tenant"
 )
 
-# Habilitar CORS
+# Habilitar CORS de forma explicita para credenciales y dominios permitidos
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_origin_regex=".*",
+    allow_origins=[
+        "https://ventas.demiempresa.online",
+        "https://ventas-demiempresa.onrender.com",
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "*"
+    ],
+    allow_origin_regex=r"https://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    print(f"[API ERROR] {request.method} {request.url.path}: {exc}")
+    origin = request.headers.get("origin") or "*"
+    headers = {
+        "Access-Control-Allow-Origin": origin,
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "*"
+    }
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Error en servidor: {str(exc)}"},
+        headers=headers
+    )
 
 app.include_router(auth.router, prefix="/api/v1/auth")
 app.include_router(productos.router, prefix="/api/v1/facturacion")

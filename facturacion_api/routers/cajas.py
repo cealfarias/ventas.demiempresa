@@ -129,7 +129,15 @@ def obtener_sesion_activa(empresa_id: str, usuario_id: int, db: Session = Depend
     
     # Evaluar si la apertura fue en un día anterior
     hoy = datetime.now(TIMEZONE).date()
-    fecha_ap = sesion.fecha_apertura.astimezone(TIMEZONE).date() if sesion.fecha_apertura else hoy
+    fecha_ap = hoy
+    if sesion.fecha_apertura:
+        try:
+            f_ap = sesion.fecha_apertura
+            if not hasattr(f_ap, 'tzinfo') or not f_ap.tzinfo:
+                f_ap = f_ap.replace(tzinfo=TIMEZONE)
+            fecha_ap = f_ap.astimezone(TIMEZONE).date()
+        except Exception:
+            fecha_ap = hoy
     es_trasnochada = fecha_ap < hoy
 
     return {
