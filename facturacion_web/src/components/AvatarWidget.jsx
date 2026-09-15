@@ -223,12 +223,11 @@ export default function AvatarWidget() {
     const isFirstTime = localStorage.getItem('avatar_facturacion_greeted') !== 'true';
     const hour = new Date().getHours();
     const greetingTime = hour < 12 ? 'Buenos días' : (hour < 18 ? 'Buenas tardes' : 'Buenas noches');
-    const userName = localStorage.getItem('usuario_nombre') || localStorage.getItem('user_name') || 'Fulgencio';
 
     const modInfo = MODULOS_KNOWLEDGE[currentPath] || MODULOS_KNOWLEDGE["/dashboard"];
     const roleUpper = role.toUpperCase();
 
-    const initialText = `¡${greetingTime}, ${userName}! Soy tu Avatar Asistente. Tu perfil es **${roleUpper}**.\nTe encuentras en **${modInfo.titulo}**.\n\nPresiona **'🧭 Guíame en esta página'** si deseas ver el paso a paso de este módulo.`;
+    const initialText = `¡${greetingTime}! Soy tu Avatar Asistente. Tu perfil es **${roleUpper}**.\nTe encuentras en **${modInfo.titulo}**.\n\nPresiona **'🧭 Guíame en esta página'** si deseas ver el paso a paso de este módulo.`;
 
     const greetingMsg = {
       sender: 'bot',
