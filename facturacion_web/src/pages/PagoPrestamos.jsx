@@ -16,6 +16,12 @@ const fmtDate = (dateStr) => {
   return new Date(dateStr).toLocaleDateString();
 };
 
+const WhatsAppIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.461c-1.847 0-3.556-.492-5.031-1.353l-.36-.211-3.74.981.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c0-5.444 4.43-9.873 9.878-9.873 2.637 0 5.116 1.028 6.98 2.893 1.864 1.865 2.891 4.344 2.89 6.982 0 5.446-4.43 9.875-9.87 9.875m0-18.066c-4.516 0-8.192 3.676-8.192 8.191 0 1.794.577 3.456 1.554 4.814l-.657 2.4 2.457-.644a8.147 8.147 0 004.838 1.557c4.517 0 8.194-3.676 8.194-8.19 0-2.188-.853-4.246-2.404-5.797-1.55-1.551-3.608-2.405-5.79-2.405" />
+  </svg>
+);
+
 export default function PagoPrestamos() {
   const location = useLocation();
   const [acreedores, setAcreedores] = useState([]);
@@ -238,6 +244,32 @@ export default function PagoPrestamos() {
     }
   };
 
+  const enviarWhatsAppCobroCuota = (cuota) => {
+    if (!detallePrestamo) return;
+    const acreedor = acreedores.find(a => a.id === detallePrestamo.acreedor_id);
+    const telefono = acreedor?.contacto_telefono ? acreedor.contacto_telefono.replace(/\D/g, '') : '';
+    
+    const text = `Estimado/a *${detallePrestamo.acreedor_nombre}*,\nLe recordamos el vencimiento de la *Cuota #${cuota.numero_cuota}* del Préstamo #${detallePrestamo.id}:\n\n💰 *Monto de Cuota:* ${fmt(cuota.monto_cuota_teorica)}\n📅 *Fecha Vencimiento:* ${fmtDate(cuota.fecha_vencimiento)}\n📌 *Abono Capital:* ${fmt(cuota.monto_capital_teorico)} | *Interés:* ${fmt(cuota.monto_interes_teorico)}\n\nQuedamos a sus órdenes para la gestión del pago.`;
+    
+    const url = telefono 
+      ? `https://api.whatsapp.com/send?phone=${telefono}&text=${encodeURIComponent(text)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
+  const enviarWhatsAppConfirmacionPago = (cuota) => {
+    if (!detallePrestamo) return;
+    const acreedor = acreedores.find(a => a.id === detallePrestamo.acreedor_id);
+    const telefono = acreedor?.contacto_telefono ? acreedor.contacto_telefono.replace(/\D/g, '') : '';
+    
+    const text = `Estimado/a *${detallePrestamo.acreedor_nombre}*,\nConfirmamos la recepción del pago de la *Cuota #${cuota.numero_cuota}* del Préstamo #${detallePrestamo.id}:\n\n✅ *Monto Pagado:* ${fmt(cuota.monto_cuota_teorica)}\n📅 *Fecha Aplicación:* ${fmtDate(cuota.fecha_pago_real)}\n💳 *Método de Pago:* ${cuota.metodo_pago || 'efectivo'}\n📊 *Saldo Deudor Restante:* ${fmt(cuota.saldo_teorico)}\n\n¡Muchas gracias!`;
+    
+    const url = telefono 
+      ? `https://api.whatsapp.com/send?phone=${telefono}&text=${encodeURIComponent(text)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
   const eliminarPrestamo = async (idAEliminar) => {
     const targetId = idAEliminar || prestamoSeleccionadoId;
     if (!targetId) return;
@@ -437,14 +469,32 @@ export default function PagoPrestamos() {
                       </td>
                       <td className="py-3 px-4 text-center">
                         {esPagada ? (
-                          <span className="text-xs text-emerald-600 font-semibold">Completado</span>
+                          <div className="flex items-center justify-center gap-2">
+                            <span className="text-xs text-emerald-600 font-semibold">Completado</span>
+                            <button
+                              onClick={() => enviarWhatsAppConfirmacionPago(c)}
+                              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all"
+                              title="Enviar Confirmación de Pago por WhatsApp"
+                            >
+                              <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-600" /> WhatsApp
+                            </button>
+                          </div>
                         ) : esSiguiente ? (
-                          <button
-                            onClick={() => abrirModalPagoCuota(c)}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1 mx-auto"
-                          >
-                            <DollarSign className="w-3.5 h-3.5" /> Pagar Cuota
-                          </button>
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => abrirModalPagoCuota(c)}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1"
+                            >
+                              <DollarSign className="w-3.5 h-3.5" /> Pagar Cuota
+                            </button>
+                            <button
+                              onClick={() => enviarWhatsAppCobroCuota(c)}
+                              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 p-1.5 rounded-lg text-xs font-semibold transition-all"
+                              title="Enviar Recordatorio de Cobro por WhatsApp"
+                            >
+                              <WhatsAppIcon className="w-4 h-4 text-emerald-600" />
+                            </button>
+                          </div>
                         ) : (
                           <button
                             disabled
