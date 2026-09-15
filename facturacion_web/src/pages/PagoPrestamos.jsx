@@ -244,12 +244,12 @@ export default function PagoPrestamos() {
     }
   };
 
-  const enviarWhatsAppCobroCuota = (cuota) => {
+  const enviarWhatsAppAvisoPago = (cuota) => {
     if (!detallePrestamo) return;
     const acreedor = acreedores.find(a => a.id === detallePrestamo.acreedor_id);
     const telefono = acreedor?.contacto_telefono ? acreedor.contacto_telefono.replace(/\D/g, '') : '';
     
-    const text = `Estimado/a *${detallePrestamo.acreedor_nombre}*,\nLe recordamos el vencimiento de la *Cuota #${cuota.numero_cuota}* del Préstamo #${detallePrestamo.id}:\n\n💰 *Monto de Cuota:* ${fmt(cuota.monto_cuota_teorica)}\n📅 *Fecha Vencimiento:* ${fmtDate(cuota.fecha_vencimiento)}\n📌 *Abono Capital:* ${fmt(cuota.monto_capital_teorico)} | *Interés:* ${fmt(cuota.monto_interes_teorico)}\n\nQuedamos a sus órdenes para la gestión del pago.`;
+    const text = `Estimado/a *${detallePrestamo.acreedor_nombre}*,\nLe informamos sobre la programación de pago para la *Cuota #${cuota.numero_cuota}* del Préstamo de Capital de Trabajo #${detallePrestamo.id}:\n\n💰 *Monto a Abonarle:* ${fmt(cuota.monto_cuota_teorica)}\n📅 *Fecha Vencimiento/Programada:* ${fmtDate(cuota.fecha_vencimiento)}\n📌 *Capital:* ${fmt(cuota.monto_capital_teorico)} | *Interés:* ${fmt(cuota.monto_interes_teorico)}\n\n¡Agradecemos su respaldo financiero a nuestra empresa!`;
     
     const url = telefono 
       ? `https://api.whatsapp.com/send?phone=${telefono}&text=${encodeURIComponent(text)}`
@@ -257,12 +257,12 @@ export default function PagoPrestamos() {
     window.open(url, '_blank');
   };
 
-  const enviarWhatsAppConfirmacionPago = (cuota) => {
+  const enviarWhatsAppComprobanteAbono = (cuota) => {
     if (!detallePrestamo) return;
     const acreedor = acreedores.find(a => a.id === detallePrestamo.acreedor_id);
     const telefono = acreedor?.contacto_telefono ? acreedor.contacto_telefono.replace(/\D/g, '') : '';
     
-    const text = `Estimado/a *${detallePrestamo.acreedor_nombre}*,\nConfirmamos la recepción del pago de la *Cuota #${cuota.numero_cuota}* del Préstamo #${detallePrestamo.id}:\n\n✅ *Monto Pagado:* ${fmt(cuota.monto_cuota_teorica)}\n📅 *Fecha Aplicación:* ${fmtDate(cuota.fecha_pago_real)}\n💳 *Método de Pago:* ${cuota.metodo_pago || 'efectivo'}\n📊 *Saldo Deudor Restante:* ${fmt(cuota.saldo_teorico)}\n\n¡Muchas gracias!`;
+    const text = `Estimado/a *${detallePrestamo.acreedor_nombre}*,\nLe adjuntamos el comprobante del pago efectuado a su favor por la *Cuota #${cuota.numero_cuota}* del Préstamo de Capital de Trabajo #${detallePrestamo.id}:\n\n✅ *Monto Abonado:* ${fmt(cuota.monto_cuota_teorica)}\n💵 *Capital Devuelto:* ${fmt(cuota.monto_capital_teorico)}\n📈 *Interés Pagado:* ${fmt(cuota.monto_interes_teorico)}\n📅 *Fecha de Aplicación:* ${fmtDate(cuota.fecha_pago_real)}\n💳 *Método de Pago:* ${cuota.metodo_pago || 'efectivo'}\n📊 *Saldo Pendiente por Retornarle:* ${fmt(cuota.saldo_teorico)}\n\n¡Muchas gracias por su financiamiento!`;
     
     const url = telefono 
       ? `https://api.whatsapp.com/send?phone=${telefono}&text=${encodeURIComponent(text)}`
@@ -303,7 +303,7 @@ export default function PagoPrestamos() {
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <Calculator className="w-6 h-6 text-indigo-600" /> Control y Pago de Préstamos
           </h1>
-          <p className="text-sm text-slate-500 mt-1">Gestión de amortizaciones teóricas vs. reales con pagos correlativos y desembolsos automáticos en caja</p>
+          <p className="text-sm text-slate-500 mt-1">Gestión de préstamos y financiamientos solicitados por la empresa como capital de trabajo, seguimiento a amortizaciones y abonos a acreedores</p>
         </div>
         <div className="flex items-center gap-3">
           <Link
@@ -472,11 +472,11 @@ export default function PagoPrestamos() {
                           <div className="flex items-center justify-center gap-2">
                             <span className="text-xs text-emerald-600 font-semibold">Completado</span>
                             <button
-                              onClick={() => enviarWhatsAppConfirmacionPago(c)}
+                              onClick={() => enviarWhatsAppComprobanteAbono(c)}
                               className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all"
-                              title="Enviar Confirmación de Pago por WhatsApp"
+                              title="Enviar Comprobante de Abono al Prestamista por WhatsApp"
                             >
-                              <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-600" /> WhatsApp
+                              <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-600" /> Comprobante
                             </button>
                           </div>
                         ) : esSiguiente ? (
@@ -488,9 +488,9 @@ export default function PagoPrestamos() {
                               <DollarSign className="w-3.5 h-3.5" /> Pagar Cuota
                             </button>
                             <button
-                              onClick={() => enviarWhatsAppCobroCuota(c)}
+                              onClick={() => enviarWhatsAppAvisoPago(c)}
                               className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 p-1.5 rounded-lg text-xs font-semibold transition-all"
-                              title="Enviar Recordatorio de Cobro por WhatsApp"
+                              title="Avisar Próximo Pago al Prestamista por WhatsApp"
                             >
                               <WhatsAppIcon className="w-4 h-4 text-emerald-600" />
                             </button>
