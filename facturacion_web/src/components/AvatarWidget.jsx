@@ -107,6 +107,11 @@ const MODULOS_KNOWLEDGE = {
     guia: "1. Registra socios inversionistas.\n2. Documenta aportes de capital sin interés o retiros de socios.",
     faqs: "P: ¿Se refleja en finanzas?\nR: Sí, como patrimonio/efectivo."
   },
+  "/arrendamientos": {
+    titulo: "🏢 Contratos de Arrendamiento",
+    guia: "1. Registra inmuebles o locales comerciales.\n2. Controla cobros a inquilinos o pagos a propietarios.\n3. Emite comprobantes y comparte por WhatsApp.",
+    faqs: "P: ¿Registra movimiento en caja?\nR: Sí, al seleccionar método Efectivo se integra con la sesión de caja activa."
+  },
   "/backup-recovery": {
     titulo: "🛡️ Copia de Seguridad y Restauración (HMAC-SHA256)",
     guia: "1. **Exportar:** Presiona 'Exportar Backup' para descargar un respaldo firmado digitalmente.\n2. **Restaurar:** Sube el archivo `.json` de respaldo para verificar su firma criptográfica y restaurar los datos.",

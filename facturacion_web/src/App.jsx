@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, NavLink, useLocation, Nav
 import {
   LayoutDashboard, Receipt, Package, Users, Settings, LogOut, Menu,
   Warehouse, BarChart3, ChevronDown, ChevronRight, Truck, ShoppingCart, CreditCard, BookOpen
-, Wallet, DollarSign, Calculator, ShieldCheck, UserCheck, Headphones } from 'lucide-react';
+, Wallet, DollarSign, Calculator, ShieldCheck, UserCheck, Headphones, Building } from 'lucide-react';
 import Productos from './pages/Productos';
 import Login from './pages/Login';
 import Registro from './pages/Registro';
@@ -26,6 +26,7 @@ import CajaStateBanner from './components/CajaStateBanner';
 import Acreedores from './pages/Acreedores';
 import Aportantes from './pages/Aportantes';
 import PagoPrestamos from './pages/PagoPrestamos';
+import ContratosArrendamiento from './pages/ContratosArrendamiento';
 import BackupRecovery from './pages/BackupRecovery';
 import SoporteModal from './components/SoporteModal';
 
@@ -205,6 +206,7 @@ const Layout = ({ children }) => {
             <SidebarLink to="/acreedores" icon={CreditCard} label="Acreedores (Maestro)" expanded={expanded} />
             <SidebarLink to="/pago-prestamos" icon={Calculator} label="Préstamos y Amortizaciones" expanded={expanded} />
             <SidebarLink to="/aportantes" icon={Users} label="Aportantes de Capital" expanded={expanded} />
+            <SidebarLink to="/arrendamientos" icon={Building} label="Contrato de arrendamiento" expanded={expanded} />
           </SidebarSection>
 
           {canSeeCompras && (
@@ -373,6 +375,7 @@ function App() {
                     <Route path="/acreedores" element={<Acreedores />} />
                     <Route path="/pago-prestamos" element={<PagoPrestamos />} />
                     <Route path="/aportantes" element={<Aportantes />} />
+                    <Route path="/arrendamientos" element={<ContratosArrendamiento />} />
                     {/* Fase 3 — Ventas */}
                     <Route path="/clientes" element={<Clientes />} />
                     <Route path="/facturas" element={<Facturas />} />

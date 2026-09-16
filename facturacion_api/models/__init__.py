@@ -804,4 +804,58 @@ class MensajeTicket(Base):
     remitente = relationship("Usuario")
 
 
+# ==========================================
+# MÓDULO DE CONTRATOS DE ARRENDAMIENTO
+# ==========================================
+
+class ContratoArrendamiento(Base):
+    __tablename__ = "contratos_arrendamiento"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    empresa_id = Column(String, index=True, nullable=False)
+    
+    inmueble_nombre = Column(String(200), nullable=False) # Ej: "Local Comercial #4", "Bodega San Miguelito"
+    tipo = Column(String(30), default="ARRENDATARIO") # ARRENDATARIO (Nosotros pagamos) | ARRENDADOR (Nosotros cobramos)
+    
+    contraparte_nombre = Column(String(200), nullable=False) # Propietario o Inquilino
+    dui_nit = Column(String(50), nullable=True)
+    telefono = Column(String(50), nullable=True)
+    email = Column(String(100), nullable=True)
+    
+    canon_mensual = Column(Integer, nullable=False) # Dinero en centavos (ej: $500.00 -> 50000)
+    dia_pago_limite = Column(Integer, default=5) # Día del mes (1-31)
+    deposito_garantia = Column(Integer, default=0) # Dinero en centavos
+    
+    fecha_inicio = Column(DateTime(timezone=True), nullable=True)
+    fecha_fin = Column(DateTime(timezone=True), nullable=True)
+    
+    estado = Column(String(20), default="activo") # activo | finalizado | suspendido
+    notas = Column(Text, nullable=True)
+    
+    fecha_registro = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
+
+    pagos = relationship("PagoArrendamiento", back_populates="contrato", cascade="all, delete-orphan")
+
+
+class PagoArrendamiento(Base):
+    __tablename__ = "pagos_arrendamiento"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    contrato_id = Column(Integer, ForeignKey("contratos_arrendamiento.id"), nullable=False)
+    empresa_id = Column(String, index=True, nullable=False)
+    
+    tipo = Column(String(30), nullable=False) # PAGO_ALQUILER | COBRO_ALQUILER
+    monto = Column(Integer, nullable=False) # centavos
+    fecha_pago = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
+    
+    metodo_pago = Column(String(50), default="efectivo")
+    referencia = Column(String(100), nullable=True)
+    notas = Column(Text, nullable=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+
+    contrato = relationship("ContratoArrendamiento", back_populates="pagos")
+    usuario = relationship("Usuario")
+
+
+
 
