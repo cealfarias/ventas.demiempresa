@@ -6,7 +6,7 @@ const empresaId = () => localStorage.getItem('empresa_id') || '';
 const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
 
 const FORM_VACIO = {
-  codigo: '', nombre: '', nombre_comercial: '', nit: '', nrc: '',
+  codigo: '', nombre: '', nombre_comercial: '', nit: '', nrc: '', giro: '',
   es_gran_contribuyente: false, email: '', telefono: '', direccion: '',
   contacto_nombre: '', contacto_telefono: '', limite_credito: '', saldo_inicial: ''
 };
@@ -203,6 +203,9 @@ export default function Proveedores() {
                 <Field label="NIT"><Input value={form.nit} onChange={e => setForm(f => ({ ...f, nit: e.target.value }))} placeholder="0000-000000-000-0" /></Field>
                 <Field label="NRC"><Input value={form.nrc} onChange={e => setForm(f => ({ ...f, nrc: e.target.value }))} placeholder="000000-0" /></Field>
               </div>
+              <Field label="Giro / Actividad Económica">
+                <Input value={form.giro || ''} onChange={e => setForm(f => ({ ...f, giro: e.target.value }))} placeholder="Ej. Venta de lácteos y embutidos / Comercio" />
+              </Field>
               <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-amber-50 transition-colors">
                 <input type="checkbox" checked={form.es_gran_contribuyente} onChange={e => setForm(f => ({ ...f, es_gran_contribuyente: e.target.checked }))} className="w-4 h-4 text-amber-500 rounded" />
                 <div>

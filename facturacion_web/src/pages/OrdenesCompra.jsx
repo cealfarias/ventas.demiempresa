@@ -49,7 +49,17 @@ export default function OrdenesCompra() {
   const [proveedores, setProveedores] = useState([]);
   const [bodegas, setBodegas] = useState([]);
   const [productos, setProductos] = useState([]);
-  const [formOC, setFormOC] = useState({ proveedor_id: '', tipo_doc: 'CCF', bodega_destino_id: '', fecha_esperada_entrega: '', notas: '', detalles: [], calcular_iva: true });
+  const [formOC, setFormOC] = useState({ 
+    proveedor_id: '', 
+    tipo_doc: 'CCF', 
+    num_comprobante: '', 
+    fecha_emision: new Date().toISOString().split('T')[0],
+    bodega_destino_id: '', 
+    fecha_esperada_entrega: '', 
+    notas: '', 
+    detalles: [], 
+    calcular_iva: true 
+  });
   const [guardando, setGuardando] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [dteJson, setDteJson] = useState('');
@@ -114,6 +124,8 @@ export default function OrdenesCompra() {
     setFormOC({
         proveedor_id: oc.proveedor_id || '',
         tipo_doc: oc.tipo_doc || 'CCF',
+        num_comprobante: oc.num_comprobante || '',
+        fecha_emision: oc.fecha_emision ? oc.fecha_emision.split('T')[0] : new Date().toISOString().split('T')[0],
         bodega_destino_id: oc.bodega_destino_id || '',
         fecha_esperada_entrega: oc.fecha_esperada_entrega ? oc.fecha_esperada_entrega.split('T')[0] : '',
         notas: oc.notas || '',
@@ -133,6 +145,8 @@ export default function OrdenesCompra() {
     try {
       const payload = {
         ...formOC,
+        num_comprobante: formOC.num_comprobante || null,
+        fecha_emision: formOC.fecha_emision ? new Date(formOC.fecha_emision).toISOString() : null,
         bodega_destino_id: formOC.bodega_destino_id ? parseInt(formOC.bodega_destino_id) : null,
         proveedor_id: parseInt(formOC.proveedor_id),
         fecha_esperada_entrega: formOC.fecha_esperada_entrega ? new Date(formOC.fecha_esperada_entrega).toISOString() : null,
@@ -231,10 +245,12 @@ export default function OrdenesCompra() {
     const iva = formOC.calcular_iva ? subtotal * 0.13 : 0;
     const total = subtotal + iva;
 
+    const provSeleccionado = proveedores.find(p => String(p.id) === String(formOC.proveedor_id));
+
     return (
       <div className="p-8 max-w-5xl mx-auto">
         <h1 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-          <ShoppingCart className="w-6 h-6 text-indigo-600" /> Nueva Orden de Compra
+          <ShoppingCart className="w-6 h-6 text-indigo-600" /> {editandoId ? 'Editar Orden de Compra' : 'Nueva Orden de Compra'}
         </h1>
         
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 space-y-4">
@@ -287,10 +303,50 @@ export default function OrdenesCompra() {
               </div>
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 uppercase">Fecha Esperada</label>
-              <input type="date" value={formOC.fecha_esperada_entrega} onChange={e => setFormOC({...formOC, fecha_esperada_entrega: e.target.value})} className="w-full mt-1 px-3 py-2 border rounded-xl bg-slate-50" />
+              <label className="text-xs font-semibold text-slate-500 uppercase">N° Comprobante / CCF Proveedor</label>
+              <input 
+                type="text" 
+                placeholder="Ej. CCF-001234 / DTE-01" 
+                value={formOC.num_comprobante} 
+                onChange={e => setFormOC({...formOC, num_comprobante: e.target.value})} 
+                className="w-full mt-1 px-3 py-2 border rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500" 
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 uppercase">Fecha Emisión del Comprobante</label>
+              <input 
+                type="date" 
+                value={formOC.fecha_emision} 
+                onChange={e => setFormOC({...formOC, fecha_emision: e.target.value})} 
+                className="w-full mt-1 px-3 py-2 border rounded-xl bg-slate-50 text-sm" 
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 uppercase">Fecha Esperada Recepción</label>
+              <input type="date" value={formOC.fecha_esperada_entrega} onChange={e => setFormOC({...formOC, fecha_esperada_entrega: e.target.value})} className="w-full mt-1 px-3 py-2 border rounded-xl bg-slate-50 text-sm" />
             </div>
           </div>
+
+          {/* Tarjeta de Datos Fiscales y Legales del Proveedor */}
+          {provSeleccionado && (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-3 space-y-2 text-xs text-slate-700">
+              <div className="flex items-center justify-between font-bold text-slate-800 text-sm border-b pb-2 border-slate-200">
+                <span className="flex items-center gap-1.5"><FileText className="w-4 h-4 text-indigo-600"/> Datos Legales del Proveedor</span>
+                {provSeleccionado.es_gran_contribuyente && (
+                  <span className="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded font-bold">GRAN CONTRIBUYENTE</span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
+                <div><span className="font-semibold text-slate-500 block uppercase">NIT:</span> <span className="font-mono">{provSeleccionado.nit || '—'}</span></div>
+                <div><span className="font-semibold text-slate-500 block uppercase">NRC:</span> <span className="font-mono">{provSeleccionado.nrc || '—'}</span></div>
+                <div><span className="font-semibold text-slate-500 block uppercase">Giro / Actividad:</span> {provSeleccionado.giro || '—'}</div>
+                <div><span className="font-semibold text-slate-500 block uppercase">Teléfono:</span> {provSeleccionado.telefono || '—'}</div>
+              </div>
+              <div className="pt-1">
+                <span className="font-semibold text-slate-500 uppercase">Dirección:</span> {provSeleccionado.direccion || '—'}
+              </div>
+            </div>
+          )}
           
           <div className="flex gap-6 mt-4">
             <label className="flex items-center gap-2 text-sm text-indigo-600 font-medium cursor-pointer">
@@ -515,23 +571,50 @@ export default function OrdenesCompra() {
           <button onClick={() => setVista('lista')} className="text-slate-500 hover:text-slate-700 font-medium">Volver</button>
         </div>
         
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
-          <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pb-4 border-b border-slate-100">
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase">Proveedor</p>
-              <p className="font-medium">{ocActiva.proveedor_nombre}</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase">Tipo Documento</p>
+              <p className="font-semibold text-indigo-700">{ocActiva.tipo_doc === 'CCF' ? 'Comprobante de Crédito Fiscal (CCF)' : ocActiva.tipo_doc}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase">N° Comprobante Proveedor</p>
+              <p className="font-semibold text-slate-800">{ocActiva.num_comprobante || 'N/A'}</p>
             </div>
             <div>
               <p className="text-xs font-semibold text-slate-500 uppercase">Estado</p>
-              <p className="font-medium">{badgeEstado(ocActiva.estado)}</p>
+              <p className="font-medium mt-0.5">{badgeEstado(ocActiva.estado)}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase">Fecha Emisión Comprobante</p>
+              <p className="font-medium text-slate-700">{ocActiva.fecha_emision ? new Date(ocActiva.fecha_emision).toLocaleDateString() : 'N/A'}</p>
             </div>
             <div>
               <p className="text-xs font-semibold text-slate-500 uppercase">Código de Generación DTE</p>
-              <p className="font-medium text-sm text-slate-600">{ocActiva.codigo_generacion_proveedor || 'N/A'}</p>
+              <p className="font-medium text-xs font-mono text-slate-600 truncate">{ocActiva.codigo_generacion_proveedor || 'N/A'}</p>
             </div>
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase">Fecha Emisión</p>
-              <p className="font-medium">{ocActiva.fecha_emision || 'N/A'}</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase">Sello Recepción DTE</p>
+              <p className="font-medium text-xs font-mono text-slate-600 truncate">{ocActiva.sello_recepcion_proveedor || 'N/A'}</p>
+            </div>
+          </div>
+
+          {/* Tarjeta de Datos Fiscales del Proveedor */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs text-slate-700">
+            <div className="flex items-center justify-between font-bold text-slate-800 text-sm border-b pb-2 border-slate-200 mb-2">
+              <span className="flex items-center gap-1.5"><FileText className="w-4 h-4 text-indigo-600"/> Datos Legales del Proveedor</span>
+              {ocActiva.proveedor_es_gran_contribuyente && (
+                <span className="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded font-bold">GRAN CONTRIBUYENTE</span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div><span className="font-semibold text-slate-500 block uppercase">Razón Social:</span> <span className="font-bold text-slate-800">{ocActiva.proveedor_nombre}</span></div>
+              <div><span className="font-semibold text-slate-500 block uppercase">NIT:</span> <span className="font-mono">{ocActiva.proveedor_nit || '—'}</span></div>
+              <div><span className="font-semibold text-slate-500 block uppercase">NRC:</span> <span className="font-mono">{ocActiva.proveedor_nrc || '—'}</span></div>
+              <div><span className="font-semibold text-slate-500 block uppercase">Giro / Actividad:</span> {ocActiva.proveedor_giro || '—'}</div>
+            </div>
+            <div className="pt-2 mt-2 border-t border-slate-200/60">
+              <span className="font-semibold text-slate-500 uppercase">Dirección Registrada:</span> {ocActiva.proveedor_direccion || '—'}
             </div>
           </div>
 

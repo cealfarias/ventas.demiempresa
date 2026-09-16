@@ -21,6 +21,8 @@ class DetalleOCBase(BaseModel):
 class OrdenCompraCreate(BaseModel):
     proveedor_id: int
     tipo_doc: str = "CCF"
+    num_comprobante: Optional[str] = None
+    fecha_emision: Optional[datetime] = None
     bodega_destino_id: Optional[int] = None
     fecha_esperada_entrega: Optional[datetime] = None
     notas: Optional[str] = None
@@ -63,7 +65,15 @@ class OrdenCompraResponse(BaseModel):
     numero: str
     proveedor_id: int
     proveedor_nombre: str
+    proveedor_nit: Optional[str] = None
+    proveedor_nrc: Optional[str] = None
+    proveedor_giro: Optional[str] = None
+    proveedor_direccion: Optional[str] = None
+    proveedor_es_gran_contribuyente: Optional[bool] = False
     tipo_doc: str
+    num_comprobante: Optional[str] = None
+    codigo_generacion_proveedor: Optional[str] = None
+    sello_recepcion_proveedor: Optional[str] = None
     subtotal: int
     iva: int
     total: int
@@ -96,13 +106,22 @@ def _build_response(oc: OrdenCompra) -> OrdenCompraResponse:
             subtotal=d.subtotal,
             pendiente=max(0, d.cantidad_pedida - d.cantidad_recibida)
         ))
+    p = oc.proveedor
     return OrdenCompraResponse(
         id=oc.id,
         empresa_id=oc.empresa_id,
         numero=oc.numero,
         proveedor_id=oc.proveedor_id,
-        proveedor_nombre=oc.proveedor.nombre if oc.proveedor else "",
+        proveedor_nombre=p.nombre if p else "",
+        proveedor_nit=p.nit if p else None,
+        proveedor_nrc=p.nrc if p else None,
+        proveedor_giro=p.giro if p else None,
+        proveedor_direccion=p.direccion if p else None,
+        proveedor_es_gran_contribuyente=p.es_gran_contribuyente if p else False,
         tipo_doc=oc.tipo_doc,
+        num_comprobante=oc.num_comprobante,
+        codigo_generacion_proveedor=oc.codigo_generacion_proveedor,
+        sello_recepcion_proveedor=oc.sello_recepcion_proveedor,
         subtotal=oc.subtotal,
         iva=oc.iva,
         total=oc.total,
@@ -147,6 +166,8 @@ def crear_orden(empresa_id: str, usuario_id: int, data: OrdenCompraCreate, db: S
         numero=numero,
         proveedor_id=data.proveedor_id,
         tipo_doc=data.tipo_doc,
+        num_comprobante=data.num_comprobante,
+        fecha_emision=data.fecha_emision if data.fecha_emision else datetime.now(TIMEZONE),
         bodega_destino_id=data.bodega_destino_id,
         fecha_esperada_entrega=data.fecha_esperada_entrega,
         notas=data.notas,
@@ -196,6 +217,9 @@ def actualizar_orden(oc_id: int, empresa_id: str, data: OrdenCompraCreate, db: S
 
     oc.proveedor_id = data.proveedor_id
     oc.tipo_doc = data.tipo_doc
+    oc.num_comprobante = data.num_comprobante
+    if data.fecha_emision:
+        oc.fecha_emision = data.fecha_emision
     oc.bodega_destino_id = data.bodega_destino_id
     oc.fecha_esperada_entrega = data.fecha_esperada_entrega
     oc.notas = data.notas

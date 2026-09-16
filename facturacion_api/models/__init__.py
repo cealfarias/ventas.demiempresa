@@ -281,6 +281,7 @@ class Proveedor(Base):
     nombre_comercial = Column(String(200))
     nit = Column(String(20))
     nrc = Column(String(20))
+    giro = Column(String(200))
     es_gran_contribuyente = Column(Boolean, default=False)
     email = Column(String(100))
     telefono = Column(String(20))
@@ -308,6 +309,7 @@ class OrdenCompra(Base):
     proveedor_id = Column(Integer, ForeignKey("proveedores.id"), nullable=False)
 
     tipo_doc = Column(String(20), default="CCF")       # CCF | FACTURA_CONSUMIDOR | MANUAL
+    num_comprobante = Column(String(50))               # Número de comprobante / CCF del proveedor
     # Importación DTE del proveedor
     json_dte_proveedor = Column(Text)
     codigo_generacion_proveedor = Column(String(100))

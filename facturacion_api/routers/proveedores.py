@@ -15,6 +15,7 @@ class ProveedorBase(BaseModel):
     nombre_comercial: Optional[str] = None
     nit: Optional[str] = None
     nrc: Optional[str] = None
+    giro: Optional[str] = None
     es_gran_contribuyente: bool = False
     email: Optional[str] = None
     telefono: Optional[str] = None
@@ -32,6 +33,7 @@ class ProveedorUpdate(BaseModel):
     nombre_comercial: Optional[str] = None
     nit: Optional[str] = None
     nrc: Optional[str] = None
+    giro: Optional[str] = None
     es_gran_contribuyente: Optional[bool] = None
     email: Optional[str] = None
     telefono: Optional[str] = None
