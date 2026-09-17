@@ -23,6 +23,15 @@ try:
         conn.execute(text("ALTER TABLE productos ADD COLUMN IF NOT EXISTS marca VARCHAR(100);"))
         conn.execute(text("ALTER TABLE productos ADD COLUMN IF NOT EXISTS tipo_item VARCHAR(20) DEFAULT 'BIEN';"))
         conn.execute(text("ALTER TABLE productos ADD COLUMN IF NOT EXISTS unidad_medida VARCHAR(50) DEFAULT 'UNIDAD';"))
+        
+        # Arrendamientos Mora & Periodos
+        conn.execute(text("ALTER TABLE contratos_arrendamiento ADD COLUMN IF NOT EXISTS aplica_mora BOOLEAN DEFAULT FALSE;"))
+        conn.execute(text("ALTER TABLE contratos_arrendamiento ADD COLUMN IF NOT EXISTS tipo_mora VARCHAR(20) DEFAULT 'porcentaje';"))
+        conn.execute(text("ALTER TABLE contratos_arrendamiento ADD COLUMN IF NOT EXISTS valor_mora FLOAT DEFAULT 0.0;"))
+        conn.execute(text("ALTER TABLE contratos_arrendamiento ADD COLUMN IF NOT EXISTS dias_gracia INTEGER DEFAULT 0;"))
+        conn.execute(text("ALTER TABLE pagos_arrendamiento ADD COLUMN IF NOT EXISTS anio INTEGER;"))
+        conn.execute(text("ALTER TABLE pagos_arrendamiento ADD COLUMN IF NOT EXISTS mes INTEGER;"))
+        conn.execute(text("ALTER TABLE pagos_arrendamiento ADD COLUMN IF NOT EXISTS monto_mora INTEGER DEFAULT 0;"))
 except Exception as e:
     print("Migration check note:", e)
 

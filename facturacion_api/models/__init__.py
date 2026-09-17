@@ -826,6 +826,12 @@ class ContratoArrendamiento(Base):
     dia_pago_limite = Column(Integer, default=5) # Día del mes (1-31)
     deposito_garantia = Column(Integer, default=0) # Dinero en centavos
     
+    # Configuración de Recargo por Mora
+    aplica_mora = Column(Boolean, default=False)
+    tipo_mora = Column(String(20), default="porcentaje") # porcentaje | monto_fijo
+    valor_mora = Column(Float, default=0.0) # Ej: 5.0 (%) o centavos si es monto fijo
+    dias_gracia = Column(Integer, default=0)
+    
     fecha_inicio = Column(DateTime(timezone=True), nullable=True)
     fecha_fin = Column(DateTime(timezone=True), nullable=True)
     
@@ -844,8 +850,12 @@ class PagoArrendamiento(Base):
     contrato_id = Column(Integer, ForeignKey("contratos_arrendamiento.id"), nullable=False)
     empresa_id = Column(String, index=True, nullable=False)
     
+    anio = Column(Integer, nullable=True) # Ej: 2026
+    mes = Column(Integer, nullable=True)  # 1 a 12
+    
     tipo = Column(String(30), nullable=False) # PAGO_ALQUILER | COBRO_ALQUILER
-    monto = Column(Integer, nullable=False) # centavos
+    monto = Column(Integer, nullable=False) # centavos (canon + mora)
+    monto_mora = Column(Integer, default=0) # centavos
     fecha_pago = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
     
     metodo_pago = Column(String(50), default="efectivo")

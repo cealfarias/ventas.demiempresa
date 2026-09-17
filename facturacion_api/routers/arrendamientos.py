@@ -4,8 +4,9 @@ from database import get_db
 from models import ContratoArrendamiento, PagoArrendamiento, SesionCaja, MovimientoCaja, Caja
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, date, timedelta
 import pytz
+import calendar
 
 TIMEZONE = pytz.timezone("America/El_Salvador")
 router = APIRouter(prefix="/arrendamientos", tags=["Contratos de Arrendamiento"])
@@ -22,6 +23,13 @@ class ContratoArrendamientoCreate(BaseModel):
     canon_mensual: int # centavos
     dia_pago_limite: Optional[int] = 5 # 1-31
     deposito_garantia: Optional[int] = 0 # centavos
+    
+    # Configuración de Recargo por Mora
+    aplica_mora: Optional[bool] = False
+    tipo_mora: Optional[str] = "porcentaje" # porcentaje | monto_fijo
+    valor_mora: Optional[float] = 0.0 # Ej: 5.0 (%) o centavos si es monto fijo
+    dias_gracia: Optional[int] = 0
+    
     fecha_inicio: Optional[str] = None
     fecha_fin: Optional[str] = None
     estado: Optional[str] = "activo" # activo | finalizado | suspendido
@@ -29,7 +37,10 @@ class ContratoArrendamientoCreate(BaseModel):
 
 class PagoArrendamientoCreate(BaseModel):
     tipo: Optional[str] = "PAGO_ALQUILER" # PAGO_ALQUILER | COBRO_ALQUILER
-    monto: int # centavos
+    anio: Optional[int] = None
+    mes: Optional[int] = None
+    monto: int # centavos (total)
+    monto_mora: Optional[int] = 0 # centavos
     fecha_pago: Optional[str] = None
     metodo_pago: Optional[str] = "efectivo"
     referencia: Optional[str] = None
@@ -39,8 +50,11 @@ class PagoArrendamientoResponse(BaseModel):
     id: int
     contrato_id: int
     empresa_id: str
+    anio: Optional[int] = None
+    mes: Optional[int] = None
     tipo: str
     monto: int
+    monto_mora: Optional[int] = 0
     fecha_pago: datetime
     metodo_pago: str
     referencia: Optional[str] = None
@@ -62,6 +76,10 @@ class ContratoArrendamientoResponse(BaseModel):
     canon_mensual: int
     dia_pago_limite: int
     deposito_garantia: int
+    aplica_mora: Optional[bool] = False
+    tipo_mora: Optional[str] = "porcentaje"
+    valor_mora: Optional[float] = 0.0
+    dias_gracia: Optional[int] = 0
     fecha_inicio: Optional[datetime] = None
     fecha_fin: Optional[datetime] = None
     estado: str
@@ -71,6 +89,12 @@ class ContratoArrendamientoResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+MESES_NOMBRES = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+]
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -97,6 +121,10 @@ def listar_contratos(empresa_id: str, db: Session = Depends(get_db)):
             "canon_mensual": c.canon_mensual or 0,
             "dia_pago_limite": c.dia_pago_limite or 5,
             "deposito_garantia": c.deposito_garantia or 0,
+            "aplica_mora": c.aplica_mora or False,
+            "tipo_mora": c.tipo_mora or "porcentaje",
+            "valor_mora": c.valor_mora or 0.0,
+            "dias_gracia": c.dias_gracia or 0,
             "fecha_inicio": c.fecha_inicio,
             "fecha_fin": c.fecha_fin,
             "estado": c.estado or "activo",
@@ -135,6 +163,10 @@ def crear_contrato(empresa_id: str, data: ContratoArrendamientoCreate, db: Sessi
         canon_mensual=data.canon_mensual or 0,
         dia_pago_limite=data.dia_pago_limite or 5,
         deposito_garantia=data.deposito_garantia or 0,
+        aplica_mora=data.aplica_mora or False,
+        tipo_mora=data.tipo_mora or "porcentaje",
+        valor_mora=data.valor_mora or 0.0,
+        dias_gracia=data.dias_gracia or 0,
         fecha_inicio=f_inicio,
         fecha_fin=f_fin,
         estado=data.estado or "activo",
@@ -179,6 +211,10 @@ def actualizar_contrato(contrato_id: int, empresa_id: str, data: ContratoArrenda
     contrato.canon_mensual = data.canon_mensual or 0
     contrato.dia_pago_limite = data.dia_pago_limite or 5
     contrato.deposito_garantia = data.deposito_garantia or 0
+    contrato.aplica_mora = data.aplica_mora or False
+    contrato.tipo_mora = data.tipo_mora or "porcentaje"
+    contrato.valor_mora = data.valor_mora or 0.0
+    contrato.dias_gracia = data.dias_gracia or 0
     contrato.fecha_inicio = f_inicio
     contrato.fecha_fin = f_fin
     contrato.estado = data.estado or "activo"
@@ -202,6 +238,100 @@ def eliminar_contrato(contrato_id: int, empresa_id: str, db: Session = Depends(g
     db.delete(contrato)
     db.commit()
     return {"message": "Contrato eliminado con éxito"}
+
+
+@router.get("/{contrato_id}/tabla-anual")
+def obtener_tabla_anual_contrato(contrato_id: int, empresa_id: str, anio: Optional[int] = None, db: Session = Depends(get_db)):
+    contrato = db.query(ContratoArrendamiento).filter(
+        ContratoArrendamiento.id == contrato_id,
+        ContratoArrendamiento.empresa_id == empresa_id
+    ).first()
+    if not contrato:
+        raise HTTPException(status_code=404, detail="Contrato no encontrado")
+
+    hoy = datetime.now(TIMEZONE).date()
+    anio_evaluado = anio or hoy.year
+
+    # Obtener pagos existentes para ese año
+    pagos_anio = db.query(PagoArrendamiento).filter(
+        PagoArrendamiento.contrato_id == contrato_id,
+        PagoArrendamiento.anio == anio_evaluado
+    ).all()
+    pagos_map = {p.mes: p for p in pagos_anio if p.mes}
+
+    tabla = []
+    dia_limite_base = contrato.dia_pago_limite or 5
+    canon_base = contrato.canon_mensual or 0
+
+    for mes in range(1, 13):
+        # Determinar el último día posible del mes para evitar ValueError (ej: Feb 28/29, Abr 30)
+        max_dias = calendar.monthrange(anio_evaluado, mes)[1]
+        dia_efectivo = min(dia_limite_base, max_dias)
+        fecha_limite = date(anio_evaluado, mes, dia_efectivo)
+
+        pago_existente = pagos_map.get(mes)
+
+        if pago_existente:
+            estado = "pagado"
+            mora_calculada = pago_existente.monto_mora or 0
+            monto_total = pago_existente.monto
+            es_vencido = False
+            dias_atraso = 0
+            fecha_pago_real = pago_existente.fecha_pago.strftime("%Y-%m-%d %H:%M") if pago_existente.fecha_pago else None
+        else:
+            fecha_pago_real = None
+            fecha_limite_con_gracia = fecha_limite + timedelta(days=contrato.dias_gracia or 0)
+            if hoy > fecha_limite_con_gracia:
+                es_vencido = True
+                dias_atraso = (hoy - fecha_limite).days
+                estado = "vencido"
+                mora_calculada = 0
+                if contrato.aplica_mora:
+                    if contrato.tipo_mora == "monto_fijo":
+                        val = contrato.valor_mora or 0.0
+                        mora_calculada = int(round(val if val >= 100 else val * 100))
+                    else: # porcentaje
+                        mora_calculada = int(round(canon_base * ((contrato.valor_mora or 0.0) / 100.0)))
+            else:
+                es_vencido = False
+                dias_atraso = 0
+                estado = "pendiente"
+                mora_calculada = 0
+
+            monto_total = canon_base + mora_calculada
+
+        tabla.append({
+            "mes": mes,
+            "nombre_mes": MESES_NOMBRES[mes - 1],
+            "anio": anio_evaluado,
+            "fecha_limite": fecha_limite.isoformat(),
+            "canon_base": canon_base,
+            "aplica_mora": contrato.aplica_mora or False,
+            "mora_calculada": mora_calculada,
+            "monto_total_estimado": monto_total,
+            "es_vencido": es_vencido,
+            "dias_atraso": dias_atraso,
+            "estado": estado,
+            "fecha_pago_real": fecha_pago_real,
+            "pago_id": pago_existente.id if pago_existente else None,
+            "metodo_pago": pago_existente.metodo_pago if pago_existente else None,
+            "referencia": pago_existente.referencia if pago_existente else None
+        })
+
+    return {
+        "contrato_id": contrato.id,
+        "inmueble_nombre": contrato.inmueble_nombre,
+        "tipo": contrato.tipo,
+        "contraparte_nombre": contrato.contraparte_nombre,
+        "canon_mensual": canon_base,
+        "dia_pago_limite": dia_limite_base,
+        "aplica_mora": contrato.aplica_mora or False,
+        "tipo_mora": contrato.tipo_mora or "porcentaje",
+        "valor_mora": contrato.valor_mora or 0.0,
+        "dias_gracia": contrato.dias_gracia or 0,
+        "anio": anio_evaluado,
+        "tabla": tabla
+    }
 
 
 @router.get("/{contrato_id}/pagos", response_model=List[PagoArrendamientoResponse])
@@ -236,8 +366,11 @@ def registrar_pago_arrendamiento(contrato_id: int, empresa_id: str, usuario_id: 
     pago = PagoArrendamiento(
         contrato_id=contrato.id,
         empresa_id=empresa_id,
+        anio=data.anio,
+        mes=data.mes,
         tipo=tipo_transaccion,
         monto=data.monto,
+        monto_mora=data.monto_mora or 0,
         metodo_pago=data.metodo_pago or "efectivo",
         referencia=data.referencia,
         notas=data.notas,
@@ -263,12 +396,13 @@ def registrar_pago_arrendamiento(contrato_id: int, empresa_id: str, usuario_id: 
         
         if sesion:
             es_ingreso = tipo_transaccion == "COBRO_ALQUILER"
+            concepto_periodo = f" (Mes {data.mes}/{data.anio})" if data.mes and data.anio else ""
             db.add(MovimientoCaja(
                 sesion_caja_id=sesion.id,
                 tipo="ingreso" if es_ingreso else "egreso",
                 metodo_pago="efectivo",
                 monto=data.monto,
-                concepto=f"Arrendamiento ({contrato.inmueble_nombre}): {contrato.contraparte_nombre}",
+                concepto=f"Arrendamiento{concepto_periodo} ({contrato.inmueble_nombre}): {contrato.contraparte_nombre}",
                 referencia_tipo="arrendamiento",
                 referencia_id=pago.id,
                 usuario_id=usuario_id
