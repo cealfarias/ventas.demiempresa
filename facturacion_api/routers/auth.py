@@ -211,6 +211,9 @@ def google_login(data: GoogleLoginSchema, db: Session = Depends(get_db)):
         empresa = Empresa(
             id=empresa_uuid,
             razon_social=nombre_empresa,
+            nit=None,
+            giro="Actividad no especificada",
+            normativa="NIIF para Pymes",
             usuario_creacion=username_gen,
             terminal_ip="127.0.0.1"
         )
@@ -226,6 +229,9 @@ def google_login(data: GoogleLoginSchema, db: Session = Depends(get_db)):
         empresa = Empresa(
             id=empresa_uuid,
             razon_social=nombre_empresa,
+            nit=None,
+            giro="Actividad no especificada",
+            normativa="NIIF para Pymes",
             usuario_creacion=user.username,
             terminal_ip="127.0.0.1"
         )
