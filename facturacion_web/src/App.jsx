@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, NavLink, useLocation, Nav
 import {
   LayoutDashboard, Receipt, Package, Users, Settings, LogOut, Menu,
   Warehouse, BarChart3, ChevronDown, ChevronRight, Truck, ShoppingCart, CreditCard, BookOpen
-, Wallet, DollarSign, Calculator, ShieldCheck, UserCheck, Headphones, Building } from 'lucide-react';
+, Wallet, DollarSign, Calculator, ShieldCheck, UserCheck, Headphones, Building, Sparkles } from 'lucide-react';
 import Productos from './pages/Productos';
 import Login from './pages/Login';
 import Registro from './pages/Registro';
