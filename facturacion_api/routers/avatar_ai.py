@@ -130,99 +130,111 @@ MODULOS_KNOWLEDGE = {
 # Base de Preguntas Frecuentes / Intenciones Específicas
 PROCEDIMIENTOS_KNOWLEDGE = [
     {
-        "intent": "caja_cerrada",
-        "keywords": ["caja cerrada", "abrir caja", "aperturar turno", "sin caja", "no me deja facturar", "no puedo cobrar en efectivo", "no tiene caja abierta"],
-        "respuesta": "🔑 **¿Cómo abrir la Caja / Resolver 'Caja Cerrada'?**\n\n1. **Opción Rápida:** Haz clic en el botón **'[Abrir]'** en el indicador de caja ubicado en la barra superior (Header).\n2. **Opción Completa:** Ve al menú **Finanzas -> Control de Caja** (`/cajas`) y presiona 'Aperturar Turno'.\n3. Selecciona la caja física y digita tu **Saldo Inicial** (fondo de caja físico).\n4. Al confirmar, tu caja quedará **ABIERTA** (en verde) y podrás facturar, cobrar CxC y pagar gastos en efectivo sin inconvenientes.",
-        "redirect": "/cajas"
+        "intent": "emitir_factura",
+        "keywords": ["emitir factura", "hacer venta", "facturar", "crear dte", "consumidor final", "credito fiscal", "como hago facturas", "cómo hago facturas", "como hago una factura", "cómo hago una factura", "como emitir", "cómo emitir", "como vendo", "cómo vendo"],
+        "respuesta": "🧾 **¿Cómo emitir una Factura / DTE?**\n\n1. Asegúrate de tener tu **Caja Abierta** (indicador verde en el encabezado).\n2. Ve al módulo **Facturación DTE** (`/facturas`).\n3. Selecciona el **Cliente** (o Consumidor Final para venta rápida).\n4. Agrega los productos o servicios desde el catálogo.\n5. Elige el **Tipo de Documento** (Factura, Crédito Fiscal, Nota de Crédito) y Condición de Pago.\n6. Haz clic en **'Emitir Factura'** y posteriormente en **'Transmitir DTE'** para enviar a Hacienda.",
+        "redirect": "/facturas"
     },
     {
-        "intent": "caja_trasnochada",
-        "keywords": ["trasnochada", "dia anterior", "caja anterior", "cierre z", "cerrar caja ayer"],
-        "respuesta": "⚠️ **Caja Trasnochada (Abierta en día anterior)**\n\nCuando dejaste un turno abierto de una fecha previa, el sistema te solicitará realizar el Cierre Z antes de abrir hoy:\n\n1. Ve a **Control de Caja** (`/cajas`).\n2. Presiona **'Cerrar Turno'**.\n3. Realiza el **Arqueo Físico** (ingresa la cantidad de billetes y monedas que tienes en la gaveta).\n4. Confirma el cierre. Si hay sobrante o faltante, el sistema lo registrará en el acta de cierre.\n5. Inmediatamente después, presiona **'Aperturar Turno'** con el nuevo fondo para el día de hoy.",
+        "intent": "orden_compra",
+        "keywords": ["orden compra", "recibir producto", "ingresar mercaderia", "comprar inventario", "como hago una compra", "cómo hago una compra", "como hago compras", "cómo hago compras", "como compro", "cómo compro", "como ingresar compra", "cómo ingresar compra"],
+        "respuesta": "🛒 **¿Cómo procesar Compras e Ingreso de Inventario?**\n\n1. Ve al menú **Compras -> Compra / Orden de Compra** (`/ordenes-compra`).\n2. Presiona **'Nueva Órden de Compra'** y selecciona el proveedor.\n3. Añade los productos indicando cantidades y costo de adquisición.\n4. Cuando los productos lleguen físicamente, abre la orden y cambia su estado a **'Recibida'**.\n5. Las existencias ingresarán automáticamente a la bodega y el Kardex recalculará el Costo Promedio Ponderado.",
+        "redirect": "/ordenes-compra"
+    },
+    {
+        "intent": "caja_cerrada",
+        "keywords": ["caja cerrada", "abrir caja", "aperturar turno", "sin caja", "no me deja facturar", "no puedo cobrar en efectivo", "no tiene caja abierta", "como abro caja", "cómo abro la caja", "como hago apertura de caja", "cómo hago la apertura"],
+        "respuesta": "🔑 **¿Cómo abrir la Caja / Resolver 'Caja Cerrada'?**\n\n1. **Opción Rápida:** Haz clic en el botón **'[Abrir]'** en el indicador de caja ubicado en la barra superior (Header).\n2. **Opción Completa:** Ve a **Control de Caja** (`/cajas`) y presiona 'Aperturar Turno'.\n3. Selecciona la caja física e ingresa tu **Saldo Inicial** (fondo de caja).\n4. Al confirmar, tu caja quedará **ABIERTA** y podrás facturar y cobrar en efectivo.",
         "redirect": "/cajas"
     },
     {
         "intent": "cierre_caja",
-        "keywords": ["cerrar caja", "arqueo", "cierre z", "cuadrar caja", "cerrar turno"],
-        "respuesta": "📊 **¿Cómo hacer el Cierre y Arqueo de Caja?**\n\n1. Dirígete a **Finanzas -> Control de Caja** (`/cajas`).\n2. Presiona el botón **'Cerrar Turno'**.\n3. Se abrirá la calculadora de **Arqueo de Billetes y Monedas**.\n4. Cuenta tu efectivo físico y digita las cantidades ($100, $50, $20, $10, $5, $1, monedas, etc.).\n5. El sistema comparará tu total físico contra el saldo calculado (Fondo + Ingresos - Egresos).\n6. Si todo cuadra (Diferencia = $0.00) o hay sobrante/faltante, presiona **'Confirmar Cierre'**.",
+        "keywords": ["cerrar caja", "arqueo", "cierre z", "cuadrar caja", "cerrar turno", "como cierro caja", "cómo cierro la caja", "como hago el cierre de caja", "cómo hago el cierre"],
+        "respuesta": "📊 **¿Cómo hacer el Cierre y Arqueo de Caja?**\n\n1. Dirígete a **Finanzas -> Control de Caja** (`/cajas`).\n2. Presiona el botón **'Cerrar Turno'**.\n3. Se abrirá la calculadora de **Arqueo de Billetes y Monedas**.\n4. Cuenta tu efectivo físico y digita las cantidades.\n5. El sistema comparará tu total físico contra el saldo calculado por el sistema.\n6. Si todo cuadra (Diferencia = $0.00), presiona **'Confirmar Cierre'**.",
         "redirect": "/cajas"
-    },
-    {
-        "intent": "inyectar_capital",
-        "keywords": ["inyectar capital", "aporte socio", "prestamo socio", "meter dinero", "fondo extra"],
-        "respuesta": "💵 **¿Cómo Inyectar Capital a la Caja?**\n\nSi necesitas ingresar efectivo a la caja que no proviene de una venta (ej: aporte de socio o préstamo temporal):\n\n1. Ve a **Control de Caja** (`/cajas`).\n2. Asegúrate de tener la caja abierta.\n3. Presiona el botón **'Inyectar Capital'**.\n4. Selecciona el Tipo: 'Aporte de Socio (0% interés)' o 'Préstamo con/sin interés'.\n5. Ingresa el nombre del acreedor/socio y el monto.\n6. El dinero ingresará al saldo de la caja sin inflar tus reporte de ventas gravadas.",
-        "redirect": "/cajas"
-    },
-    {
-        "intent": "emitir_factura",
-        "keywords": ["emitir factura", "hacer venta", "facturar", "crear dte", "consumidor final", "credito fiscal"],
-        "respuesta": "🧾 **Pasos para Emitir una Factura / DTE:**\n\n1. Asegúrate de tener tu **Caja Abierta** (badge en verde en el encabezado).\n2. Ve a **Ventas -> Facturación DTE** (`/facturas`).\n3. Selecciona el **Cliente** (o Consumidor Final).\n4. Agrega los productos desde el buscador de catálogo.\n5. Selecciona el **Tipo de DTE** (Factura Consumidor Final, Crédito Fiscal, Nota de Crédito).\n6. Selecciona el **Condición de Pago** (Contado / Crédito) y Método de Pago.\n7. Presiona **'Emitir Factura'**.\n8. Para enviarla a Hacienda El Salvador, presiona el botón **'Transmitir DTE'**.",
-        "redirect": "/facturas"
-    },
-    {
-        "intent": "anular_factura",
-        "keywords": ["anular factura", "cancelar factura", "anular dte", "invalidar documento"],
-        "respuesta": "🚫 **¿Cómo Anular una Factura?**\n\n1. Ingresa a **Facturación DTE** (`/facturas`).\n2. En la tabla de facturas emitidas, ubica el documento a anular.\n3. Presiona el botón de tres puntos o el icono de papelera/anular.\n4. Selecciona el motivo de invalidación.\n5. Confirma la anulación. El sistema devolverá el stock al inventario y revertirá el dinero si fue al contado.",
-        "redirect": "/facturas"
     },
     {
         "intent": "cobrar_cxc",
-        "keywords": ["cobrar", "abono cliente", "cuenta por cobrar", "recibir pago cliente", "saldar deuda cliente"],
-        "respuesta": "💳 **¿Cómo registrar un Cobro a Cliente (CxC)?**\n\n1. Ve a **Ventas -> Cuentas por Cobrar** (`/cuentas-cobrar`).\n2. Busca al cliente en la lista y presiona **'Registrar Cobro'**.\n3. Ingresa la cantidad a abonar o liquidar.\n4. Selecciona el método de pago: **Efectivo** (requiere caja abierta), **Transferencia** o **Tarjeta**.\n5. Presiona **'Confirmar Cobro'**. El abono actualizará el saldo pendiente y, si fue en efectivo, se sumará inmediatamente a tu caja activa.",
+        "keywords": ["cobrar", "abono cliente", "cuenta por cobrar", "recibir pago cliente", "saldar deuda cliente", "como hago un cobro", "cómo hago un cobro", "como cobro", "cómo cobro", "como abonar cliente"],
+        "respuesta": "💳 **¿Cómo registrar un Cobro a Cliente (CxC)?**\n\n1. Ve a **Ventas -> Cuentas por Cobrar** (`/cuentas-cobrar`).\n2. Busca al cliente y presiona **'Registrar Cobro'**.\n3. Ingresa la cantidad a abonar y selecciona la forma de pago (**Efectivo**, **Transferencia** o **Tarjeta**).\n4. Al confirmar, el saldo del cliente se actualizará y, si fue en efectivo, se sumará inmediatamente a tu caja activa.",
         "redirect": "/cuentas-cobrar"
     },
     {
         "intent": "pagar_cxp",
-        "keywords": ["pagar proveedor", "cuenta por pagar", "abono proveedor", "pagar deuda comprad"],
+        "keywords": ["pagar proveedor", "cuenta por pagar", "abono proveedor", "pagar deuda comprad", "como hago un pago a proveedor", "cómo hago un pago a proveedor", "como pago proveedor"],
         "respuesta": "📄 **¿Cómo registrar un Pago a Proveedor (CxP)?**\n\n1. Ve a **Compras -> Cuentas por Pagar** (`/cuentas-pagar`).\n2. Selecciona la factura o compra pendiente del proveedor.\n3. Presiona **'Registrar Pago'**.\n4. Ingresa el monto abonado y el medio de pago (Efectivo de Caja o Banco).\n5. Al guardar, si fue en efectivo se registrará el egreso automático en tu caja activa.",
         "redirect": "/cuentas-pagar"
     },
     {
         "intent": "registrar_gasto",
-        "keywords": ["registrar gasto", "crear gasto", "gasto operativo", "caja chica", "pago servicio"],
+        "keywords": ["registrar gasto", "crear gasto", "gasto operativo", "caja chica", "pago servicio", "como hago un gasto", "cómo hago un gasto", "como registro un gasto", "cómo registro un gasto"],
         "respuesta": "💸 **¿Cómo registrar un Gasto Operativo?**\n\n1. Ve a **Finanzas -> Gastos Operativos** (`/gastos`).\n2. Selecciona la **Categoría del Gasto** (Servicios, Mantenimiento, Viáticos, Renta, etc.).\n3. Ingresa el **Monto** ($) y el **Concepto / Descripción**.\n4. Elige si el pago sale de **Efectivo de Caja** (requiere turno de caja abierto) o **Transferencia Bancaria**.\n5. Haz clic en **'Registrar Gasto'**.",
         "redirect": "/gastos"
     },
     {
-        "intent": "orden_compra",
-        "keywords": ["orden compra", "recibir producto", "ingresar mercaderia", "comprar inventario"],
-        "respuesta": "🛒 **¿Cómo procesar Compras e Ingreso de Mercadería?**\n\n1. Ve a **Compras -> Compra / Orden de Compra** (`/ordenes-compra`).\n2. Presiona **'Nueva Órden de Compra'**, elige el proveedor e ingresa los productos con su costo de adquisición.\n3. Cuando los productos físicos lleguen al almacén, abre la orden y cambia su estado a **'Recibida'**.\n4. ¡Listo! Las existencias ingresarán automáticamente a la bodega y el Libro Kardex actualizará el Costo Promedio Ponderado.",
-        "redirect": "/ordenes-compra"
+        "intent": "crear_cliente",
+        "keywords": ["crear cliente", "nuevo cliente", "registrar cliente", "como creo un cliente", "cómo creo un cliente", "como hago un cliente", "cómo hago un cliente"],
+        "respuesta": "👥 **¿Cómo crear un nuevo Cliente?**\n\n1. Dirígete a **Ventas -> Clientes** (`/clientes`).\n2. Haz clic en el botón **'Nuevo Cliente'**.\n3. Ingresa el Nombre, NIT/NRC/DUI, Teléfono y Dirección.\n4. Asigna un límite de crédito si realizará compras a plazo y guarda los cambios.",
+        "redirect": "/clientes"
+    },
+    {
+        "intent": "crear_producto",
+        "keywords": ["crear producto", "nuevo producto", "agregar producto", "como creo un producto", "cómo creo un producto", "como hago un producto"],
+        "respuesta": "📦 **¿Cómo crear un nuevo Producto o Servicio?**\n\n1. Ve a **Almacén -> Catálogo de Productos** (`/productos`).\n2. Haz clic en **'Nuevo Producto'**.\n3. Selecciona si es **Producto Físico** (descuenta stock) o **Servicio**.\n4. Ingresa el Código, Nombre, Precio de Venta y Costo Inicial.",
+        "redirect": "/productos"
     },
     {
         "intent": "kardex_inventario",
-        "keywords": ["kardex", "costo promedio", "trazabilidad", "auditar producto", "entradas y salidas"],
-        "respuesta": "📋 **¿Cómo consultar el Libro Kardex?**\n\n1. Ve a **Almacén -> Libro Kardex** (`/kardex`).\n2. Selecciona el producto que deseas auditar.\n3. Verás la lista cronológica de todas las Entradas (compras), Salidas (ventas/gastos) y el saldo valorizado con su **Costo Promedio Ponderado**.",
+        "keywords": ["kardex", "costo promedio", "trazabilidad", "auditar producto", "entradas y salidas", "como consulto el kardex", "cómo consulto el kardex", "como veo el kardex"],
+        "respuesta": "📋 **¿Cómo consultar el Libro Kardex?**\n\n1. Ve a **Almacén -> Libro Kardex** (`/kardex`).\n2. Selecciona el producto que deseas auditar.\n3. Verás el historial cronológico de todas las Entradas (compras), Salidas (ventas/gastos) y el saldo valorizado con su **Costo Promedio Ponderado**.",
         "redirect": "/kardex"
     },
     {
         "intent": "backup_restauracion",
-        "keywords": ["backup", "copia de seguridad", "restaurar", "respaldo", "hmac"],
-        "respuesta": "🛡️ **¿Cómo exportar y restaurar la Copia de Seguridad (Backup)?**\n\n1. Ve a **Configuración -> Backup y Restauración** (`/backup-recovery`).\n2. **Para Exportar:** Presiona **'Exportar Backup'**. Se descargará un archivo `.json` firmado con clave de seguridad HMAC-SHA256.\n3. **Para Restaurar:** Selecciona tu archivo `.json` guardado y haz clic en **'Verificar y Restaurar'**. El sistema autenticará la firma para garantizar que no fue manipulado.",
+        "keywords": ["backup", "copia de seguridad", "restaurar", "respaldo", "hmac", "como hago un backup", "cómo hago un backup", "como respaldo"],
+        "respuesta": "🛡️ **¿Cómo exportar y restaurar la Copia de Seguridad (Backup)?**\n\n1. Ve a **Configuración -> Backup y Restauración** (`/backup-recovery`).\n2. **Para Exportar:** Presiona **'Exportar Backup'**. Se descargará un archivo `.json` firmado con clave de seguridad HMAC-SHA256.\n3. **Para Restaurar:** Selecciona tu archivo `.json` guardado y haz clic en **'Verificar y Restaurar'**.",
         "redirect": "/backup-recovery"
     },
     {
         "intent": "usuarios_roles",
-        "keywords": ["crear usuario", "cambiar rol", "permisos", "vendedor", "cajera", "bodeguero"],
-        "respuesta": "👥 **¿Cómo administrar Usuarios y Roles (RBAC)?**\n\n1. Dirígete a **Configuración -> Gestión de Usuarios** (`/usuarios`).\n2. Haz clic en **'Nuevo Usuario'**.\n3. Completa Username, Email y Password.\n4. Selecciona el **Rol** (Admin, Cajera, Bodeguero, Vendedor, Auditor, etc.).\n5. Guarda el usuario. Las pantallas se adaptarán automáticamente a los permisos de ese perfil.",
+        "keywords": ["crear usuario", "cambiar rol", "permisos", "vendedor", "cajera", "bodeguero", "como creo un usuario", "cómo creo un usuario"],
+        "respuesta": "👥 **¿Cómo administrar Usuarios y Roles (RBAC)?**\n\n1. Dirígete a **Configuración -> Gestión de Usuarios** (`/usuarios`).\n2. Haz clic en **'Nuevo Usuario'**.\n3. Completa Username, Email, Contraseña y asigna el **Rol** correspondiente.",
         "redirect": "/usuarios"
+    },
+    {
+        "intent": "caja_trasnochada",
+        "keywords": ["trasnochada", "dia anterior", "caja anterior", "cierre z", "cerrar caja ayer"],
+        "respuesta": "⚠️ **Caja Trasnochada (Abierta en día anterior)**\n\n1. Ve a **Control de Caja** (`/cajas`).\n2. Presiona **'Cerrar Turno'** y realiza el arqueo físico.\n3. Confirma el cierre. Inmediatamente después, presiona **'Aperturar Turno'** con el nuevo fondo para el día de hoy.",
+        "redirect": "/cajas"
+    },
+    {
+        "intent": "inyectar_capital",
+        "keywords": ["inyectar capital", "aporte socio", "prestamo socio", "meter dinero", "fondo extra"],
+        "respuesta": "💵 **¿Cómo Inyectar Capital a la Caja?**\n\n1. Ve a **Control de Caja** (`/cajas`) con la caja abierta.\n2. Presiona el botón **'Inyectar Capital'**.\n3. Selecciona Tipo (Aporte o Préstamo), ingresa acreedor/socio y monto.",
+        "redirect": "/cajas"
+    },
+    {
+        "intent": "anular_factura",
+        "keywords": ["anular factura", "cancelar factura", "anular dte", "invalidar documento"],
+        "respuesta": "🚫 **¿Cómo Anular una Factura?**\n\n1. Ingresa a **Facturación DTE** (`/facturas`).\n2. En la tabla de facturas emitidas, ubica el documento y presiona el botón **'Anular'**.\n3. Selecciona el motivo de invalidación. El stock devolverá automáticamente al inventario.",
+        "redirect": "/facturas"
     },
     {
         "intent": "acreedores_maestro",
         "keywords": ["acreedor", "acreedores", "prestamista", "catalogo acreedores", "maestro acreedores"],
-        "respuesta": "🏦 **Directorio Maestro de Acreedores (`/acreedores`):**\n\n1. Esta pantalla es exclusivamente el **Catálogo Maestro** de prestamistas (Bancos, Financieras, Personas).\n2. Registra y edita Nombre, DUI/NIT, Teléfono y datos de contacto.\n3. Presiona **'👁️ Ver Préstamos'** en cualquier acreedor para ir a la central de Préstamos y Amortizaciones.",
+        "respuesta": "🏦 **Directorio Maestro de Acreedores (`/acreedores`):**\n\n1. Registra y edita Bancos, Financieras o Prestamistas.\n2. Presiona **'👁️ Ver Préstamos'** en cualquier acreedor para ver sus contratos.",
         "redirect": "/acreedores"
     },
     {
         "intent": "prestamos_cuotas",
-        "keywords": ["prestamo", "prestamos", "cuotas", "amortizacion", "pagar cuota", "tabla amortizacion"],
-        "respuesta": "🧮 **Préstamos y Amortizaciones (`/pago-prestamos`):**\n\n1. Esta pantalla es el **Módulo Gestor de Préstamos y Pago de Cuotas**.\n2. Presiona **'Nuevo Préstamo'** para crear un contrato eligiendo el Acreedor del maestro, monto, plazo e interés.\n3. Selecciona cualquier préstamo para ver su **Tabla de Amortización** (Sistema Francés o Interés Simple).\n4. Presiona **'$ Pagar Cuota'** para liquidar en orden correlativo descontando de caja chica o banco.",
+        "keywords": ["prestamo", "prestamos", "cuotas", "amortizacion", "pagar cuota", "tabla amortizacion", "como pago una cuota"],
+        "respuesta": "🧮 **Préstamos y Amortizaciones (`/pago-prestamos`):**\n\n1. Ve a **Finanzas -> Pago de Préstamos**.\n2. Presiona **'Nuevo Préstamo'** para crear un contrato o selecciona uno existente para ver su tabla de amortización.\n3. Haz clic en **'$ Pagar Cuota'** para saldar la cuota correlativa.",
         "redirect": "/pago-prestamos"
     },
     {
         "intent": "configuracion_dte",
         "keywords": ["configurar dte", "certificado p12", "firma hacienda", "llave api mh"],
-        "respuesta": "⚙️ **¿Cómo configurar la Facturación Electrónica DTE?**\n\n1. Ve a **Configuración -> Configuración DTE** (`/configuracion-dte`).\n2. Carga tu archivo de **Certificado Digital `.p12`** y escribe su contraseña.\n3. Ingresa tu **Clave API de Hacienda** (otorgada por el MH El Salvador).\n4. Selecciona el **Entorno** (Pruebas o Producción).\n5. Presiona 'Guardar Configuración' y realiza la prueba de firma.",
+        "respuesta": "⚙️ **¿Cómo configurar la Facturación Electrónica DTE?**\n\n1. Ve a **Configuración -> Configuración DTE** (`/configuracion-dte`).\n2. Carga tu archivo de **Certificado Digital `.p12`** y su contraseña.\n3. Ingresa la **Clave API de Hacienda** y selecciona el entorno.",
         "redirect": "/configuracion-dte"
     }
 ]
@@ -235,7 +247,7 @@ ERP_KEYWORDS = [
     "financiamiento", "préstamo", "aporte", "impuesto", "nit", "nrc", "iva",
     "ayuda", "hola", "buenos dias", "buenas tardes", "buenas noches", "gracias",
     "opciones", "manual", "configuración", "certificación", "token", "sucursal",
-    "inicio", "dashboard", "sesión", "turno", "arqueo", "guia", "como", "usar",
+    "inicio", "dashboard", "sesión", "turno", "arqueo", "guia", "como", "usar", "cómo", "hago", "puedo", "pasos",
     "trasnochada", "inyectar", "acreedor", "aportante", "backup", "restaurar", "firmar",
     "que haces", "que puedes hacer", "sirves", "funciones"
 ]

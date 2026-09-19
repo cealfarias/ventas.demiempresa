@@ -70,15 +70,28 @@ const SidebarLink = ({ to, icon: Icon, label, expanded }) => {
   );
 };
 
-const SidebarSection = ({ label, expanded, children }) => (
-  <div className="mb-1">
-    {expanded && (
-      <p className="text-[10px] font-extrabold text-indigo-300 uppercase tracking-widest px-3 pt-3.5 pb-1 opacity-90">{label}</p>
-    )}
-    {!expanded && <div className="border-t border-slate-800 my-2" />}
-    {children}
-  </div>
-);
+const SidebarSection = ({ label, expanded, defaultOpen = false, children }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="mb-1">
+      {expanded ? (
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full flex items-center justify-between px-3 pt-3 pb-1 text-[10px] font-extrabold text-indigo-300 uppercase tracking-widest hover:text-white transition-colors text-left"
+        >
+          <span>{label}</span>
+          {isOpen ? <ChevronDown className="w-3.5 h-3.5 text-indigo-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500" />}
+        </button>
+      ) : (
+        <div className="border-t border-slate-800 my-2" />
+      )}
+      {(!expanded || isOpen) && (
+        <div className="transition-all duration-200">{children}</div>
+      )}
+    </div>
+  );
+};
 
 // ── Listener de Inactividad de Sesión (15 Minutos) ────────────────────────────
 const SessionTimeoutListener = () => {
@@ -193,14 +206,22 @@ const Layout = ({ children }) => {
           <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" expanded={expanded} />
 
           {canSeeVentas && (
-            <SidebarSection label="Ventas" expanded={expanded}>
+            <SidebarSection label="Ventas" expanded={expanded} defaultOpen={true}>
               <SidebarLink to="/clientes" icon={Users} label="Clientes" expanded={expanded} />
               <SidebarLink to="/facturas" icon={Receipt} label="Facturación DTE" expanded={expanded} />
               <SidebarLink to="/cuentas-cobrar" icon={CreditCard} label="Cuentas por Cobrar" expanded={expanded} />
             </SidebarSection>
           )}
 
-          <SidebarSection label="Finanzas" expanded={expanded}>
+          {canSeeCompras && (
+            <SidebarSection label="Compras" expanded={expanded} defaultOpen={true}>
+              <SidebarLink to="/proveedores" icon={Truck} label="Proveedores" expanded={expanded} />
+              <SidebarLink to="/ordenes-compra" icon={ShoppingCart} label="Compra" expanded={expanded} />
+              <SidebarLink to="/cuentas-pagar" icon={CreditCard} label="Cuentas por Pagar" expanded={expanded} />
+            </SidebarSection>
+          )}
+
+          <SidebarSection label="Finanzas" expanded={expanded} defaultOpen={false}>
             <SidebarLink to="/cajas" icon={Wallet} label="Control de Caja" expanded={expanded} />
             <SidebarLink to="/gastos" icon={DollarSign} label="Gastos Operativos" expanded={expanded} />
             <SidebarLink to="/acreedores" icon={CreditCard} label="Acreedores (Maestro)" expanded={expanded} />
@@ -209,16 +230,8 @@ const Layout = ({ children }) => {
             <SidebarLink to="/arrendamientos" icon={Building} label="Contrato de arrendamiento" expanded={expanded} />
           </SidebarSection>
 
-          {canSeeCompras && (
-            <SidebarSection label="Compras" expanded={expanded}>
-              <SidebarLink to="/proveedores" icon={Truck} label="Proveedores" expanded={expanded} />
-              <SidebarLink to="/ordenes-compra" icon={ShoppingCart} label="Compra" expanded={expanded} />
-              <SidebarLink to="/cuentas-pagar" icon={CreditCard} label="Cuentas por Pagar" expanded={expanded} />
-            </SidebarSection>
-          )}
-
           {canSeeAlmacen && (
-            <SidebarSection label="Almacén" expanded={expanded}>
+            <SidebarSection label="Almacén" expanded={expanded} defaultOpen={false}>
               <SidebarLink to="/bodegas" icon={Warehouse} label="Bodegas" expanded={expanded} />
               <SidebarLink to="/existencias" icon={BarChart3} label="Existencias" expanded={expanded} />
               <SidebarLink to="/kardex" icon={BookOpen} label="Libro Kardex" expanded={expanded} />
@@ -227,13 +240,13 @@ const Layout = ({ children }) => {
           )}
           
           {canSeeLogistica && (
-            <SidebarSection label="Logística" expanded={expanded}>
+            <SidebarSection label="Logística" expanded={expanded} defaultOpen={false}>
               <SidebarLink to="/vendedores" icon={UserCheck} label="Vendedores" expanded={expanded} />
               <SidebarLink to="/despachos" icon={Truck} label="Rutas y Entregas" expanded={expanded} />
             </SidebarSection>
           )}
 
-          <SidebarSection label="Ayuda & Soporte" expanded={expanded}>
+          <SidebarSection label="Ayuda & Soporte" expanded={expanded} defaultOpen={false}>
             <button
               onClick={() => setShowSoporteModal(true)}
               className="w-full flex items-center px-3 py-2.5 my-0.5 rounded-xl transition-all text-indigo-300 hover:bg-white/10 hover:text-white font-medium relative group"
@@ -251,11 +264,31 @@ const Layout = ({ children }) => {
           </SidebarSection>
 
           {canSeeConfiguracion && (
-            <SidebarSection label="Configuración" expanded={expanded}>
+            <SidebarSection label="Configuración" expanded={expanded} defaultOpen={false}>
               <SidebarLink to="/configuracion-dte" icon={Settings} label="Configuración DTE" expanded={expanded} />
               <SidebarLink to="/usuarios" icon={Users} label="Gestión de Usuarios" expanded={expanded} />
               <SidebarLink to="/backup-recovery" icon={ShieldCheck} label="Backup y Restauración" expanded={expanded} />
             </SidebarSection>
+          )}
+
+          {/* Banner Interactivo de Invitación al Avatar IA */}
+          {expanded && (
+            <div className="mt-4 p-3 mx-1 rounded-2xl bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-950 border border-indigo-700/60 shadow-xl text-left">
+              <div className="flex items-center gap-2 mb-1">
+                <Sparkles className="w-4 h-4 text-amber-300 fill-amber-300 animate-pulse" />
+                <span className="text-xs font-bold text-white">¿Tienes dudas de uso?</span>
+              </div>
+              <p className="text-[10px] text-indigo-200 leading-snug mb-2.5">
+                Pregúntale a tu Avatar IA en cualquier momento: <br/>
+                <span className="italic text-amber-200 font-semibold">"¿Cómo hago facturas?"</span>
+              </p>
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('avatar:say', { detail: { text: '¡Hola! ¿En qué te puedo colaborar? Puedes preguntarme: ¿Cómo hago facturas?, ¿Cómo hago compras?, ¿Cómo abro caja? o cualquier proceso.' } }))}
+                className="w-full text-[10px] font-bold bg-indigo-600 hover:bg-indigo-500 text-white py-1.5 px-2 rounded-xl text-center transition-all shadow-md shadow-indigo-600/30 flex items-center justify-center gap-1"
+              >
+                🤖 Preguntar al Avatar IA
+              </button>
+            </div>
           )}
         </nav>
 
