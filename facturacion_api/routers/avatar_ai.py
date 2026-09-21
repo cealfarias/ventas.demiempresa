@@ -130,6 +130,12 @@ MODULOS_KNOWLEDGE = {
 # Base de Preguntas Frecuentes / Intenciones Específicas
 PROCEDIMIENTOS_KNOWLEDGE = [
     {
+        "intent": "opciones_inventario",
+        "keywords": ["opciones de inventario", "formas de inventario", "descontar existencia", "no afectar existencia", "producto fisico", "servicio sin stock", "json de compra", "armar por json", "crear producto por compra", "como trabajar inventarios", "cómo trabajar los inventarios", "dos opciones de inventario", "metodos de inventario"],
+        "respuesta": "📦 **Opciones para Trabajar los Inventarios en el Sistema:**\n\n1️⃣ **Al Facturar/Vender:**\n• **Producto Físico:** Descuenta existencias automáticamente de la bodega asignada y actualiza el Kardex.\n• **Servicio / No Inventariable:** Permite facturar libremente sin requerir existencias ni afectar stock en bodega.\n\n2️⃣ **Al Comprar (DTE / JSON):**\n• Al cargar o procesar el **JSON / DTE de Compra de Proveedores**, el sistema **crea automáticamente los productos nuevos** si no existen y **actualiza/incrementa las existencias** en la bodega asignada con su Costo Promedio Ponderado.",
+        "redirect": "/productos"
+    },
+    {
         "intent": "primeros_pasos",
         "keywords": ["primeros pasos", "por donde empiezo", "por dónde empiezo", "que hago primero", "qué hago primero", "primer ingreso", "nuevo usuario", "configurar desde cero", "como empiezo", "cómo empiezo", "pasos iniciales", "pasos para iniciar", "que debo hacer al entrar"],
         "respuesta": "🚀 **Pasos Iniciales Recomendados para un Nuevo Usuario / Empresa:**\n\n1️⃣ **Configuración DTE (`/configuracion-dte`):** Ingresa la razón social, NIT/NRC y tu certificado del Ministerio de Hacienda.\n2️⃣ **Crear Bodega (`/bodegas`):** Registra tu primera bodega o tienda física para inventario.\n3️⃣ **Cargar Productos (`/productos`):** Agrega los productos o servicios que ofrecerás con su precio de venta.\n4️⃣ **Aperturar Caja (`/cajas`):** Abre tu primer turno de caja para comenzar a emitir facturas.",

@@ -164,7 +164,9 @@ const ROLE_SHORTCUTS = {
 
 export default function AvatarWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(() => {
+    return localStorage.getItem('avatar_voice_muted') === 'true';
+  });
   const [hasMic, setHasMic] = useState(true);
   const [isListening, setIsListening] = useState(false);
   const [inputText, setInputText] = useState('');
@@ -253,7 +255,7 @@ export default function AvatarWidget() {
       localStorage.setItem('avatar_facturacion_greeted', 'true');
       setIsOpen(true);
       setTimeout(() => {
-        const onboardingText = `🎉 **¡Bienvenido a tu nuevo Espacio Empresarial!**\nSoy tu **Avatar Asistente IA** y te guiaré paso a paso para poner a punto tu negocio.\n\n**Te recomiendo completar estos 4 pasos iniciales:**\n\n1️⃣ **Configuración DTE**: Completa la razón social, NIT/NRC y tu certificado del Ministerio de Hacienda.\n2️⃣ **Crear Bodega**: Define tu primera bodega o tienda principal para gestionar tu inventario.\n3️⃣ **Registrar Productos**: Agrega tus productos o servicios con precios de venta.\n4️⃣ **Apertura de Caja**: Abre tu primer turno de caja para comenzar a facturar.`;
+        const onboardingText = `🎉 **¡Bienvenido a tu nuevo Espacio Empresarial!**\nSoy tu **Avatar Asistente IA** y te guiaré paso a paso para poner a punto tu negocio.\n\n**Pasos iniciales recomendados:**\n\n1️⃣ **Configuración DTE**: Completa tu razón social, NIT/NRC y tu certificado para emitir en Hacienda.\n2️⃣ **Crear Bodega**: Define la bodega o sucursal desde donde administrarás tu stock.\n3️⃣ **Cargar Productos e Inventarios** (2 opciones):\n   • *Opción A (Manual)*: Crea **Productos Físicos** (descuentan existencias de bodega) o **Servicios** (facturan libremente sin afectar existencias).\n   • *Opción B (Automática por JSON/DTE)*: Al procesar la compra de tus proveedores en **Orden de Compra**, el sistema crea automáticamente los productos nuevos e incrementa el stock en bodega con su costo promedio.\n4️⃣ **Apertura de Caja**: Abre tu primer turno de caja para comenzar a facturar y cobrar.`;
 
         const onboardingMsg = {
           sender: 'bot',
@@ -340,6 +342,7 @@ export default function AvatarWidget() {
   const handleToggleMute = () => {
     const newMuted = !isMuted;
     setIsMuted(newMuted);
+    localStorage.setItem('avatar_voice_muted', newMuted ? 'true' : 'false');
     if (newMuted && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
