@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional
@@ -8,7 +8,7 @@ import pytz
 
 from database import get_db
 from models import Usuario
-from routers.auth import get_current_user, pwd_context
+from routers.auth import get_current_user, pwd_context, obtener_ip_cliente
 
 router = APIRouter(prefix="/usuarios", tags=["Gestion de Usuarios y Roles"])
 
@@ -72,6 +72,7 @@ def listar_usuarios(
 @router.post("", response_model=UsuarioOutSchema)
 def crear_usuario(
     data: CrearUsuarioSchema,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
@@ -109,7 +110,8 @@ def crear_usuario(
         hashed_password=hashed_pw,
         rol=rol_clean,
         is_active=True,
-        usuario_creacion=current_user.username
+        usuario_creacion=current_user.username,
+        terminal_ip=obtener_ip_cliente(request)
     )
     
     db.add(nuevo_user)

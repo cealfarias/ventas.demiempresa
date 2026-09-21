@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 import { Share2 } from 'lucide-react';
 import TerminosFacturacion from '../components/TerminosFacturacion';
@@ -9,8 +9,36 @@ import './Login.css';
 
 export default function Registro() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const googleState = location.state;
 
   useEffect(() => {
+    if (googleState?.googleEmail) {
+      setGoogleToken(googleState.googleToken || 'google_token_present');
+      const genUsername = googleState.googleUsername || (googleState.googleEmail.split('@')[0].replace('.', '_') + '_' + Math.floor(Math.random() * 1000));
+      setFormData(prev => ({
+        ...prev,
+        admin_email: googleState.googleEmail,
+        admin_username: genUsername,
+        admin_password: 'GOOGLE_SSO_NO_PASSWORD_' + Math.random().toString(36).substring(7)
+      }));
+
+      const textoAvatar = googleState.userExists 
+        ? '¡Hola! Su cuenta existe en el sistema. Por favor ingrese el nombre de su empresa para vincularla y completar el registro.'
+        : 'Su usuario no está registrado, pasamos a registrarlo. Por favor ingrese el nombre de su empresa para finalizar el registro.';
+
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('avatar:say', {
+          detail: {
+            text: textoAvatar,
+            highlightId: null,
+            options: []
+          }
+        }));
+      }, 500);
+      return;
+    }
+
     const isFirstTime = localStorage.getItem('avatar_registro_greeted') !== 'true';
     if (isFirstTime) {
       localStorage.setItem('avatar_registro_greeted', 'true');
@@ -38,7 +66,7 @@ export default function Registro() {
         }));
       }, 9000);
     }
-  }, []);
+  }, [googleState]);
   const [googleToken, setGoogleToken] = useState(null);
   const [formData, setFormData] = useState({
     empresa_nombre: '',

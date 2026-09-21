@@ -24,7 +24,7 @@ class Empresa(Base):
     fecha_creacion = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
     usuario_modificacion = Column(String(100))
     fecha_modificacion = Column(DateTime(timezone=True))
-    terminal_ip = Column(String(50))
+    terminal_ip = Column(String(50), default="0.0.0.0")
 
 class Usuario(Base):
     __tablename__ = "usuarios"
@@ -44,7 +44,7 @@ class Usuario(Base):
     fecha_creacion = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
     usuario_modificacion = Column(String(100))
     fecha_modificacion = Column(DateTime(timezone=True))
-    terminal_ip = Column(String(50))
+    terminal_ip = Column(String(50), default="0.0.0.0")
 
 
 class Cliente(Base):

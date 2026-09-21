@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 import bcrypt
@@ -35,12 +35,25 @@ class RegistroSchema(BaseModel):
     admin_password: str
 
 class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str
-    rol: str
-    empresa_id: str
+    access_token: Optional[str] = None
+    token_type: Optional[str] = "bearer"
+    rol: Optional[str] = None
+    empresa_id: Optional[str] = None
     usuario_id: Optional[int] = None
     require_2fa: bool = False
+    registered: bool = True
+    has_empresa: bool = True
+    email: Optional[str] = None
+    username: Optional[str] = None
+    detail: Optional[str] = None
+
+def obtener_ip_cliente(request: Request) -> str:
+    if not request:
+        return "0.0.0.0"
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if (request.client and request.client.host) else "0.0.0.0"
 
 # ================= UTILIDADES =================
 def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
@@ -74,7 +87,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 from sqlalchemy.exc import IntegrityError
 
 @router.post("/registro")
-def registrar_empresa(data: RegistroSchema, db: Session = Depends(get_db)):
+def registrar_empresa(data: RegistroSchema, request: Request, db: Session = Depends(get_db)):
+    ip_cliente = obtener_ip_cliente(request)
     # 1. Verificar si el usuario ya existe por email o username
     user = db.query(Usuario).filter((Usuario.username == data.admin_username) | (Usuario.email == data.admin_email)).first()
     
@@ -90,7 +104,8 @@ def registrar_empresa(data: RegistroSchema, db: Session = Depends(get_db)):
             hashed_password=hashed_pw,
             rol="admin",
             two_factor_secret=pyotp.random_base32(),
-            usuario_creacion=data.admin_username
+            usuario_creacion=data.admin_username,
+            terminal_ip=ip_cliente
         )
         db.add(nuevo_usuario)
         mensaje = "Empresa y administrador creados exitosamente"
@@ -108,7 +123,7 @@ def registrar_empresa(data: RegistroSchema, db: Session = Depends(get_db)):
         giro="Actividad no especificada",
         normativa="NIIF para Pymes",
         usuario_creacion=username_asociado,
-        terminal_ip="127.0.0.1"
+        terminal_ip=ip_cliente
     )
     db.add(nueva_empresa)
     
@@ -190,59 +205,41 @@ class GoogleLoginSchema(BaseModel):
     email: str
 
 @router.post("/google-login", response_model=TokenResponse)
-def google_login(data: GoogleLoginSchema, db: Session = Depends(get_db)):
+def google_login(data: GoogleLoginSchema, request: Request, db: Session = Depends(get_db)):
     user = db.query(Usuario).filter(Usuario.email == data.email).first()
+    
+    # 1. Si el usuario NO existe
     if not user:
-        # Auto-crear usuario y empresa automáticamente para usuarios de Google
-        username_gen = data.email.split("@")[0].replace(".", "_") + "_" + str(uuid.uuid4())[:4]
-        empresa_uuid = str(uuid.uuid4())
-        nombre_empresa = f"Empresa de {data.email.split('@')[0].capitalize()}"
+        return {
+            "access_token": None,
+            "token_type": "bearer",
+            "rol": "",
+            "empresa_id": "",
+            "registered": False,
+            "has_empresa": False,
+            "email": data.email,
+            "detail": "Su usuario no está registrado, pasamos a registrarlo."
+        }
 
-        user = Usuario(
-            username=username_gen,
-            email=data.email,
-            hashed_password=pwd_context.hash(str(uuid.uuid4())),
-            rol="admin",
-            two_factor_secret=pyotp.random_base32(),
-            usuario_creacion=username_gen
-        )
-        db.add(user)
-
-        empresa = Empresa(
-            id=empresa_uuid,
-            razon_social=nombre_empresa,
-            nit=None,
-            giro="Actividad no especificada",
-            normativa="NIIF para Pymes",
-            usuario_creacion=username_gen,
-            terminal_ip="127.0.0.1"
-        )
-        db.add(empresa)
-        db.commit()
-        db.refresh(user)
-        db.refresh(empresa)
-
+    # 2. Si el usuario existe, buscar si tiene empresa asignada
     empresa = db.query(Empresa).filter(Empresa.usuario_creacion == user.username).first()
     if not empresa:
-        empresa_uuid = str(uuid.uuid4())
-        nombre_empresa = f"Empresa de {user.username}"
-        empresa = Empresa(
-            id=empresa_uuid,
-            razon_social=nombre_empresa,
-            nit=None,
-            giro="Actividad no especificada",
-            normativa="NIIF para Pymes",
-            usuario_creacion=user.username,
-            terminal_ip="127.0.0.1"
-        )
-        db.add(empresa)
-        db.commit()
-        db.refresh(empresa)
+        return {
+            "access_token": None,
+            "token_type": "bearer",
+            "rol": user.rol,
+            "empresa_id": "",
+            "usuario_id": user.id,
+            "registered": True,
+            "has_empresa": False,
+            "email": user.email,
+            "username": user.username,
+            "detail": "Su usuario no tiene una empresa registrada."
+        }
 
-    empresa_id = empresa.id if empresa else ""
-
+    # 3. Usuario existe y tiene empresa asignada -> Login Exitoso
     access_token = create_access_token(
-        data={"sub": user.username, "emp": empresa_id, "rol": user.rol},
+        data={"sub": user.username, "emp": empresa.id, "rol": user.rol},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
 
@@ -250,8 +247,10 @@ def google_login(data: GoogleLoginSchema, db: Session = Depends(get_db)):
         "access_token": access_token,
         "token_type": "bearer",
         "rol": user.rol,
-        "empresa_id": empresa_id,
+        "empresa_id": empresa.id,
         "usuario_id": user.id,
+        "registered": True,
+        "has_empresa": True,
         "require_2fa": False
     }
 

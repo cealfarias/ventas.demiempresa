@@ -147,6 +147,21 @@ def listar_facturas(
 @router.post("", response_model=FacturaResponse, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=FacturaResponse, status_code=status.HTTP_201_CREATED)
 def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Session = Depends(get_db)):
+    sesion = db.query(SesionCaja).join(Caja).filter(SesionCaja.usuario_id == usuario_id, SesionCaja.estado == "abierta", Caja.empresa_id == empresa_id).first()
+    if sesion:
+        hoy = datetime.now(TIMEZONE).date()
+        fecha_ap = hoy
+        if sesion.fecha_apertura:
+            try:
+                f_ap = sesion.fecha_apertura
+                if not hasattr(f_ap, 'tzinfo') or not f_ap.tzinfo:
+                    f_ap = f_ap.replace(tzinfo=TIMEZONE)
+                fecha_ap = f_ap.astimezone(TIMEZONE).date()
+            except Exception:
+                fecha_ap = hoy
+        if fecha_ap < hoy:
+            raise HTTPException(status_code=400, detail="Tiene un turno de caja abierto del día anterior. Debe realizar el Cierre Z y aperturar un nuevo turno de caja del día de hoy antes de emitir facturas.")
+
     cliente = db.query(Cliente).filter(Cliente.id_cliente == data.cliente_id, Cliente.empresa_id == empresa_id).first()
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")

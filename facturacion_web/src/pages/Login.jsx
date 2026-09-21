@@ -255,6 +255,37 @@ export default function Login() {
                       const decoded = JSON.parse(jsonPayload);
                       
                       const res = await api.post('/api/v1/auth/google-login', { email: decoded.email });
+                      
+                      if (res.data.registered === false) {
+                        window.dispatchEvent(new CustomEvent('avatar:say', {
+                          detail: { text: 'Su usuario no está registrado, pasamos a registrarlo.', options: [] }
+                        }));
+                        navigate('/registro', {
+                          state: {
+                            googleEmail: decoded.email,
+                            googleName: decoded.name || decoded.given_name,
+                            googleToken: token,
+                            userExists: false
+                          }
+                        });
+                        return;
+                      }
+
+                      if (res.data.has_empresa === false) {
+                        window.dispatchEvent(new CustomEvent('avatar:say', {
+                          detail: { text: 'Su usuario no tiene una empresa registrada. Pasemos a registrar su empresa.', options: [] }
+                        }));
+                        navigate('/registro', {
+                          state: {
+                            googleEmail: decoded.email,
+                            googleUsername: res.data.username,
+                            googleToken: token,
+                            userExists: true
+                          }
+                        });
+                        return;
+                      }
+
                       localStorage.setItem('token', res.data.access_token);
                       localStorage.setItem('rol', res.data.rol);
                       localStorage.setItem('empresa_id', res.data.empresa_id);
