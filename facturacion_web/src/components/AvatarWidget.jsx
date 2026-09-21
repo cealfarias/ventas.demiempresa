@@ -251,19 +251,26 @@ export default function AvatarWidget() {
 
     if (isFirstTime) {
       localStorage.setItem('avatar_facturacion_greeted', 'true');
+      setIsOpen(true);
       setTimeout(() => {
-        const tipMsg = {
+        const onboardingText = `🎉 **¡Bienvenido a tu nuevo Espacio Empresarial!**\nSoy tu **Avatar Asistente IA** y te guiaré paso a paso para poner a punto tu negocio.\n\n**Te recomiendo completar estos 4 pasos iniciales:**\n\n1️⃣ **Configuración DTE**: Completa la razón social, NIT/NRC y tu certificado del Ministerio de Hacienda.\n2️⃣ **Crear Bodega**: Define tu primera bodega o tienda principal para gestionar tu inventario.\n3️⃣ **Registrar Productos**: Agrega tus productos o servicios con precios de venta.\n4️⃣ **Apertura de Caja**: Abre tu primer turno de caja para comenzar a facturar.`;
+
+        const onboardingMsg = {
           sender: 'bot',
-          text: 'Te recomiendo revisar primero la Configuración DTE para validar tu certificado de Hacienda.',
+          text: onboardingText,
           options: [
-            { label: 'Ir a Configuración DTE', action: 'navigate:config-dte' }
+            { label: '1. Configuración DTE ⚙️', action: '/configuracion-dte' },
+            { label: '2. Crear Bodega 📦', action: '/bodegas' },
+            { label: '3. Registrar Productos 🏷️', action: '/productos' },
+            { label: '4. Control de Caja 💰', action: '/cajas' }
           ],
           isOffTopic: false
         };
-        setMessages((prev) => [...prev, tipMsg]);
-        setLastInstruction(tipMsg.text);
-        if (!isMuted) speakText(tipMsg.text);
-      }, 5000);
+
+        setMessages((prev) => [...prev, onboardingMsg]);
+        setLastInstruction(onboardingText);
+        if (!isMuted) speakText("¡Bienvenido a tu nuevo espacio empresarial! Te he preparado la guía con los primeros cuatro pasos esenciales para comenzar a operar.");
+      }, 1200);
     }
   };
 
@@ -438,6 +445,22 @@ export default function AvatarWidget() {
       return {
         text: "Soy tu asistente virtual especializado exclusivamente en el sistema de Facturación e Inventarios. Para consultas o soporte en temas externos a la plataforma, disponemos de un servicio de asistencia extendida con costo adicional. ¿En qué puedo ayudarte respecto a tus operaciones de ventas, compras o inventario hoy?",
         isOffTopic: true
+      };
+    }
+
+    if (msgLower.includes("primeros pasos") || msgLower.includes("por donde empiezo") || msgLower.includes("por dónde empiezo") || msgLower.includes("que hago primero") || msgLower.includes("qué hago primero") || msgLower.includes("nuevo usuario") || msgLower.includes("primer ingreso") || msgLower.includes("configurar desde cero") || msgLower.includes("como empiezo") || msgLower.includes("primeros")) {
+      return {
+        text: "🚀 **Pasos Iniciales Recomendados para una Nueva Empresa / Usuario:**\n\n" +
+              "1️⃣ **Configuración DTE**: Completa la Razón Social, NIT/NRC y tu certificado del Ministerio de Hacienda.\n" +
+              "2️⃣ **Crear Bodega**: Define tu primera bodega o tienda principal para gestionar tu inventario.\n" +
+              "3️⃣ **Registrar Productos**: Agrega tus productos o servicios con precios de venta.\n" +
+              "4️⃣ **Apertura de Caja**: Abre tu primer turno de caja para comenzar a facturar.",
+        options: [
+          { label: '1. Configuración DTE ⚙️', action: '/configuracion-dte' },
+          { label: '2. Crear Bodega 📦', action: '/bodegas' },
+          { label: '3. Registrar Productos 🏷️', action: '/productos' },
+          { label: '4. Control de Caja 💰', action: '/cajas' }
+        ]
       };
     }
 

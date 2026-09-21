@@ -130,6 +130,12 @@ MODULOS_KNOWLEDGE = {
 # Base de Preguntas Frecuentes / Intenciones Específicas
 PROCEDIMIENTOS_KNOWLEDGE = [
     {
+        "intent": "primeros_pasos",
+        "keywords": ["primeros pasos", "por donde empiezo", "por dónde empiezo", "que hago primero", "qué hago primero", "primer ingreso", "nuevo usuario", "configurar desde cero", "como empiezo", "cómo empiezo", "pasos iniciales", "pasos para iniciar", "que debo hacer al entrar"],
+        "respuesta": "🚀 **Pasos Iniciales Recomendados para un Nuevo Usuario / Empresa:**\n\n1️⃣ **Configuración DTE (`/configuracion-dte`):** Ingresa la razón social, NIT/NRC y tu certificado del Ministerio de Hacienda.\n2️⃣ **Crear Bodega (`/bodegas`):** Registra tu primera bodega o tienda física para inventario.\n3️⃣ **Cargar Productos (`/productos`):** Agrega los productos o servicios que ofrecerás con su precio de venta.\n4️⃣ **Aperturar Caja (`/cajas`):** Abre tu primer turno de caja para comenzar a emitir facturas.",
+        "redirect": "/configuracion-dte"
+    },
+    {
         "intent": "emitir_factura",
         "keywords": ["emitir factura", "hacer venta", "facturar", "crear dte", "consumidor final", "credito fiscal", "como hago facturas", "cómo hago facturas", "como hago una factura", "cómo hago una factura", "como emitir", "cómo emitir", "como vendo", "cómo vendo"],
         "respuesta": "🧾 **¿Cómo emitir una Factura / DTE?**\n\n1. Asegúrate de tener tu **Caja Abierta** (indicador verde en el encabezado).\n2. Ve al módulo **Facturación DTE** (`/facturas`).\n3. Selecciona el **Cliente** (o Consumidor Final para venta rápida).\n4. Agrega los productos o servicios desde el catálogo.\n5. Elige el **Tipo de Documento** (Factura, Crédito Fiscal, Nota de Crédito) y Condición de Pago.\n6. Haz clic en **'Emitir Factura'** y posteriormente en **'Transmitir DTE'** para enviar a Hacienda.",
