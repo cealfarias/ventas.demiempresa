@@ -234,17 +234,26 @@ export default function CuentasCobrar() {
     let cargosPeriodo = 0;
     let abonosPeriodo = 0;
 
-    const facturasEnPeriodo = [];
-    const abonosEnPeriodo = [];
+    const movimientos = [];
 
-    // Calcular saldos históricos y separar movimientos del periodo
+    // Calcular saldos históricos y consolidar movimientos del periodo
     clienteData.todas_cuentas.forEach(c => {
-      const fechaFac = new Date(c.fecha_creacion);
+      const fechaFac = parseFechaLocal(c.fecha_creacion) || new Date(c.fecha_creacion);
+      const fechaVenc = parseFechaLocal(c.fecha_vencimiento) || (c.fecha_vencimiento ? new Date(c.fecha_vencimiento) : null);
+
       if (fechaFac < start) {
         saldoAnterior += c.monto_original;
       } else if (fechaFac >= start && fechaFac <= end) {
         cargosPeriodo += c.monto_original;
-        facturasEnPeriodo.push(c);
+        movimientos.push({
+          fecha: fechaFac,
+          tipo: 'cargo',
+          documento: c.factura_numero || 'FAC-N/A',
+          vencimiento: fechaVenc ? fechaVenc.toLocaleDateString() : 'N/A',
+          esVencida: fechaVenc ? (new Date(fechaVenc.getFullYear(), fechaVenc.getMonth(), fechaVenc.getDate(), 23, 59, 59) < new Date()) : false,
+          cargo: c.monto_original,
+          abono: 0
+        });
       }
 
       if (c.pagos) {
@@ -254,42 +263,55 @@ export default function CuentasCobrar() {
             saldoAnterior -= p.monto;
           } else if (fechaPago >= start && fechaPago <= end) {
             abonosPeriodo += p.monto;
-            abonosEnPeriodo.push({ ...p, factura_numero: c.factura_numero });
+            const metodoStr = p.metodo_pago ? p.metodo_pago.toUpperCase() : 'EFECTIVO';
+            const refStr = p.referencia ? ` (Ref: ${p.referencia})` : '';
+            movimientos.push({
+              fecha: fechaPago,
+              tipo: 'abono',
+              documento: c.factura_numero ? `Abono FAC ${c.factura_numero}` : 'Abono Recibido',
+              vencimiento: `${metodoStr}${refStr}`,
+              esVencida: false,
+              cargo: 0,
+              abono: p.monto
+            });
           }
         });
       }
     });
 
+    // Ordenar cronológicamente por fecha (de menor a mayor)
+    movimientos.sort((a, b) => a.fecha - b.fecha);
+
+    // Calcular el saldo corriendo acumulado
+    let saldoRunning = saldoAnterior;
+    movimientos.forEach(m => {
+      saldoRunning = saldoRunning + m.cargo - m.abono;
+      m.saldo = saldoRunning;
+    });
+
     const saldoFinal = saldoAnterior + cargosPeriodo - abonosPeriodo;
 
-    let facturasRows = '';
-    facturasEnPeriodo.sort((a,b) => new Date(a.fecha_creacion) - new Date(b.fecha_creacion)).forEach(c => {
-      const esVencida = new Date(c.fecha_vencimiento) < new Date();
-      facturasRows += `
-        <tr>
-          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${new Date(c.fecha_creacion).toLocaleDateString()}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${c.factura_numero || 'N/A'}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; color: ${esVencida ? '#b91c1c' : 'inherit'};">${c.fecha_vencimiento ? new Date(c.fecha_vencimiento).toLocaleDateString() : 'N/A'}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right;">${fmt(c.monto_original)}</td>
+    let movimientosRows = '';
+    movimientos.forEach(m => {
+      const cargoText = m.cargo > 0 ? fmt(m.cargo) : '—';
+      const abonoText = m.abono > 0 ? fmt(m.abono) : '—';
+      const rowBg = m.tipo === 'abono' ? 'background-color: #f0fdf4;' : '';
+      
+      movimientosRows += `
+        <tr style="${rowBg}">
+          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${m.fecha.toLocaleDateString()}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: 500;">${m.documento}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; color: ${m.esVencida ? '#b91c1c' : '#475569'}; font-size: 12px;">${m.vencimiento}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right; color: ${m.cargo > 0 ? '#1e293b' : '#94a3b8'}; font-weight: ${m.cargo > 0 ? '600' : 'normal'};">${cargoText}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right; color: ${m.abono > 0 ? '#059669' : '#94a3b8'}; font-weight: ${m.abono > 0 ? '600' : 'normal'};">${abonoText}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #1e293b;">${fmt(m.saldo)}</td>
         </tr>
       `;
     });
 
-    let abonosRows = '';
-    abonosEnPeriodo.sort((a,b) => new Date(a.fecha) - new Date(b.fecha)).forEach(p => {
-      abonosRows += `
-        <tr>
-          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${new Date(p.fecha).toLocaleString()}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${p.factura_numero || 'N/A'}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-transform: uppercase;">${p.metodo_pago}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${p.referencia || '—'}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right; color: #059669;">${fmt(p.monto)}</td>
-        </tr>
-      `;
-    });
-
-    if (!facturasRows) facturasRows = '<tr><td colspan="4" style="padding: 15px; text-align: center; color: #64748b; font-style: italic;">No hay facturas emitidas en este periodo.</td></tr>';
-    if (!abonosRows) abonosRows = '<tr><td colspan="5" style="padding: 15px; text-align: center; color: #64748b; font-style: italic;">No hay abonos registrados en este periodo.</td></tr>';
+    if (!movimientosRows) {
+      movimientosRows = '<tr><td colspan="6" style="padding: 15px; text-align: center; color: #64748b; font-style: italic;">No hay movimientos (cargos o abonos) registrados en este periodo.</td></tr>';
+    }
 
     const periodoStr = `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;
 
@@ -298,15 +320,14 @@ export default function CuentasCobrar() {
         <head>
           <title>Estado de Cuenta - ${clienteData.cliente_nombre}</title>
           <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #1e293b; max-width: 900px; margin: auto; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #1e293b; max-width: 950px; margin: auto; }
             .header { display: flex; justify-content: space-between; border-bottom: 3px solid #059669; padding-bottom: 20px; margin-bottom: 30px; }
             h1 { color: #059669; margin: 0 0 10px 0; font-size: 28px; }
-            .summary-box { background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 30px; display: flex; justify-content: space-between; border: 1px solid #e2e8f0; }
             table { border-collapse: collapse; width: 100%; margin-bottom: 40px; font-size: 14px; }
-            th { text-align: left; padding: 10px 8px; background: #f1f5f9; border-bottom: 2px solid #cbd5e1; color: #475569; text-transform: uppercase; font-size: 12px; }
+            th { text-align: left; padding: 10px 8px; background: #f1f5f9; border-bottom: 2px solid #cbd5e1; color: #475569; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
             .text-right { text-align: right; }
             .footer { text-align: center; margin-top: 50px; color: #94a3b8; font-size: 0.85em; border-top: 1px solid #e2e8f0; padding-top: 20px; }
-            .resumen-tabla { width: 50%; margin-left: auto; margin-bottom: 40px; }
+            .resumen-tabla { width: 50%; margin-left: auto; margin-bottom: 30px; }
             .resumen-tabla td { padding: 8px; border-bottom: 1px solid #e2e8f0; }
           </style>
         </head>
@@ -343,31 +364,21 @@ export default function CuentasCobrar() {
             </tbody>
           </table>
 
-          <h3 style="color: #334155; font-size: 16px; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px;">1. Facturas Emitidas en el Periodo</h3>
+          <h3 style="color: #334155; font-size: 16px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 15px;">
+            Movimientos del Periodo (Ordenados por Fecha)
+          </h3>
           <table>
             <thead>
               <tr>
-                <th>Fecha Emisión</th>
-                <th>Documento</th>
-                <th>Vencimiento</th>
-                <th class="text-right">Monto Facturado</th>
+                <th>Fecha Emisión / Pago</th>
+                <th>Documento / Concepto</th>
+                <th>Vencimiento / Referencia</th>
+                <th class="text-right">Cargo</th>
+                <th class="text-right">Abono</th>
+                <th class="text-right">Saldo</th>
               </tr>
             </thead>
-            <tbody>${facturasRows}</tbody>
-          </table>
-
-          <h3 style="color: #334155; font-size: 16px; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px;">2. Abonos Recibidos en el Periodo</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha y Hora</th>
-                <th>Aplicado A</th>
-                <th>Método</th>
-                <th>Referencia</th>
-                <th class="text-right">Monto Pagado</th>
-              </tr>
-            </thead>
-            <tbody>${abonosRows}</tbody>
+            <tbody>${movimientosRows}</tbody>
           </table>
           
           <div class="footer">
