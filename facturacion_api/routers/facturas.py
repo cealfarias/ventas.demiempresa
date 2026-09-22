@@ -188,9 +188,7 @@ def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Ses
         total=data.total
     )
     if data.fecha_emision:
-        from datetime import datetime
-        import pytz
-        tz = pytz.timezone("America/El_Salvador")
+        tz = TIMEZONE
         if "T" in data.fecha_emision:
             fecha_str = data.fecha_emision[:16]
             fecha_req = datetime.strptime(fecha_str, "%Y-%m-%dT%H:%M")
@@ -340,9 +338,7 @@ def actualizar_factura(factura_id: int, empresa_id: str, usuario_id: int, data: 
     f.total = data.total
 
     if data.fecha_emision:
-        from datetime import datetime
-        import pytz
-        tz = pytz.timezone("America/El_Salvador")
+        tz = TIMEZONE
         if "T" in data.fecha_emision:
             fecha_str = data.fecha_emision[:16]
             fecha_req = datetime.strptime(fecha_str, "%Y-%m-%dT%H:%M")

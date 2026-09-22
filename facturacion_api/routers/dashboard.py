@@ -7,7 +7,7 @@ from typing import Dict, Any
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
-from datetime import datetime
+from datetime import datetime, timedelta, date
 import pytz
 
 local_tz = pytz.timezone("America/El_Salvador")
@@ -34,7 +34,6 @@ def obtener_kpis(empresa_id: str, periodo: str = "dia", tz: str = "America/El_Sa
         query_ventas = query_ventas.filter(Factura.fecha_emision >= inicio)
         query_compras = query_compras.filter(Kardex.fecha >= inicio)
     elif periodo == "semana":
-        from datetime import timedelta
         inicio = (hoy - timedelta(days=hoy.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
         query_ventas = query_ventas.filter(Factura.fecha_emision >= inicio)
         query_compras = query_compras.filter(Kardex.fecha >= inicio)
@@ -97,7 +96,6 @@ def obtener_kpis(empresa_id: str, periodo: str = "dia", tz: str = "America/El_Sa
 @router.get("/grafico-ventas", response_model=list[Dict[str, Any]])
 def obtener_grafico_ventas(empresa_id: str, periodo: str = "anio", anio: int = None, tz: str = "America/El_Salvador", db: Session = Depends(get_db)):
     local_tz = pytz.timezone(tz)
-    from datetime import datetime, timedelta
     import calendar
     hoy = datetime.now(local_tz)
     if not anio:
@@ -226,7 +224,6 @@ def obtener_grafico_ventas(empresa_id: str, periodo: str = "anio", anio: int = N
 @router.get("/top-productos", response_model=list[Dict[str, Any]])
 def obtener_top_productos(empresa_id: str, periodo: str = "anio", anio: int = None, tz: str = "America/El_Salvador", db: Session = Depends(get_db)):
     local_tz = pytz.timezone(tz)
-    from datetime import datetime, timedelta
     import calendar
     hoy = datetime.now(local_tz)
     if not anio:
