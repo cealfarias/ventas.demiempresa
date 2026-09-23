@@ -467,8 +467,50 @@ class ConfiguracionDTE(Base):
     correlativo_factura = Column(Integer, default=0)
     correlativo_ccf = Column(Integer, default=0)
 
+    # Configuración de Correo Saliente (SMTP)
+    smtp_host = Column(String(100), nullable=True)
+    smtp_port = Column(Integer, default=587)
+    smtp_username = Column(String(100), nullable=True)
+    smtp_password_encrypted = Column(Text, nullable=True)
+    smtp_use_tls = Column(Boolean, default=True)
+    smtp_from_email = Column(String(100), nullable=True)
+
     activo = Column(Boolean, default=True)
     fecha_actualizacion = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE), onupdate=lambda: datetime.now(TIMEZONE))
+
+
+class DTEArchivoLegal(Base):
+    """Retención legal de 10 años exigida por el Ministerio de Hacienda (DGII)."""
+    __tablename__ = "dte_archivos_legales"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    empresa_id = Column(String, index=True, nullable=False)
+    factura_id = Column(Integer, ForeignKey("facturas.id"), nullable=True)
+    tipo_dte = Column(String(10), nullable=False)
+    codigo_generacion = Column(String(100), index=True, nullable=False, unique=True)
+    numero_control = Column(String(100), nullable=False)
+    json_original = Column(Text, nullable=False)
+    jws_firmado = Column(Text, nullable=False)
+    respuesta_mh = Column(Text, nullable=True)
+    sello_recepcion = Column(String(200), nullable=True)
+    fecha_emision = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE), nullable=False)
+    hash_integridad = Column(String(64), nullable=False) # SHA-256
+
+
+class DTEMatrizPruebaLog(Base):
+    """Registro de la ejecución de la batería de pruebas para acreditación de emisor ante el MH."""
+    __tablename__ = "dte_matriz_pruebas_log"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    empresa_id = Column(String, index=True, nullable=False)
+    escenario = Column(String(100), nullable=False)
+    tipo_dte = Column(String(10), nullable=False)
+    codigo_generacion = Column(String(100), nullable=False)
+    numero_control = Column(String(100), nullable=False)
+    sello_recepcion = Column(String(200), nullable=True)
+    estado = Column(String(30), nullable=False) # EXITOSO | RECHAZADO | OBSERVADO
+    observaciones = Column(Text, nullable=True)
+    fecha_ejecucion = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE))
 
 
 # ==========================================
