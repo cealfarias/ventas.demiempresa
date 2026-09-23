@@ -135,10 +135,10 @@ export default function Login() {
         <div className="login-left">
           <div className="login-left-content">
             <h1>El Control Total<br />de tu Empresa</h1>
-            <p style={{ fontSize: '1.25rem', opacity: 0.9, lineHeight: 1.5 }}>
+            <p style={{ fontSize: '0.95rem', opacity: 0.9, lineHeight: 1.45 }}>
               Accede a tu plataforma y unifica la administración de todas tus áreas y sucursales.
             </p>
-            <ul className="login-benefits" style={{ marginTop: '3rem' }}>
+            <ul className="login-benefits" style={{ marginTop: '1.75rem' }}>
               <li className="benefit-item">
                 <div className="benefit-icon">🤝</div>
                 <span>Conecta Ventas, Inventario y Contabilidad</span>
@@ -159,7 +159,7 @@ export default function Login() {
         <div className="login-right">
           <div className="login-card">
             <div className="login-header">
-              <div className="logo-placeholder" style={{ color: '#4f46e5', fontSize: '2.5rem' }}>📄</div>
+              <div className="logo-placeholder" style={{ color: '#4f46e5', fontSize: '1.75rem' }}>📄</div>
               <h2>Iniciar Sesión</h2>
               <p className="text-muted">Ingresa a tu espacio de Facturación</p>
             </div>
@@ -169,35 +169,35 @@ export default function Login() {
                 <div style={{
                   backgroundColor: '#f0fdf4',
                   border: '1px solid #bbf7d0',
-                  borderRadius: '1rem',
-                  padding: '1rem',
-                  marginBottom: '1.25rem',
+                  borderRadius: '0.75rem',
+                  padding: '0.65rem 0.85rem',
+                  marginBottom: '0.85rem',
                   display: 'flex',
                   alignItems: 'flex-start',
-                  gap: '0.875rem',
+                  gap: '0.65rem',
                   boxShadow: '0 4px 12px rgba(16, 185, 129, 0.12)'
                 }}>
                   <div style={{
-                    width: '42px',
-                    height: '42px',
+                    width: '32px',
+                    height: '32px',
                     borderRadius: '50%',
                     background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: '#ffffff',
-                    fontSize: '1.35rem',
+                    fontSize: '1.0rem',
                     flexShrink: 0,
                     boxShadow: '0 2px 8px rgba(79, 70, 229, 0.3)'
                   }}>
                     🤖
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#166534', display: 'flex', items: 'center', gap: '0.35rem', marginBottom: '0.25rem' }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 'bold', color: '#166534', display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.15rem' }}>
                       <span>Avatar IA Asistente</span>
-                      <span style={{ fontSize: '0.65rem', background: '#dcfce7', color: '#15803d', padding: '0.1rem 0.4rem', borderRadius: '9999px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Seguridad</span>
+                      <span style={{ fontSize: '0.6rem', background: '#dcfce7', color: '#15803d', padding: '0.05rem 0.35rem', borderRadius: '9999px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Seguridad</span>
                     </div>
-                    <p style={{ fontSize: '0.8125rem', color: '#15803d', lineHeight: '1.4', margin: 0 }}>
+                    <p style={{ fontSize: '0.75rem', color: '#15803d', lineHeight: '1.35', margin: 0 }}>
                       ¡Hola! Se ha cerrado tu sesión automáticamente por inactividad para proteger los datos de tu empresa. Por favor, ingresa tus credenciales para continuar.
                     </p>
                   </div>
@@ -229,17 +229,17 @@ export default function Login() {
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
-                <a href="#" className="text-muted" style={{ fontSize: '0.85rem', textDecoration: 'none' }}>¿Olvidaste tu contraseña?</a>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+                <a href="#" className="text-muted" style={{ fontSize: '0.8rem', textDecoration: 'none' }}>¿Olvidaste tu contraseña?</a>
               </div>
 
-              <button type="submit" className="btn btn-primary btn-block" disabled={loading} style={{ padding: '0.85rem', fontSize: '1rem' }}>
+              <button type="submit" className="btn btn-primary btn-block" disabled={loading} style={{ padding: '0.6rem', fontSize: '0.875rem' }}>
                 {loading ? 'Ingresando...' : 'Ingresar al Dashboard'}
               </button>
 
-              <div style={{ display: 'flex', alignItems: 'center', margin: '1.5rem 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', margin: '1rem 0' }}>
                 <hr style={{ flex: 1, borderTop: '1px solid #e2e8f0', margin: 0 }} />
-                <span style={{ padding: '0 1rem', color: '#64748b', fontSize: '0.875rem' }}>O ingresa con</span>
+                <span style={{ padding: '0 0.75rem', color: '#64748b', fontSize: '0.8rem' }}>O ingresa con</span>
                 <hr style={{ flex: 1, borderTop: '1px solid #e2e8f0', margin: 0 }} />
               </div>
 
