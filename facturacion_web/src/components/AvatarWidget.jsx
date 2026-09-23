@@ -215,9 +215,11 @@ export default function AvatarWidget() {
   const containerRef = useRef(null);
 
   const handlePointerDown = (e) => {
-    // Si el usuario presiona un botón de acción dentro del header, no arrastrar
-    if (e.target.closest('button') && !e.target.closest('.drag-handle-btn')) return;
-    if (e.target.closest('input') || e.target.closest('textarea')) return;
+    // Cuando la ventana está abierta (maximizada), filtrar botones internos que no sean de arrastre
+    if (isOpen) {
+      if (e.target.closest('input') || e.target.closest('textarea')) return;
+      if (e.target.closest('button') && !e.target.closest('.drag-handle-btn')) return;
+    }
 
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
