@@ -289,12 +289,14 @@ export default function OrdenesCompra() {
                 <Select
                   value={[
                     { value: 'CCF', label: 'Comprobante de Crédito Fiscal (CCF)' },
+                    { value: 'FACTURA', label: 'Factura Electrónica' },
                     { value: 'FACTURA_CONSUMIDOR', label: 'Factura Consumidor Final' },
                     { value: 'FSE', label: 'Factura de Sujeto Excluido (FSE)' }
                   ].find(opt => opt.value === formOC.tipo_doc)}
                   onChange={opt => setFormOC({...formOC, tipo_doc: opt ? opt.value : 'CCF'})}
                   options={[
                     { value: 'CCF', label: 'Comprobante de Crédito Fiscal (CCF)' },
+                    { value: 'FACTURA', label: 'Factura Electrónica' },
                     { value: 'FACTURA_CONSUMIDOR', label: 'Factura Consumidor Final' },
                     { value: 'FSE', label: 'Factura de Sujeto Excluido (FSE)' }
                   ]}
@@ -529,7 +531,7 @@ export default function OrdenesCompra() {
         <h1 className="text-2xl font-bold text-slate-800 mb-2 flex items-center gap-2">
           <FileJson className="w-6 h-6 text-emerald-600" /> Importación Inteligente de DTE
         </h1>
-        <p className="text-slate-500 mb-6">Sube el archivo JSON del Comprobante de Crédito Fiscal que te envió tu proveedor. El sistema creará automáticamente la orden, el proveedor y los productos si no existen.</p>
+        <p className="text-slate-500 mb-6">Sube el archivo JSON del Comprobante de Crédito Fiscal (CCF) o Factura Electrónica enviado por tu proveedor. El sistema creará automáticamente la orden, el proveedor y los productos si no existen.</p>
         
         <div className="bg-white p-12 rounded-2xl shadow-sm border-2 border-dashed border-slate-300 hover:border-emerald-500 hover:bg-emerald-50 transition-colors mb-6 flex flex-col items-center justify-center cursor-pointer relative group">
           <input 
@@ -546,7 +548,7 @@ export default function OrdenesCompra() {
             {dteJson ? (
               <span className="text-emerald-600 font-semibold flex items-center gap-1 justify-center"><CheckCircle2 className="w-4 h-4"/> ¡Archivo cargado con éxito! Listo para procesar.</span>
             ) : (
-              'Solo archivos .json generados por el Ministerio de Hacienda'
+              'Soporta archivos .json de Crédito Fiscal (03) y Factura Electrónica (01) de Hacienda'
             )}
           </p>
         </div>
@@ -575,7 +577,10 @@ export default function OrdenesCompra() {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pb-4 border-b border-slate-100">
             <div>
               <p className="text-xs font-semibold text-slate-500 uppercase">Tipo Documento</p>
-              <p className="font-semibold text-indigo-700">{ocActiva.tipo_doc === 'CCF' ? 'Comprobante de Crédito Fiscal (CCF)' : ocActiva.tipo_doc}</p>
+              <p className="font-semibold text-indigo-700">
+                {ocActiva.tipo_doc === 'CCF' ? 'Comprobante de Crédito Fiscal (CCF)' : 
+                 ocActiva.tipo_doc === 'FACTURA' ? 'Factura Electrónica' : ocActiva.tipo_doc}
+              </p>
             </div>
             <div>
               <p className="text-xs font-semibold text-slate-500 uppercase">N° Comprobante Proveedor</p>

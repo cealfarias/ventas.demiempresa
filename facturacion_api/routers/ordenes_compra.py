@@ -375,7 +375,35 @@ def crear_desde_dte(empresa_id: str, payload: ImportarDTERequest, usuario_id: in
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="El JSON proporcionado no es válido")
 
-    codigo_gen = dte.get("identificacion", {}).get("codigoGeneracion", "")
+    if isinstance(dte, str):
+        try:
+            dte = json.loads(dte)
+        except:
+            pass
+
+    if isinstance(dte, dict) and "documento" in dte and isinstance(dte["documento"], dict):
+        dte = dte["documento"]
+    elif isinstance(dte, dict) and "dteJson" in dte and isinstance(dte["dteJson"], dict):
+        dte = dte["dteJson"]
+    elif isinstance(dte, dict) and "dte" in dte and isinstance(dte["dte"], dict):
+        dte = dte["dte"]
+
+    if not isinstance(dte, dict):
+        raise HTTPException(status_code=400, detail="El contenido del DTE JSON no es un objeto válido")
+
+    identificacion = dte.get("identificacion", {})
+    tipo_dte = str(identificacion.get("tipoDte", "03")).strip()
+    
+    MAPPING_TIPO = {
+        "01": "FACTURA",
+        "03": "CCF",
+        "05": "NOTA_CREDITO",
+        "06": "NOTA_DEBITO",
+        "14": "FSE"
+    }
+    tipo_doc = MAPPING_TIPO.get(tipo_dte, "CCF")
+
+    codigo_gen = identificacion.get("codigoGeneracion", "")
     if codigo_gen:
         existente = db.query(OrdenCompra).filter(
             OrdenCompra.empresa_id == empresa_id,
@@ -385,23 +413,23 @@ def crear_desde_dte(empresa_id: str, payload: ImportarDTERequest, usuario_id: in
             raise HTTPException(status_code=400, detail=f"Este DTE ({codigo_gen}) ya fue importado en la orden {existente.numero}.")
 
     emisor = dte.get("emisor", {})
-    nit_emisor = emisor.get("nit", "")
-    nombre_emisor = emisor.get("nombre", "")
+    nit_emisor = emisor.get("nit") or emisor.get("numDocumento") or emisor.get("nrc") or ""
+    nombre_emisor = emisor.get("nombre") or emisor.get("nombreComercial") or ""
 
     if not nit_emisor or not nombre_emisor:
-        raise HTTPException(status_code=400, detail="El DTE no tiene información válida del emisor")
+        raise HTTPException(status_code=400, detail="El DTE no contiene información válida del emisor (NIT/Documento y Nombre).")
 
     # Buscar o crear proveedor
     proveedor = db.query(Proveedor).filter(
         Proveedor.empresa_id == empresa_id,
-        Proveedor.nit == nit_emisor
+        (Proveedor.nit == nit_emisor) | ((Proveedor.nrc != "") & (Proveedor.nrc == emisor.get("nrc", "")))
     ).first()
 
     if not proveedor:
         proveedor = Proveedor(
             empresa_id=empresa_id,
             nombre=nombre_emisor,
-            nombre_comercial=emisor.get("nombreComercial", ""),
+            nombre_comercial=emisor.get("nombreComercial", "") or nombre_emisor,
             nit=nit_emisor,
             nrc=emisor.get("nrc", ""),
             telefono=emisor.get("telefono", ""),
@@ -411,7 +439,7 @@ def crear_desde_dte(empresa_id: str, payload: ImportarDTERequest, usuario_id: in
         db.flush()
 
     # Crear Orden
-    fec_emi_str = dte.get("identificacion", {}).get("fecEmi", "")
+    fec_emi_str = identificacion.get("fecEmi", "")
     fecha_emision_doc = datetime.now(TIMEZONE)
     if fec_emi_str:
         try:
@@ -419,27 +447,29 @@ def crear_desde_dte(empresa_id: str, payload: ImportarDTERequest, usuario_id: in
         except:
             pass
 
+    sello_recepcion = dte.get("selloRecibido") or dte.get("respuestaHacienda", {}).get("selloRecibido") or ""
+
     oc = OrdenCompra(
         empresa_id=empresa_id,
         numero=_generar_numero_oc(db, empresa_id),
         proveedor_id=proveedor.id,
-        tipo_doc="CCF",
+        tipo_doc=tipo_doc,
         json_dte_proveedor=payload.json_dte,
-        codigo_generacion_proveedor=dte.get("identificacion", {}).get("codigoGeneracion", ""),
+        codigo_generacion_proveedor=codigo_gen,
         fecha_emision=fecha_emision_doc,
-        sello_recepcion_proveedor=dte.get("selloRecibido", ""),
+        sello_recepcion_proveedor=sello_recepcion,
         estado="borrador",
         usuario_id=usuario_id,
-        notas=f"Generado automáticamente desde DTE {dte.get('identificacion', {}).get('numeroControl', '')}"
+        notas=f"Generado automáticamente desde DTE {identificacion.get('numeroControl', '')} (Tipo {tipo_dte})"
     )
     db.add(oc)
     db.flush()
 
     cuerpo_documento = dte.get("cuerpoDocumento", [])
-    subtotal = 0
+    subtotal_acrum = 0
     
     for item in cuerpo_documento:
-        descripcion = item.get("descripcion", "")
+        descripcion = item.get("descripcion", "").strip()
         if not descripcion: continue
         
         # Buscar producto por nombre (o código) o crearlo si no existe
@@ -450,11 +480,16 @@ def crear_desde_dte(empresa_id: str, payload: ImportarDTERequest, usuario_id: in
         
         precio_unitario = float(item.get("precioUni", 0))
         cantidad = float(item.get("cantidad", 0))
+        venta_gravada = float(item.get("ventaGravada", 0))
+        venta_exenta = float(item.get("ventaExenta", 0))
+        venta_nosuj = float(item.get("ventaNoSuj", 0))
+
+        monto_item = venta_gravada or venta_exenta or venta_nosuj or (precio_unitario * cantidad)
         
         if not producto:
             producto = Producto(
                 empresa_id=empresa_id,
-                codigo=item.get("codigo", f"P-{str(len(descripcion))}-{int(precio_unitario)}"),
+                codigo=item.get("codigo") or f"P-{str(len(descripcion))}-{int(precio_unitario)}",
                 nombre=descripcion,
                 precio_venta=precio_unitario, # Por defecto al mismo precio, el usuario luego lo ajusta
                 costo_promedio=precio_unitario,
@@ -463,26 +498,60 @@ def crear_desde_dte(empresa_id: str, payload: ImportarDTERequest, usuario_id: in
             db.add(producto)
             db.flush()
             
-        item_subtotal = int(float(item.get("ventaGravada", 0)) * 100)
+        item_subtotal_cents = int(round(monto_item * 100))
         detalle = DetalleOrdenCompra(
             orden_compra_id=oc.id,
             producto_id=producto.id_producto,
             cantidad_pedida=cantidad,
             cantidad_recibida=0.0,
             precio_unitario=precio_unitario,
-            subtotal=item_subtotal
+            subtotal=item_subtotal_cents
         )
         db.add(detalle)
-        subtotal += item_subtotal
+        subtotal_acrum += item_subtotal_cents
 
     resumen = dte.get("resumen", {})
-    subtotal_dte = int(float(resumen.get("totalGravada", subtotal/100)) * 100)
-    iva_dte = int(float(resumen.get("totalIva", (subtotal/100)*0.13)) * 100)
-    total_dte = int(float(resumen.get("montoTotalOperacion", (subtotal_dte+iva_dte)/100)) * 100)
+    total_pagar_float = float(resumen.get("montoTotalOperacion") or resumen.get("totalPagar") or resumen.get("totalPagarOperacion") or 0)
+    total_gravada_float = float(resumen.get("totalGravada") or 0)
+    total_iva_float = float(resumen.get("totalIva") or 0)
 
-    oc.subtotal = subtotal_dte
-    oc.iva = iva_dte
-    oc.total = total_dte
+    if not total_iva_float and isinstance(resumen.get("tributos"), list):
+        for t in resumen["tributos"]:
+            if t.get("codigo") == "20" or "IVA" in str(t.get("descripcion", "")).upper():
+                total_iva_float += float(t.get("valor", 0))
+
+    if tipo_dte == "01": # Factura Electrónica
+        if total_pagar_float > 0:
+            total_cents = int(round(total_pagar_float * 100))
+            if total_iva_float > 0:
+                iva_cents = int(round(total_iva_float * 100))
+                subtotal_cents = total_cents - iva_cents
+            else:
+                subtotal_cents = int(round((total_pagar_float / 1.13) * 100))
+                iva_cents = total_cents - subtotal_cents
+        else:
+            total_cents = subtotal_acrum
+            subtotal_cents = int(round((subtotal_acrum / 100 / 1.13) * 100))
+            iva_cents = total_cents - subtotal_cents
+    else: # CCF u otros
+        if total_gravada_float > 0:
+            subtotal_cents = int(round(total_gravada_float * 100))
+        else:
+            subtotal_cents = subtotal_acrum
+
+        if total_iva_float > 0:
+            iva_cents = int(round(total_iva_float * 100))
+        else:
+            iva_cents = int(round((subtotal_cents / 100) * 0.13 * 100))
+
+        if total_pagar_float > 0:
+            total_cents = int(round(total_pagar_float * 100))
+        else:
+            total_cents = subtotal_cents + iva_cents
+
+    oc.subtotal = subtotal_cents
+    oc.iva = iva_cents
+    oc.total = total_cents
 
     db.commit()
     db.refresh(oc)
@@ -501,11 +570,40 @@ def importar_dte_proveedor(oc_id: int, empresa_id: str, payload: ImportarDTERequ
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="El JSON proporcionado no es válido")
 
+    if isinstance(dte, str):
+        try:
+            dte = json.loads(dte)
+        except:
+            pass
+
+    if isinstance(dte, dict) and "documento" in dte and isinstance(dte["documento"], dict):
+        dte = dte["documento"]
+    elif isinstance(dte, dict) and "dteJson" in dte and isinstance(dte["dteJson"], dict):
+        dte = dte["dteJson"]
+    elif isinstance(dte, dict) and "dte" in dte and isinstance(dte["dte"], dict):
+        dte = dte["dte"]
+
+    if not isinstance(dte, dict):
+        raise HTTPException(status_code=400, detail="El contenido del DTE JSON no es un objeto válido")
+
+    identificacion = dte.get("identificacion", {})
+    tipo_dte = str(identificacion.get("tipoDte", "")).strip()
+
+    MAPPING_TIPO = {
+        "01": "FACTURA",
+        "03": "CCF",
+        "05": "NOTA_CREDITO",
+        "06": "NOTA_DEBITO",
+        "14": "FSE"
+    }
+    if tipo_dte in MAPPING_TIPO:
+        oc.tipo_doc = MAPPING_TIPO[tipo_dte]
+
     oc.json_dte_proveedor = payload.json_dte
-    oc.codigo_generacion_proveedor = dte.get("identificacion", {}).get("codigoGeneracion", "")
-    oc.sello_recepcion_proveedor = dte.get("selloRecibido", "")
+    oc.codigo_generacion_proveedor = identificacion.get("codigoGeneracion", "")
+    oc.sello_recepcion_proveedor = dte.get("selloRecibido") or dte.get("respuestaHacienda", {}).get("selloRecibido") or ""
     
-    fec_emi_str = dte.get("identificacion", {}).get("fecEmi", "")
+    fec_emi_str = identificacion.get("fecEmi", "")
     if fec_emi_str:
         try:
             oc.fecha_emision = datetime.strptime(fec_emi_str, "%Y-%m-%d").replace(tzinfo=TIMEZONE)
@@ -513,14 +611,36 @@ def importar_dte_proveedor(oc_id: int, empresa_id: str, payload: ImportarDTERequ
             pass
 
     resumen = dte.get("resumen", {})
-    subtotal_dte = int(float(resumen.get("totalGravada", 0)) * 100)
-    iva_dte = int(float(resumen.get("totalIva", 0)) * 100)
-    total_dte = int(float(resumen.get("montoTotalOperacion", 0)) * 100)
+    total_pagar_float = float(resumen.get("montoTotalOperacion") or resumen.get("totalPagar") or 0)
+    total_gravada_float = float(resumen.get("totalGravada") or 0)
+    total_iva_float = float(resumen.get("totalIva") or 0)
 
-    if total_dte > 0:
-        oc.subtotal = subtotal_dte
-        oc.iva = iva_dte
-        oc.total = total_dte
+    if not total_iva_float and isinstance(resumen.get("tributos"), list):
+        for t in resumen["tributos"]:
+            if t.get("codigo") == "20" or "IVA" in str(t.get("descripcion", "")).upper():
+                total_iva_float += float(t.get("valor", 0))
+
+    if tipo_dte == "01": # Factura
+        if total_pagar_float > 0:
+            total_cents = int(round(total_pagar_float * 100))
+            if total_iva_float > 0:
+                iva_cents = int(round(total_iva_float * 100))
+                subtotal_cents = total_cents - iva_cents
+            else:
+                subtotal_cents = int(round((total_pagar_float / 1.13) * 100))
+                iva_cents = total_cents - subtotal_cents
+            oc.subtotal = subtotal_cents
+            oc.iva = iva_cents
+            oc.total = total_cents
+    else: # CCF u otros
+        subtotal_dte = int(round(total_gravada_float * 100))
+        iva_dte = int(round(total_iva_float * 100))
+        total_dte = int(round(total_pagar_float * 100)) if total_pagar_float > 0 else (subtotal_dte + iva_dte)
+
+        if total_dte > 0:
+            oc.subtotal = subtotal_dte
+            oc.iva = iva_dte
+            oc.total = total_dte
 
     db.commit()
     db.refresh(oc)
