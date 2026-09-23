@@ -100,6 +100,13 @@ def actualizar_configuracion(empresa_id: str, datos: ConfiguracionDTEBase, db: S
     db.refresh(config)
     return config
 
+from dte_service.validator.catalogos import obtener_geografia_cascada
+
+@router.get("/catalogos-geograficos")
+def obtener_catalogos_geograficos():
+    """Devuelve la jerarquía completa en cascada: Departamentos (CAT-012) -> Municipios (CAT-013) -> Distritos (CAT-008)."""
+    return obtener_geografia_cascada()
+
 @router.post("/auto-detectar-smtp")
 def auto_detectar_smtp(payload: AutoDetectarSMTPRequest):
     """Auto-detecta el servidor SMTP y devuelve instrucciones visuales según el dominio."""
@@ -112,3 +119,4 @@ def probar_smtp(payload: ProbarSMTPRequest):
     if not exito:
         raise HTTPException(status_code=400, detail=mensaje)
     return {"status": "OK", "mensaje": mensaje}
+
