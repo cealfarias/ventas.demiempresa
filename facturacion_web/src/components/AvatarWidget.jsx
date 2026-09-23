@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Bot, Mic, MicOff, Volume2, VolumeX, RotateCcw, Repeat, 
-  Send, Sparkles, X, ChevronUp, AlertCircle, ExternalLink, Compass, HelpCircle
+  Send, Sparkles, X, ChevronUp, AlertCircle, ExternalLink, Compass, HelpCircle,
+  Move, GripVertical
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -190,6 +191,94 @@ export default function AvatarWidget() {
 
   const role = (localStorage.getItem('rol') || 'admin').toLowerCase();
   const currentPath = location.pathname.endsWith('/') && location.pathname !== '/' ? location.pathname.slice(0, -1) : location.pathname;
+
+  // Estado de Posición Arrastrable (Draggable - Mouse y Tap/Touch)
+  const [pos, setPos] = useState(() => {
+    try {
+      const saved = localStorage.getItem('avatar_pos');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    // Posición inicial por defecto: abajo a la derecha
+    return {
+      x: Math.max(10, window.innerWidth - 240),
+      y: Math.max(10, window.innerHeight - 90)
+    };
+  });
+
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0, hasMoved: false });
+  const containerRef = useRef(null);
+
+  const handlePointerDown = (e) => {
+    // Si el usuario presiona un botón de acción dentro del header, no arrastrar
+    if (e.target.closest('button') && !e.target.closest('.drag-handle-btn')) return;
+    if (e.target.closest('input') || e.target.closest('textarea')) return;
+
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    dragStartRef.current = {
+      startX: clientX,
+      startY: clientY,
+      initialX: pos.x,
+      initialY: pos.y,
+      hasMoved: false
+    };
+    isDraggingRef.current = true;
+  };
+
+  useEffect(() => {
+    const handlePointerMove = (e) => {
+      if (!isDraggingRef.current) return;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      const dx = clientX - dragStartRef.current.startX;
+      const dy = clientY - dragStartRef.current.startY;
+
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        dragStartRef.current.hasMoved = true;
+      }
+
+      const widgetWidth = isOpen ? 430 : 220;
+      const maxX = Math.max(10, window.innerWidth - Math.min(window.innerWidth * 0.92, widgetWidth) - 10);
+      const maxY = Math.max(10, window.innerHeight - (isOpen ? 640 : 70));
+
+      const newX = Math.max(10, Math.min(maxX, dragStartRef.current.initialX + dx));
+      const newY = Math.max(10, Math.min(maxY, dragStartRef.current.initialY + dy));
+
+      setPos({ x: newX, y: newY });
+    };
+
+    const handlePointerUp = () => {
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false;
+        setPos(currentPos => {
+          try {
+            localStorage.setItem('avatar_pos', JSON.stringify(currentPos));
+          } catch (e) {}
+          return currentPos;
+        });
+      }
+    };
+
+    window.addEventListener('mousemove', handlePointerMove);
+    window.addEventListener('mouseup', handlePointerUp);
+    window.addEventListener('touchmove', handlePointerMove, { passive: false });
+    window.addEventListener('touchend', handlePointerUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handlePointerMove);
+      window.removeEventListener('mouseup', handlePointerUp);
+      window.removeEventListener('touchmove', handlePointerMove);
+      window.removeEventListener('touchend', handlePointerUp);
+    };
+  }, [isOpen]);
 
   // 1. Diagnóstico de Hardware (Micrófono y Parlantes)
   useEffect(() => {
@@ -600,17 +689,42 @@ export default function AvatarWidget() {
     "¿Cómo registro un gasto?"
   ];
 
+  const currentWidth = isOpen ? Math.min(window.innerWidth * 0.92, 430) : 220;
+  const currentHeight = isOpen ? Math.min(window.innerHeight * 0.9, 660) : 60;
+
+  const safeX = Math.max(10, Math.min(pos.x, window.innerWidth - currentWidth - 10));
+  const safeY = Math.max(10, Math.min(pos.y, window.innerHeight - currentHeight - 10));
+
+  const handleOrbClick = (e) => {
+    if (dragStartRef.current.hasMoved) {
+      e.stopPropagation();
+      return;
+    }
+    setIsOpen(true);
+  };
+
   return (
-    <div className="fixed bottom-5 right-5 z-50 font-sans">
+    <div
+      ref={containerRef}
+      style={{
+        position: 'fixed',
+        left: `${safeX}px`,
+        top: `${safeY}px`,
+        zIndex: 9999
+      }}
+      className="font-sans select-none"
+    >
       {/* Botón Flotante Estilo Orb Animado del Avatar */}
       {!isOpen && (
         <button
-          onClick={() => setIsOpen(true)}
-          className="relative group flex items-center gap-3 bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 text-white p-2.5 pr-4 rounded-full shadow-2xl border-2 border-indigo-400 hover:border-indigo-300 transition-all hover:scale-105 active:scale-95"
-          title="Abrir Asistente Virtual Avatar IA"
+          onMouseDown={handlePointerDown}
+          onTouchStart={handlePointerDown}
+          onClick={handleOrbClick}
+          className="relative group flex items-center gap-2.5 bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 text-white p-2.5 pr-4 rounded-full shadow-2xl border-2 border-indigo-400 hover:border-indigo-300 transition-all hover:scale-105 active:scale-95 cursor-grab active:cursor-grabbing"
+          title="Mantén presionado para arrastrar • Haz clic o tap para abrir Avatar IA"
         >
           {/* Esfera Brillante / Glowing Orb */}
-          <div className="relative w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-400 flex items-center justify-center shadow-lg shadow-indigo-500/50 overflow-hidden">
+          <div className="relative w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-400 flex items-center justify-center shadow-lg shadow-indigo-500/50 overflow-hidden shrink-0">
             <div className="absolute inset-0 bg-indigo-500/30 animate-ping rounded-full" />
             <Bot className="w-6 h-6 text-white relative z-10 animate-bounce" />
             <span className="absolute bottom-0.5 right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-indigo-900 z-20" />
@@ -620,8 +734,8 @@ export default function AvatarWidget() {
             <span className="font-extrabold text-xs text-amber-300 flex items-center gap-1">
               Avatar IA <Sparkles className="w-3 h-3 text-amber-300 fill-amber-300" />
             </span>
-            <span className="text-[10px] text-slate-300 font-semibold tracking-tight">
-              ¿Dudas? Hazme una pregunta
+            <span className="text-[10px] text-slate-300 font-semibold tracking-tight flex items-center gap-1">
+              <Move className="w-2.5 h-2.5 text-indigo-300" /> Arrástrame o pregunta
             </span>
           </div>
 
@@ -637,12 +751,18 @@ export default function AvatarWidget() {
       {isOpen && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-[92vw] sm:w-[430px] max-h-[660px] flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-200">
           {/* Header con Esfera Orb */}
-          <div className="bg-gradient-to-r from-slate-950 via-indigo-950 to-indigo-900 text-white p-3.5 flex items-center justify-between border-b border-indigo-800">
-            <div className="flex items-center gap-3">
+          <div
+            onMouseDown={handlePointerDown}
+            onTouchStart={handlePointerDown}
+            className="bg-gradient-to-r from-slate-950 via-indigo-950 to-indigo-900 text-white p-3.5 flex items-center justify-between border-b border-indigo-800 cursor-grab active:cursor-grabbing"
+            title="Mantén presionado el encabezado para mover la ventana"
+          >
+            <div className="flex items-center gap-2.5">
+              <GripVertical className="w-4 h-4 text-indigo-400/80 shrink-0" />
               {/* Esfera Orb activa en Header */}
-              <div className="relative w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-500 to-amber-400 flex items-center justify-center shadow-lg shadow-indigo-500/50 shrink-0">
+              <div className="relative w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-500 to-amber-400 flex items-center justify-center shadow-lg shadow-indigo-500/50 shrink-0">
                 <div className={`absolute inset-0 rounded-full ${loading ? 'bg-amber-400/40 animate-ping' : 'bg-indigo-400/20 animate-pulse'}`} />
-                <Bot className="w-6 h-6 text-white relative z-10" />
+                <Bot className="w-5 h-5 text-white relative z-10" />
               </div>
               <div>
                 <h3 className="font-bold text-sm flex items-center gap-1.5 text-white">
@@ -655,7 +775,7 @@ export default function AvatarWidget() {
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-indigo-200 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+              className="text-indigo-200 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors drag-handle-btn"
               title="Cerrar ventana"
             >
               <X className="w-5 h-5" />
