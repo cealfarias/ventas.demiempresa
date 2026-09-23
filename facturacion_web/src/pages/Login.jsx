@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
 import { api } from '../services/api';
 import { GoogleLogin } from '@react-oauth/google';
 import './Login.css';
+
+const LOADING_STEPS = [
+  { title: "Verificando credenciales...", sub: "Iniciando protocolo de seguridad SSL 256-Bit" },
+  { title: "Conectando con el Servidor Render Cloud...", sub: "Estableciendo sesión segura de alta velocidad" },
+  { title: "Sincronizando espacio de Facturación...", sub: "Cargando inventario, cajas y permisos de usuario" },
+  { title: "¡Autenticación exitosa! Entrando al Dashboard...", sub: "Abriendo la plataforma principal" }
+];
 
 export default function Login() {
   const navigate = useNavigate();
@@ -15,8 +23,20 @@ export default function Login() {
   });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loadingStepIdx, setLoadingStepIdx] = useState(0);
   const [show2FA, setShow2FA] = useState(false);
   const [otpCode, setOtpCode] = useState('');
+
+  useEffect(() => {
+    if (!loading) {
+      setLoadingStepIdx(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setLoadingStepIdx(prev => (prev < LOADING_STEPS.length - 1 ? prev + 1 : prev));
+    }, 1300);
+    return () => clearInterval(interval);
+  }, [loading]);
 
   useEffect(() => {
     if (isExpired) {
@@ -36,7 +56,6 @@ export default function Login() {
   }, [isExpired]);
 
   const handleChange = (e) => {
-    setFormData(prev => ({ ...prev, [name]: e.target.value }));
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -89,6 +108,103 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  if (loading) {
+    const step = LOADING_STEPS[loadingStepIdx] || LOADING_STEPS[0];
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur-xl text-white font-sans p-4">
+        {/* Glow Effects */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-600/25 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 translate-y-1/2 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative w-full max-w-md bg-slate-900/90 border border-slate-800 rounded-3xl p-8 shadow-2xl overflow-hidden text-center flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">
+          
+          {/* Status Badge */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-indigo-500/30 text-[11px] font-semibold text-indigo-300 mb-8 shadow-inner">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            <span>Servidor Render • Conexión Segura</span>
+          </div>
+
+          {/* Círculo Animado con Flecha Recorriendo el Borde */}
+          <div className="relative w-32 h-32 mb-8 flex items-center justify-center">
+            {/* Anillo de fondo resplandeciente */}
+            <div className="absolute inset-0 rounded-full bg-indigo-500/10 animate-pulse border border-indigo-500/20" />
+
+            {/* SVG Anillo Giratorio Gradient */}
+            <svg className="w-full h-full animate-spin" viewBox="0 0 100 100" style={{ animationDuration: '2.2s' }}>
+              <defs>
+                <linearGradient id="spinnerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#818cf8" stopOpacity="1" />
+                  <stop offset="50%" stopColor="#c084fc" stopOpacity="0.8" />
+                  <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.1" />
+                </linearGradient>
+              </defs>
+              <circle
+                cx="50"
+                cy="50"
+                r="40"
+                fill="none"
+                stroke="#1e293b"
+                strokeWidth="5.5"
+              />
+              <circle
+                cx="50"
+                cy="50"
+                r="40"
+                fill="none"
+                stroke="url(#spinnerGradient)"
+                strokeWidth="5.5"
+                strokeDasharray="180"
+                strokeDashoffset="60"
+                strokeLinecap="round"
+              />
+            </svg>
+
+            {/* Flecha Orbitando Recorriendo el Círculo */}
+            <div className="absolute inset-0 animate-spin" style={{ animationDuration: '2.2s' }}>
+              <div className="absolute top-[3px] left-1/2 -translate-x-1/2 -translate-y-1/2 bg-indigo-500 text-white p-1 rounded-full shadow-lg shadow-indigo-500/80">
+                <ArrowRight className="w-3.5 h-3.5 rotate-[-45deg]" />
+              </div>
+            </div>
+
+            {/* Logo Central Resplandeciente */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/40 border border-indigo-300/30">
+                <ShieldCheck className="w-7 h-7 text-white animate-pulse" />
+              </div>
+            </div>
+          </div>
+
+          {/* Textos Informativos Profesionales */}
+          <h3 className="text-xl font-bold text-white mb-2 tracking-tight transition-all duration-300">
+            {step.title}
+          </h3>
+          <p className="text-xs text-slate-400 mb-8 max-w-xs leading-relaxed">
+            {step.sub}
+          </p>
+
+          {/* Barra de Progreso Dinámica */}
+          <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden border border-slate-700/50">
+            <div
+              className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 transition-all duration-500 ease-out"
+              style={{ width: `${((loadingStepIdx + 1) / LOADING_STEPS.length) * 100}%` }}
+            />
+          </div>
+
+          {/* Pie de página */}
+          <div className="mt-6 pt-4 border-t border-slate-800/80 w-full flex items-center justify-between text-[11px] text-slate-500">
+            <span className="flex items-center gap-1.5 font-medium">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Facturación SaaS
+            </span>
+            <span className="font-mono text-slate-400">v2.4 • Render Cloud</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (show2FA) {
     return (
