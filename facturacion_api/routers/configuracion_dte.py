@@ -100,12 +100,15 @@ def actualizar_configuracion(empresa_id: str, datos: ConfiguracionDTEBase, db: S
     db.refresh(config)
     return config
 
-from dte_service.validator.catalogos import obtener_geografia_cascada
+from dte_service.validator.catalogos import obtener_geografia_exacta
 
 @router.get("/catalogos-geograficos")
 def obtener_catalogos_geograficos():
-    """Devuelve la jerarquía completa en cascada: Departamentos (CAT-012) -> Municipios (CAT-013) -> Distritos (CAT-008)."""
-    return obtener_geografia_cascada()
+    """
+    Devuelve la jerarquía geográfica exacta:
+    1. Seleccionar Departamento -> 2. Seleccionar Distrito -> 3. Auto-asignar Municipio (CAT-013).
+    """
+    return obtener_geografia_exacta()
 
 @router.post("/auto-detectar-smtp")
 def auto_detectar_smtp(payload: AutoDetectarSMTPRequest):

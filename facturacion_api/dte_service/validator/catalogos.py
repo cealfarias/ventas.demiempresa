@@ -1,7 +1,7 @@
 """
 Catálogos Oficiales de la Dirección General de Impuestos Internos (DGII) / Ministerio de Hacienda El Salvador.
 Versión 1.1 (Actualizado según Manual Oficial MH).
-Incluye Jerarquía completa: Departamentos (CAT-012) -> Municipios (CAT-013) -> Distritos (CAT-008).
+Flujo Geográfico Requerido: 1. Seleccionar Departamento -> 2. Seleccionar Distrito -> 3. Auto-asignar Municipio.
 """
 
 CAT_001_AMBIENTE = {
@@ -87,557 +87,338 @@ CAT_012_DEPARTAMENTO = {
     "14": "La Unión"
 }
 
-# ── 13. MUNICIPIOS POR DEPARTAMENTO (CAT-013 V1.1 Reestructuración) ──────────
-DEPARTAMENTOS_MUNICIPIOS_DISTRITOS = {
+# ── ESTRUCTURA MAPEO: DEPARTAMENTO -> DISTRITOS -> AUTO MUNICIPIO (CAT-008 & CAT-013) ──
+ESTRUCTURA_GEOGRAFICA_MH = {
     "01": { # Ahuachapán
         "nombre": "Ahuachapán",
-        "municipios": {
-            "13": {
-                "nombre": "AHUACHAPÁN NORTE",
-                "distritos": {
-                    "03": "Atiquizaya",
-                    "05": "El Refugio",
-                    "09": "San Lorenzo",
-                    "12": "Turín"
-                }
-            },
-            "14": {
-                "nombre": "AHUACHAPÁN CENTRO",
-                "distritos": {
-                    "01": "Ahuachapán",
-                    "02": "Apaneca",
-                    "04": "Concepción de Ataco",
-                    "11": "Tacuba"
-                }
-            },
-            "15": {
-                "nombre": "AHUACHAPÁN SUR",
-                "distritos": {
-                    "06": "Guaymango",
-                    "07": "Jujutla",
-                    "08": "San Francisco Menéndez",
-                    "10": "San Pedro Puxtla"
-                }
-            }
+        "distritos": {
+            "01": {"nombre": "Ahuachapán", "municipio_cod": "14", "municipio_nombre": "AHUACHAPÁN CENTRO"},
+            "02": {"nombre": "Apaneca", "municipio_cod": "14", "municipio_nombre": "AHUACHAPÁN CENTRO"},
+            "03": {"nombre": "Atiquizaya", "municipio_cod": "13", "municipio_nombre": "AHUACHAPÁN NORTE"},
+            "04": {"nombre": "Concepción de Ataco", "municipio_cod": "14", "municipio_nombre": "AHUACHAPÁN CENTRO"},
+            "05": {"nombre": "El Refugio", "municipio_cod": "13", "municipio_nombre": "AHUACHAPÁN NORTE"},
+            "06": {"nombre": "Guaymango", "municipio_cod": "15", "municipio_nombre": "AHUACHAPÁN SUR"},
+            "07": {"nombre": "Jujutla", "municipio_cod": "15", "municipio_nombre": "AHUACHAPÁN SUR"},
+            "08": {"nombre": "San Francisco Menéndez", "municipio_cod": "15", "municipio_nombre": "AHUACHAPÁN SUR"},
+            "09": {"nombre": "San Lorenzo", "municipio_cod": "13", "municipio_nombre": "AHUACHAPÁN NORTE"},
+            "10": {"nombre": "San Pedro Puxtla", "municipio_cod": "15", "municipio_nombre": "AHUACHAPÁN SUR"},
+            "11": {"nombre": "Tacuba", "municipio_cod": "14", "municipio_nombre": "AHUACHAPÁN CENTRO"},
+            "12": {"nombre": "Turín", "municipio_cod": "13", "municipio_nombre": "AHUACHAPÁN NORTE"}
         }
     },
     "02": { # Santa Ana
         "nombre": "Santa Ana",
-        "municipios": {
-            "14": {
-                "nombre": "SANTA ANA NORTE",
-                "distritos": {
-                    "06": "Masahuat",
-                    "07": "Metapán",
-                    "08": "San Antonio Pajonal",
-                    "11": "Santa Rosa Guachipilín"
-                }
-            },
-            "15": {
-                "nombre": "SANTA ANA CENTRO",
-                "distritos": {
-                    "10": "Santa Ana"
-                }
-            },
-            "16": {
-                "nombre": "SANTA ANA ESTE",
-                "distritos": {
-                    "02": "Coatepeque",
-                    "04": "El Congo"
-                }
-            },
-            "17": {
-                "nombre": "SANTA ANA OESTE",
-                "distritos": {
-                    "01": "Candelaria de la Frontera",
-                    "03": "Chalchuapa",
-                    "05": "El Porvenir",
-                    "09": "San Sebastián Salitrillo",
-                    "12": "Santiago de la Frontera",
-                    "13": "Texistepeque"
-                }
-            }
+        "distritos": {
+            "01": {"nombre": "Candelaria de la Frontera", "municipio_cod": "17", "municipio_nombre": "SANTA ANA OESTE"},
+            "02": {"nombre": "Coatepeque", "municipio_cod": "16", "municipio_nombre": "SANTA ANA ESTE"},
+            "03": {"nombre": "Chalchuapa", "municipio_cod": "17", "municipio_nombre": "SANTA ANA OESTE"},
+            "04": {"nombre": "El Congo", "municipio_cod": "16", "municipio_nombre": "SANTA ANA ESTE"},
+            "05": {"nombre": "El Porvenir", "municipio_cod": "17", "municipio_nombre": "SANTA ANA OESTE"},
+            "06": {"nombre": "Masahuat", "municipio_cod": "14", "municipio_nombre": "SANTA ANA NORTE"},
+            "07": {"nombre": "Metapán", "municipio_cod": "14", "municipio_nombre": "SANTA ANA NORTE"},
+            "08": {"nombre": "San Antonio Pajonal", "municipio_cod": "14", "municipio_nombre": "SANTA ANA NORTE"},
+            "09": {"nombre": "San Sebastián Salitrillo", "municipio_cod": "17", "municipio_nombre": "SANTA ANA OESTE"},
+            "10": {"nombre": "Santa Ana", "municipio_cod": "15", "municipio_nombre": "SANTA ANA CENTRO"},
+            "11": {"nombre": "Santa Rosa Guachipilín", "municipio_cod": "14", "municipio_nombre": "SANTA ANA NORTE"},
+            "12": {"nombre": "Santiago de la Frontera", "municipio_cod": "17", "municipio_nombre": "SANTA ANA OESTE"},
+            "13": {"nombre": "Texistepeque", "municipio_cod": "17", "municipio_nombre": "SANTA ANA OESTE"}
         }
     },
     "03": { # Sonsonate
         "nombre": "Sonsonate",
-        "municipios": {
-            "17": {
-                "nombre": "SONSONATE NORTE",
-                "distritos": {
-                    "07": "Juayúa",
-                    "08": "Nahuizalco",
-                    "10": "Salcoatitán",
-                    "14": "Santa Catarina Masahuat"
-                }
-            },
-            "18": {
-                "nombre": "SONSONATE CENTRO",
-                "distritos": {
-                    "15": "Sonsonate",
-                    "16": "Sonzacate",
-                    "09": "Nahulingo",
-                    "11": "San Antonio del Monte",
-                    "13": "Santo Domingo Guzmán"
-                }
-            },
-            "19": {
-                "nombre": "SONSONATE ESTE",
-                "distritos": {
-                    "02": "Armenia",
-                    "03": "Caluco",
-                    "04": "Cuisnahuat",
-                    "05": "Santa Isabel Ishuatán",
-                    "06": "Izalco",
-                    "12": "San Julián"
-                }
-            },
-            "20": {
-                "nombre": "SONSONATE OESTE",
-                "distritos": {
-                    "01": "Acajutla"
-                }
-            }
+        "distritos": {
+            "01": {"nombre": "Acajutla", "municipio_cod": "20", "municipio_nombre": "SONSONATE OESTE"},
+            "02": {"nombre": "Armenia", "municipio_cod": "19", "municipio_nombre": "SONSONATE ESTE"},
+            "03": {"nombre": "Caluco", "municipio_cod": "19", "municipio_nombre": "SONSONATE ESTE"},
+            "04": {"nombre": "Cuisnahuat", "municipio_cod": "19", "municipio_nombre": "SONSONATE ESTE"},
+            "05": {"nombre": "Santa Isabel Ishuatán", "municipio_cod": "19", "municipio_nombre": "SONSONATE ESTE"},
+            "06": {"nombre": "Izalco", "municipio_cod": "19", "municipio_nombre": "SONSONATE ESTE"},
+            "07": {"nombre": "Juayúa", "municipio_cod": "17", "municipio_nombre": "SONSONATE NORTE"},
+            "08": {"nombre": "Nahuizalco", "municipio_cod": "17", "municipio_nombre": "SONSONATE NORTE"},
+            "09": {"nombre": "Nahulingo", "municipio_cod": "18", "municipio_nombre": "SONSONATE CENTRO"},
+            "10": {"nombre": "Salcoatitán", "municipio_cod": "17", "municipio_nombre": "SONSONATE NORTE"},
+            "11": {"nombre": "San Antonio del Monte", "municipio_cod": "18", "municipio_nombre": "SONSONATE CENTRO"},
+            "12": {"nombre": "San Julián", "municipio_cod": "19", "municipio_nombre": "SONSONATE ESTE"},
+            "13": {"nombre": "Santa Catarina Masahuat", "municipio_cod": "17", "municipio_nombre": "SONSONATE NORTE"},
+            "14": {"nombre": "Santo Domingo Guzmán", "municipio_cod": "18", "municipio_nombre": "SONSONATE CENTRO"},
+            "15": {"nombre": "Sonsonate", "municipio_cod": "18", "municipio_nombre": "SONSONATE CENTRO"},
+            "16": {"nombre": "Sonzacate", "municipio_cod": "18", "municipio_nombre": "SONSONATE CENTRO"}
         }
     },
     "04": { # Chalatenango
         "nombre": "Chalatenango",
-        "municipios": {
-            "34": {
-                "nombre": "CHALATENANGO NORTE",
-                "distritos": {
-                    "04": "Citalá",
-                    "12": "La Palma",
-                    "25": "San Ignacio"
-                }
-            },
-            "35": {
-                "nombre": "CHALATENANGO CENTRO",
-                "distritos": {
-                    "01": "Agua Caliente",
-                    "06": "Concepción Quezaltepeque",
-                    "07": "Chalatenango",
-                    "08": "Dulce Nombre de María",
-                    "09": "El Carrizal",
-                    "10": "El Paraíso",
-                    "11": "La Laguna",
-                    "13": "La Reina",
-                    "14": "Las Vueltas",
-                    "28": "San José Cancasque",
-                    "31": "San Rafael",
-                    "32": "Santa Rita"
-                }
-            },
-            "36": {
-                "nombre": "CHALATENANGO SUR",
-                "distritos": {
-                    "02": "Arcatao",
-                    "03": "Azacualpa",
-                    "05": "Comalapa",
-                    "15": "Nombre de Jesús",
-                    "16": "Nueva Concepción",
-                    "17": "Nueva Trinidad",
-                    "18": "Ojos de Agua",
-                    "19": "Potonico",
-                    "20": "San Antonio de la Cruz",
-                    "21": "San Antonio Los Ranchos",
-                    "22": "San Fernando",
-                    "23": "San Francisco Lempa",
-                    "24": "San Francisco Morazán",
-                    "26": "San Isidro Labrador",
-                    "27": "San José Flores",
-                    "29": "San Luis del Carmen",
-                    "30": "San Miguel de Mercedes",
-                    "33": "Tejutla"
-                }
-            }
+        "distritos": {
+            "01": {"nombre": "Agua Caliente", "municipio_cod": "35", "municipio_nombre": "CHALATENANGO CENTRO"},
+            "02": {"nombre": "Arcatao", "municipio_cod": "36", "municipio_nombre": "CHALATENANGO SUR"},
+            "03": {"nombre": "Azacualpa", "municipio_cod": "36", "municipio_nombre": "CHALATENANGO SUR"},
+            "04": {"nombre": "Citalá", "municipio_cod": "34", "municipio_nombre": "CHALATENANGO NORTE"},
+            "05": {"nombre": "Comalapa", "municipio_cod": "36", "municipio_nombre": "CHALATENANGO SUR"},
+            "06": {"nombre": "Concepción Quezaltepeque", "municipio_cod": "35", "municipio_nombre": "CHALATENANGO CENTRO"},
+            "07": {"nombre": "Chalatenango", "municipio_cod": "35", "municipio_nombre": "CHALATENANGO CENTRO"},
+            "08": {"nombre": "Dulce Nombre de María", "municipio_cod": "35", "municipio_nombre": "CHALATENANGO CENTRO"},
+            "09": {"nombre": "El Carrizal", "municipio_cod": "35", "municipio_nombre": "CHALATENANGO CENTRO"},
+            "10": {"nombre": "El Paraíso", "municipio_cod": "35", "municipio_nombre": "CHALATENANGO CENTRO"},
+            "11": {"nombre": "La Laguna", "municipio_cod": "35", "municipio_nombre": "CHALATENANGO CENTRO"},
+            "12": {"nombre": "La Palma", "municipio_cod": "34", "municipio_nombre": "CHALATENANGO NORTE"},
+            "13": {"nombre": "La Reina", "municipio_cod": "35", "municipio_nombre": "CHALATENANGO CENTRO"},
+            "14": {"nombre": "Las Vueltas", "municipio_cod": "35", "municipio_nombre": "CHALATENANGO CENTRO"},
+            "15": {"nombre": "Nombre de Jesús", "municipio_cod": "36", "municipio_nombre": "CHALATENANGO SUR"},
+            "16": {"nombre": "Nueva Concepción", "municipio_cod": "36", "municipio_nombre": "CHALATENANGO SUR"},
+            "17": {"nombre": "Nueva Trinidad", "municipio_cod": "36", "municipio_nombre": "CHALATENANGO SUR"},
+            "18": {"nombre": "Ojos de Agua", "municipio_cod": "36", "municipio_nombre": "CHALATENANGO SUR"},
+            "19": {"nombre": "Potonico", "municipio_cod": "36", "municipio_nombre": "CHALATENANGO SUR"},
+            "20": {"nombre": "San Antonio de la Cruz", "municipio_cod": "36", "municipio_nombre": "CHALATENANGO SUR"},
+            "21": {"nombre": "San Antonio Los Ranchos", "municipio_cod": "36", "municipio_nombre": "CHALATENANGO SUR"},
+            "22": {"nombre": "San Fernando", "municipio_cod": "36", "municipio_nombre": "CHALATENANGO SUR"},
+            "23": {"nombre": "San Francisco Lempa", "municipio_cod": "36", "municipio_nombre": "CHALATENANGO SUR"},
+            "24": {"nombre": "San Francisco Morazán", "municipio_cod": "36", "municipio_nombre": "CHALATENANGO SUR"},
+            "25": {"nombre": "San Ignacio", "municipio_cod": "34", "municipio_nombre": "CHALATENANGO NORTE"},
+            "26": {"nombre": "San Isidro Labrador", "municipio_cod": "36", "municipio_nombre": "CHALATENANGO SUR"},
+            "27": {"nombre": "San José Cancasque", "municipio_cod": "35", "municipio_nombre": "CHALATENANGO CENTRO"},
+            "28": {"nombre": "San José Flores", "municipio_cod": "36", "municipio_nombre": "CHALATENANGO SUR"},
+            "29": {"nombre": "San Luis del Carmen", "municipio_cod": "36", "municipio_nombre": "CHALATENANGO SUR"},
+            "30": {"nombre": "San Miguel de Mercedes", "municipio_cod": "36", "municipio_nombre": "CHALATENANGO SUR"},
+            "31": {"nombre": "San Rafael", "municipio_cod": "35", "municipio_nombre": "CHALATENANGO CENTRO"},
+            "32": {"nombre": "Santa Rita", "municipio_cod": "35", "municipio_nombre": "CHALATENANGO CENTRO"},
+            "33": {"nombre": "Tejutla", "municipio_cod": "36", "municipio_nombre": "CHALATENANGO SUR"}
         }
     },
     "05": { # La Libertad
         "nombre": "La Libertad",
-        "municipios": {
-            "23": {
-                "nombre": "LA LIBERTAD NORTE",
-                "distritos": {
-                    "12": "Quezaltepeque",
-                    "16": "San Matías",
-                    "17": "San Pablo Tacachico"
-                }
-            },
-            "24": {
-                "nombre": "LA LIBERTAD CENTRO",
-                "distritos": {
-                    "02": "Ciudad Arce",
-                    "15": "San Juan Opico"
-                }
-            },
-            "25": {
-                "nombre": "LA LIBERTAD OESTE",
-                "distritos": {
-                    "03": "Colón",
-                    "07": "Jayaque",
-                    "13": "Sacacoyo",
-                    "19": "Talnique",
-                    "21": "Tepecoyo"
-                }
-            },
-            "26": {
-                "nombre": "LA LIBERTAD ESTE",
-                "distritos": {
-                    "01": "Antiguo Cuscatlán",
-                    "06": "Huizúcar",
-                    "10": "Nuevo Cuscatlán",
-                    "11": "Santa Tecla",
-                    "22": "Zaragoza"
-                }
-            },
-            "27": {
-                "nombre": "LA LIBERTAD COSTA",
-                "distritos": {
-                    "05": "Chiltiupán",
-                    "08": "Jicalapa",
-                    "09": "La Libertad",
-                    "18": "Tamanique",
-                    "20": "Teotepeque"
-                }
-            },
-            "28": {
-                "nombre": "LA LIBERTAD SUR",
-                "distritos": {
-                    "04": "Comasagua",
-                    "14": "San José Villanueva"
-                }
-            }
+        "distritos": {
+            "01": {"nombre": "Antiguo Cuscatlán", "municipio_cod": "26", "municipio_nombre": "LA LIBERTAD ESTE"},
+            "02": {"nombre": "Ciudad Arce", "municipio_cod": "24", "municipio_nombre": "LA LIBERTAD CENTRO"},
+            "03": {"nombre": "Colón", "municipio_cod": "25", "municipio_nombre": "LA LIBERTAD OESTE"},
+            "04": {"nombre": "Comasagua", "municipio_cod": "28", "municipio_nombre": "LA LIBERTAD SUR"},
+            "05": {"nombre": "Chiltiupán", "municipio_cod": "27", "municipio_nombre": "LA LIBERTAD COSTA"},
+            "06": {"nombre": "Huizúcar", "municipio_cod": "26", "municipio_nombre": "LA LIBERTAD ESTE"},
+            "07": {"nombre": "Jayaque", "municipio_cod": "25", "municipio_nombre": "LA LIBERTAD OESTE"},
+            "08": {"nombre": "Jicalapa", "municipio_cod": "27", "municipio_nombre": "LA LIBERTAD COSTA"},
+            "09": {"nombre": "La Libertad", "municipio_cod": "27", "municipio_nombre": "LA LIBERTAD COSTA"},
+            "10": {"nombre": "Nuevo Cuscatlán", "municipio_cod": "26", "municipio_nombre": "LA LIBERTAD ESTE"},
+            "11": {"nombre": "Santa Tecla", "municipio_cod": "26", "municipio_nombre": "LA LIBERTAD ESTE"},
+            "12": {"nombre": "Quezaltepeque", "municipio_cod": "23", "municipio_nombre": "LA LIBERTAD NORTE"},
+            "13": {"nombre": "Sacacoyo", "municipio_cod": "25", "municipio_nombre": "LA LIBERTAD OESTE"},
+            "14": {"nombre": "San José Villanueva", "municipio_cod": "28", "municipio_nombre": "LA LIBERTAD SUR"},
+            "15": {"nombre": "San Juan Opico", "municipio_cod": "24", "municipio_nombre": "LA LIBERTAD CENTRO"},
+            "16": {"nombre": "San Matías", "municipio_cod": "23", "municipio_nombre": "LA LIBERTAD NORTE"},
+            "17": {"nombre": "San Pablo Tacachico", "municipio_cod": "23", "municipio_nombre": "LA LIBERTAD NORTE"},
+            "18": {"nombre": "Tamanique", "municipio_cod": "27", "municipio_nombre": "LA LIBERTAD COSTA"},
+            "19": {"nombre": "Talnique", "municipio_cod": "25", "municipio_nombre": "LA LIBERTAD OESTE"},
+            "20": {"nombre": "Teotepeque", "municipio_cod": "27", "municipio_nombre": "LA LIBERTAD COSTA"},
+            "21": {"nombre": "Tepecoyo", "municipio_cod": "25", "municipio_nombre": "LA LIBERTAD OESTE"},
+            "22": {"nombre": "Zaragoza", "municipio_cod": "26", "municipio_nombre": "LA LIBERTAD ESTE"}
         }
     },
     "06": { # San Salvador
         "nombre": "San Salvador",
-        "municipios": {
-            "20": {
-                "nombre": "SAN SALVADOR NORTE",
-                "distritos": {
-                    "01": "Aguilares",
-                    "05": "El Paisnal",
-                    "06": "Guazapa"
-                }
-            },
-            "21": {
-                "nombre": "SAN SALVADOR OESTE",
-                "distritos": {
-                    "02": "Apopa",
-                    "09": "Nejapa"
-                }
-            },
-            "22": {
-                "nombre": "SAN SALVADOR ESTE",
-                "distritos": {
-                    "07": "Ilopango",
-                    "13": "San Martín",
-                    "17": "Soyapango",
-                    "18": "Tonacatepeque"
-                }
-            },
-            "23": {
-                "nombre": "SAN SALVADOR CENTRO",
-                "distritos": {
-                    "03": "Ayutuxtepeque",
-                    "04": "Cuscatancingo",
-                    "08": "Mejicanos",
-                    "14": "San Salvador",
-                    "19": "Ciudad Delgado"
-                }
-            },
-            "24": {
-                "nombre": "SAN SALVADOR SUR",
-                "distritos": {
-                    "10": "Panchimalco",
-                    "11": "Rosario de Mora",
-                    "12": "San Marcos",
-                    "15": "Santiago Texacuangos",
-                    "16": "Santo Tomás"
-                }
-            }
+        "distritos": {
+            "01": {"nombre": "Aguilares", "municipio_cod": "20", "municipio_nombre": "SAN SALVADOR NORTE"},
+            "02": {"nombre": "Apopa", "municipio_cod": "21", "municipio_nombre": "SAN SALVADOR OESTE"},
+            "03": {"nombre": "Ayutuxtepeque", "municipio_cod": "23", "municipio_nombre": "SAN SALVADOR CENTRO"},
+            "04": {"nombre": "Cuscatancingo", "municipio_cod": "23", "municipio_nombre": "SAN SALVADOR CENTRO"},
+            "05": {"nombre": "El Paisnal", "municipio_cod": "20", "municipio_nombre": "SAN SALVADOR NORTE"},
+            "06": {"nombre": "Guazapa", "municipio_cod": "20", "municipio_nombre": "SAN SALVADOR NORTE"},
+            "07": {"nombre": "Ilopango", "municipio_cod": "22", "municipio_nombre": "SAN SALVADOR ESTE"},
+            "08": {"nombre": "Mejicanos", "municipio_cod": "23", "municipio_nombre": "SAN SALVADOR CENTRO"},
+            "09": {"nombre": "Nejapa", "municipio_cod": "21", "municipio_nombre": "SAN SALVADOR OESTE"},
+            "10": {"nombre": "Panchimalco", "municipio_cod": "24", "municipio_nombre": "SAN SALVADOR SUR"},
+            "11": {"nombre": "Rosario de Mora", "municipio_cod": "24", "municipio_nombre": "SAN SALVADOR SUR"},
+            "12": {"nombre": "San Marcos", "municipio_cod": "24", "municipio_nombre": "SAN SALVADOR SUR"},
+            "13": {"nombre": "San Martín", "municipio_cod": "22", "municipio_nombre": "SAN SALVADOR ESTE"},
+            "14": {"nombre": "San Salvador", "municipio_cod": "23", "municipio_nombre": "SAN SALVADOR CENTRO"},
+            "15": {"nombre": "Santiago Texacuangos", "municipio_cod": "24", "municipio_nombre": "SAN SALVADOR SUR"},
+            "16": {"nombre": "Santo Tomás", "municipio_cod": "24", "municipio_nombre": "SAN SALVADOR SUR"},
+            "17": {"nombre": "Soyapango", "municipio_cod": "22", "municipio_nombre": "SAN SALVADOR ESTE"},
+            "18": {"nombre": "Tonacatepeque", "municipio_cod": "22", "municipio_nombre": "SAN SALVADOR ESTE"},
+            "19": {"nombre": "Ciudad Delgado", "municipio_cod": "23", "municipio_nombre": "SAN SALVADOR CENTRO"}
         }
     },
     "07": { # Cuscatlán
         "nombre": "Cuscatlán",
-        "municipios": {
-            "17": {
-                "nombre": "CUSCATLÁN NORTE",
-                "distritos": {
-                    "15": "Suchitoto",
-                    "09": "San José Guayabal",
-                    "08": "San Cristóbal",
-                    "11": "San Rafael Cedros",
-                    "16": "Tenancingo"
-                }
-            },
-            "18": {
-                "nombre": "CUSCATLÁN SUR",
-                "distritos": {
-                    "02": "Cojutepeque",
-                    "01": "Candelaria",
-                    "03": "El Carmen",
-                    "04": "El Rosario",
-                    "05": "Monte San Juan",
-                    "06": "Oratorio de Concepción",
-                    "07": "San Bartolomé Perulapía",
-                    "10": "San Pedro Perulapán",
-                    "12": "San Ramón",
-                    "13": "Santa Cruz Analquito",
-                    "14": "Santa Cruz Michapa"
-                }
-            }
+        "distritos": {
+            "01": {"nombre": "Candelaria", "municipio_cod": "18", "municipio_nombre": "CUSCATLÁN SUR"},
+            "02": {"nombre": "Cojutepeque", "municipio_cod": "18", "municipio_nombre": "CUSCATLÁN SUR"},
+            "03": {"nombre": "El Carmen", "municipio_cod": "18", "municipio_nombre": "CUSCATLÁN SUR"},
+            "04": {"nombre": "El Rosario", "municipio_cod": "18", "municipio_nombre": "CUSCATLÁN SUR"},
+            "05": {"nombre": "Monte San Juan", "municipio_cod": "18", "municipio_nombre": "CUSCATLÁN SUR"},
+            "06": {"nombre": "Oratorio de Concepción", "municipio_cod": "18", "municipio_nombre": "CUSCATLÁN SUR"},
+            "07": {"nombre": "San Bartolomé Perulapía", "municipio_cod": "18", "municipio_nombre": "CUSCATLÁN SUR"},
+            "08": {"nombre": "San Cristóbal", "municipio_cod": "17", "municipio_nombre": "CUSCATLÁN NORTE"},
+            "09": {"nombre": "San José Guayabal", "municipio_cod": "17", "municipio_nombre": "CUSCATLÁN NORTE"},
+            "10": {"nombre": "San Pedro Perulapán", "municipio_cod": "18", "municipio_nombre": "CUSCATLÁN SUR"},
+            "11": {"nombre": "San Rafael Cedros", "municipio_cod": "17", "municipio_nombre": "CUSCATLÁN NORTE"},
+            "12": {"nombre": "San Ramón", "municipio_cod": "18", "municipio_nombre": "CUSCATLÁN SUR"},
+            "13": {"nombre": "Santa Cruz Analquito", "municipio_cod": "18", "municipio_nombre": "CUSCATLÁN SUR"},
+            "14": {"nombre": "Santa Cruz Michapa", "municipio_cod": "18", "municipio_nombre": "CUSCATLÁN SUR"},
+            "15": {"nombre": "Suchitoto", "municipio_cod": "17", "municipio_nombre": "CUSCATLÁN NORTE"},
+            "16": {"nombre": "Tenancingo", "municipio_cod": "17", "municipio_nombre": "CUSCATLÁN NORTE"}
         }
     },
     "08": { # La Paz
         "nombre": "La Paz",
-        "municipios": {
-            "23": {
-                "nombre": "LA PAZ OESTE",
-                "distritos": {
-                    "01": "Cuyultitán",
-                    "05": "Olocuilta",
-                    "07": "San Juan Talpa",
-                    "11": "San Luis Talpa",
-                    "13": "San Pedro Masahuat",
-                    "19": "Tapalhuaca",
-                    "20": "San Antonio Masahuat"
-                }
-            },
-            "24": {
-                "nombre": "LA PAZ CENTRO",
-                "distritos": {
-                    "02": "El Rosario",
-                    "03": "Jerusalén",
-                    "04": "Merced La Ceiba",
-                    "06": "Paraíso Osorio",
-                    "08": "San Emigdio",
-                    "09": "San Francisco Chinameca",
-                    "12": "San Juan Tepezontes",
-                    "14": "San Miguel Tepezontes",
-                    "16": "San Pedro Nonualco",
-                    "17": "San Rafael Obrajuelo",
-                    "18": "Santa María Ostuma"
-                }
-            },
-            "25": {
-                "nombre": "LA PAZ ESTE",
-                "distritos": {
-                    "10": "San Juan Nonualco",
-                    "15": "Santiago Nonualco",
-                    "21": "Zacatecoluca",
-                    "22": "San Luis La Herradura"
-                }
-            }
+        "distritos": {
+            "01": {"nombre": "Cuyultitán", "municipio_cod": "23", "municipio_nombre": "LA PAZ OESTE"},
+            "02": {"nombre": "El Rosario", "municipio_cod": "24", "municipio_nombre": "LA PAZ CENTRO"},
+            "03": {"nombre": "Jerusalén", "municipio_cod": "24", "municipio_nombre": "LA PAZ CENTRO"},
+            "04": {"nombre": "Merced La Ceiba", "municipio_cod": "24", "municipio_nombre": "LA PAZ CENTRO"},
+            "05": {"nombre": "Olocuilta", "municipio_cod": "23", "municipio_nombre": "LA PAZ OESTE"},
+            "06": {"nombre": "Paraíso Osorio", "municipio_cod": "24", "municipio_nombre": "LA PAZ CENTRO"},
+            "07": {"nombre": "San Antonio Masahuat", "municipio_cod": "23", "municipio_nombre": "LA PAZ OESTE"},
+            "08": {"nombre": "San Emigdio", "municipio_cod": "24", "municipio_nombre": "LA PAZ CENTRO"},
+            "09": {"nombre": "San Francisco Chinameca", "municipio_cod": "24", "municipio_nombre": "LA PAZ CENTRO"},
+            "10": {"nombre": "San Juan Nonualco", "municipio_cod": "25", "municipio_nombre": "LA PAZ ESTE"},
+            "11": {"nombre": "San Juan Talpa", "municipio_cod": "23", "municipio_nombre": "LA PAZ OESTE"},
+            "12": {"nombre": "San Juan Tepezontes", "municipio_cod": "24", "municipio_nombre": "LA PAZ CENTRO"},
+            "13": {"nombre": "San Luis Talpa", "municipio_cod": "23", "municipio_nombre": "LA PAZ OESTE"},
+            "14": {"nombre": "San Miguel Tepezontes", "municipio_cod": "24", "municipio_nombre": "LA PAZ CENTRO"},
+            "15": {"nombre": "San Pedro Masahuat", "municipio_cod": "23", "municipio_nombre": "LA PAZ OESTE"},
+            "16": {"nombre": "San Pedro Nonualco", "municipio_cod": "24", "municipio_nombre": "LA PAZ CENTRO"},
+            "17": {"nombre": "San Rafael Obrajuelo", "municipio_cod": "24", "municipio_nombre": "LA PAZ CENTRO"},
+            "18": {"nombre": "Santa María Ostuma", "municipio_cod": "24", "municipio_nombre": "LA PAZ CENTRO"},
+            "19": {"nombre": "Santiago Nonualco", "municipio_cod": "25", "municipio_nombre": "LA PAZ ESTE"},
+            "20": {"nombre": "Tapalhuaca", "municipio_cod": "23", "municipio_nombre": "LA PAZ OESTE"},
+            "21": {"nombre": "Zacatecoluca", "municipio_cod": "25", "municipio_nombre": "LA PAZ ESTE"},
+            "22": {"nombre": "San Luis La Herradura", "municipio_cod": "25", "municipio_nombre": "LA PAZ ESTE"}
         }
     },
     "09": { # Cabañas
         "nombre": "Cabañas",
-        "municipios": {
-            "10": {
-                "nombre": "CABAÑAS ESTE",
-                "distritos": {
-                    "06": "Sensuntepeque",
-                    "08": "Victoria",
-                    "09": "Dolores",
-                    "04": "Jutiapa",
-                    "07": "Tejutepeque"
-                }
-            },
-            "11": {
-                "nombre": "CABAÑAS OESTE",
-                "distritos": {
-                    "03": "Ilobasco",
-                    "01": "Cinquera",
-                    "02": "Guacotecti",
-                    "05": "San Isidro"
-                }
-            }
+        "distritos": {
+            "01": {"nombre": "Cinquera", "municipio_cod": "11", "municipio_nombre": "CABAÑAS OESTE"},
+            "02": {"nombre": "Guacotecti", "municipio_cod": "11", "municipio_nombre": "CABAÑAS OESTE"},
+            "03": {"nombre": "Ilobasco", "municipio_cod": "11", "municipio_nombre": "CABAÑAS OESTE"},
+            "04": {"nombre": "Jutiapa", "municipio_cod": "10", "municipio_nombre": "CABAÑAS ESTE"},
+            "05": {"nombre": "San Isidro", "municipio_cod": "11", "municipio_nombre": "CABAÑAS OESTE"},
+            "06": {"nombre": "Sensuntepeque", "municipio_cod": "10", "municipio_nombre": "CABAÑAS ESTE"},
+            "07": {"nombre": "Tejutepeque", "municipio_cod": "10", "municipio_nombre": "CABAÑAS ESTE"},
+            "08": {"nombre": "Victoria", "municipio_cod": "10", "municipio_nombre": "CABAÑAS ESTE"},
+            "09": {"nombre": "Dolores", "municipio_cod": "10", "municipio_nombre": "CABAÑAS ESTE"}
         }
     },
     "10": { # San Vicente
         "nombre": "San Vicente",
-        "municipios": {
-            "14": {
-                "nombre": "SAN VICENTE NORTE",
-                "distritos": {
-                    "01": "Apastepeque",
-                    "04": "Santa Clara",
-                    "05": "Santo Domingo",
-                    "06": "San Esteban Catarina",
-                    "07": "San Ildefonso",
-                    "08": "San Lorenzo",
-                    "09": "San Sebastián"
-                }
-            },
-            "15": {
-                "nombre": "SAN VICENTE SUR",
-                "distritos": {
-                    "10": "San Vicente",
-                    "02": "Guadalupe",
-                    "03": "San Cayetano Istepeque",
-                    "11": "Tecoluca",
-                    "12": "Tepetitán",
-                    "13": "Verapaz"
-                }
-            }
+        "distritos": {
+            "01": {"nombre": "Apastepeque", "municipio_cod": "14", "municipio_nombre": "SAN VICENTE NORTE"},
+            "02": {"nombre": "Guadalupe", "municipio_cod": "15", "municipio_nombre": "SAN VICENTE SUR"},
+            "03": {"nombre": "San Cayetano Istepeque", "municipio_cod": "15", "municipio_nombre": "SAN VICENTE SUR"},
+            "04": {"nombre": "Santa Clara", "municipio_cod": "14", "municipio_nombre": "SAN VICENTE NORTE"},
+            "05": {"nombre": "Santo Domingo", "municipio_cod": "14", "municipio_nombre": "SAN VICENTE NORTE"},
+            "06": {"nombre": "San Esteban Catarina", "municipio_cod": "14", "municipio_nombre": "SAN VICENTE NORTE"},
+            "07": {"nombre": "San Ildefonso", "municipio_cod": "14", "municipio_nombre": "SAN VICENTE NORTE"},
+            "08": {"nombre": "San Lorenzo", "municipio_cod": "14", "municipio_nombre": "SAN VICENTE NORTE"},
+            "09": {"nombre": "San Sebastián", "municipio_cod": "14", "municipio_nombre": "SAN VICENTE NORTE"},
+            "10": {"nombre": "San Vicente", "municipio_cod": "15", "municipio_nombre": "SAN VICENTE SUR"},
+            "11": {"nombre": "Tecoluca", "municipio_cod": "15", "municipio_nombre": "SAN VICENTE SUR"},
+            "12": {"nombre": "Tepetitán", "municipio_cod": "15", "municipio_nombre": "SAN VICENTE SUR"},
+            "13": {"nombre": "Verapaz", "municipio_cod": "15", "municipio_nombre": "SAN VICENTE SUR"}
         }
     },
     "11": { # Usulután
         "nombre": "Usulután",
-        "municipios": {
-            "24": {
-                "nombre": "USULUTÁN NORTE",
-                "distritos": {
-                    "01": "Alegría",
-                    "02": "Berlín",
-                    "03": "California",
-                    "05": "El Triunfo",
-                    "07": "Estanzuelas",
-                    "09": "Jucuapa",
-                    "11": "Mercedes Umaña",
-                    "12": "Nueva Granada",
-                    "21": "Santiago de María"
-                }
-            },
-            "25": {
-                "nombre": "USULUTÁN ESTE",
-                "distritos": {
-                    "23": "Usulután",
-                    "04": "Concepción Batres",
-                    "06": "Ereguayquín",
-                    "10": "Jucuarán",
-                    "13": "Ozatlán",
-                    "15": "San Agustín",
-                    "17": "San Dionisio",
-                    "18": "Santa Elena",
-                    "19": "San Francisco Javier",
-                    "20": "Santa María",
-                    "22": "Tecapán"
-                }
-            },
-            "26": {
-                "nombre": "USULUTÁN OESTE",
-                "distritos": {
-                    "08": "Jiquilisco",
-                    "14": "Puerto El Triunfo",
-                    "16": "San Buenaventura"
-                }
-            }
+        "distritos": {
+            "01": {"nombre": "Alegría", "municipio_cod": "24", "municipio_nombre": "USULUTÁN NORTE"},
+            "02": {"nombre": "Berlín", "municipio_cod": "24", "municipio_nombre": "USULUTÁN NORTE"},
+            "03": {"nombre": "California", "municipio_cod": "24", "municipio_nombre": "USULUTÁN NORTE"},
+            "04": {"nombre": "Concepción Batres", "municipio_cod": "25", "municipio_nombre": "USULUTÁN ESTE"},
+            "05": {"nombre": "El Triunfo", "municipio_cod": "24", "municipio_nombre": "USULUTÁN NORTE"},
+            "06": {"nombre": "Ereguayquín", "municipio_cod": "25", "municipio_nombre": "USULUTÁN ESTE"},
+            "07": {"nombre": "Estanzuelas", "municipio_cod": "24", "municipio_nombre": "USULUTÁN NORTE"},
+            "08": {"nombre": "Jiquilisco", "municipio_cod": "26", "municipio_nombre": "USULUTÁN OESTE"},
+            "09": {"nombre": "Jucuapa", "municipio_cod": "24", "municipio_nombre": "USULUTÁN NORTE"},
+            "10": {"nombre": "Jucuarán", "municipio_cod": "25", "municipio_nombre": "USULUTÁN ESTE"},
+            "11": {"nombre": "Mercedes Umaña", "municipio_cod": "24", "municipio_nombre": "USULUTÁN NORTE"},
+            "12": {"nombre": "Nueva Granada", "municipio_cod": "24", "municipio_nombre": "USULUTÁN NORTE"},
+            "13": {"nombre": "Ozatlán", "municipio_cod": "25", "municipio_nombre": "USULUTÁN ESTE"},
+            "14": {"nombre": "Puerto El Triunfo", "municipio_cod": "26", "municipio_nombre": "USULUTÁN OESTE"},
+            "15": {"nombre": "San Agustín", "municipio_cod": "25", "municipio_nombre": "USULUTÁN ESTE"},
+            "16": {"nombre": "San Buenaventura", "municipio_cod": "26", "municipio_nombre": "USULUTÁN OESTE"},
+            "17": {"nombre": "San Dionisio", "municipio_cod": "25", "municipio_nombre": "USULUTÁN ESTE"},
+            "18": {"nombre": "Santa Elena", "municipio_cod": "25", "municipio_nombre": "USULUTÁN ESTE"},
+            "19": {"nombre": "San Francisco Javier", "municipio_cod": "25", "municipio_nombre": "USULUTÁN ESTE"},
+            "20": {"nombre": "Santa María", "municipio_cod": "25", "municipio_nombre": "USULUTÁN ESTE"},
+            "21": {"nombre": "Santiago de María", "municipio_cod": "24", "municipio_nombre": "USULUTÁN NORTE"},
+            "22": {"nombre": "Tecapán", "municipio_cod": "25", "municipio_nombre": "USULUTÁN ESTE"},
+            "23": {"nombre": "Usulután", "municipio_cod": "25", "municipio_nombre": "USULUTÁN ESTE"}
         }
     },
     "12": { # San Miguel
         "nombre": "San Miguel",
-        "municipios": {
-            "21": {
-                "nombre": "SAN MIGUEL NORTE",
-                "distritos": {
-                    "01": "Carolina",
-                    "02": "Ciudad Barrios",
-                    "04": "Chapeltique",
-                    "11": "Nuevo Edén de San Juan",
-                    "14": "San Gerardo",
-                    "16": "San Luis de la Reina",
-                    "19": "Sesori"
-                }
-            },
-            "22": {
-                "nombre": "SAN MIGUEL CENTRO",
-                "distritos": {
-                    "17": "San Miguel",
-                    "03": "Comacarán",
-                    "05": "Chinameca",
-                    "07": "El Tránsito",
-                    "09": "Moncagua",
-                    "12": "Quelepa"
-                }
-            },
-            "23": {
-                "nombre": "SAN MIGUEL OESTE",
-                "distritos": {
-                    "08": "Lolotique",
-                    "10": "Nueva Guadalupe",
-                    "13": "San Antonio del Mosco",
-                    "15": "San Jorge",
-                    "18": "San Rafael Oriente",
-                    "20": "Uluazapa"
-                }
-            }
+        "distritos": {
+            "01": {"nombre": "Carolina", "municipio_cod": "21", "municipio_nombre": "SAN MIGUEL NORTE"},
+            "02": {"nombre": "Ciudad Barrios", "municipio_cod": "21", "municipio_nombre": "SAN MIGUEL NORTE"},
+            "03": {"nombre": "Comacarán", "municipio_cod": "22", "municipio_nombre": "SAN MIGUEL CENTRO"},
+            "04": {"nombre": "Chapeltique", "municipio_cod": "21", "municipio_nombre": "SAN MIGUEL NORTE"},
+            "05": {"nombre": "Chinameca", "municipio_cod": "22", "municipio_nombre": "SAN MIGUEL CENTRO"},
+            "06": {"nombre": "Chirilagua", "municipio_cod": "22", "municipio_nombre": "SAN MIGUEL CENTRO"},
+            "07": {"nombre": "El Tránsito", "municipio_cod": "22", "municipio_nombre": "SAN MIGUEL CENTRO"},
+            "08": {"nombre": "Lolotique", "municipio_cod": "23", "municipio_nombre": "SAN MIGUEL OESTE"},
+            "09": {"nombre": "Moncagua", "municipio_cod": "22", "municipio_nombre": "SAN MIGUEL CENTRO"},
+            "10": {"nombre": "Nueva Guadalupe", "municipio_cod": "23", "municipio_nombre": "SAN MIGUEL OESTE"},
+            "11": {"nombre": "Nuevo Edén de San Juan", "municipio_cod": "21", "municipio_nombre": "SAN MIGUEL NORTE"},
+            "12": {"nombre": "Quelepa", "municipio_cod": "22", "municipio_nombre": "SAN MIGUEL CENTRO"},
+            "13": {"nombre": "San Antonio del Mosco", "municipio_cod": "23", "municipio_nombre": "SAN MIGUEL OESTE"},
+            "14": {"nombre": "San Gerardo", "municipio_cod": "21", "municipio_nombre": "SAN MIGUEL NORTE"},
+            "15": {"nombre": "San Jorge", "municipio_cod": "23", "municipio_nombre": "SAN MIGUEL OESTE"},
+            "16": {"nombre": "San Luis de la Reina", "municipio_cod": "21", "municipio_nombre": "SAN MIGUEL NORTE"},
+            "17": {"nombre": "San Miguel", "municipio_cod": "22", "municipio_nombre": "SAN MIGUEL CENTRO"},
+            "18": {"nombre": "San Rafael Oriente", "municipio_cod": "23", "municipio_nombre": "SAN MIGUEL OESTE"},
+            "19": {"nombre": "Sesori", "municipio_cod": "21", "municipio_nombre": "SAN MIGUEL NORTE"},
+            "20": {"nombre": "Uluazapa", "municipio_cod": "23", "municipio_nombre": "SAN MIGUEL OESTE"}
         }
     },
     "13": { # Morazán
         "nombre": "Morazán",
-        "municipios": {
-            "27": {
-                "nombre": "MORAZÁN NORTE",
-                "distritos": {
-                    "01": "Arambala",
-                    "03": "Corinto",
-                    "05": "Delicias de Concepción",
-                    "07": "El Rosario",
-                    "10": "Joateca",
-                    "11": "Jocoaitique",
-                    "14": "Meanguera",
-                    "16": "Perquín",
-                    "18": "San Fernando",
-                    "21": "San Simón",
-                    "24": "Torola"
-                }
-            },
-            "28": {
-                "nombre": "MORAZÁN SUR",
-                "distritos": {
-                    "19": "San Francisco Gotera",
-                    "02": "Cacaopera",
-                    "04": "Chilanga",
-                    "06": "El Divisadero",
-                    "08": "Gualococti",
-                    "09": "Guatajiagua",
-                    "12": "Jocoro",
-                    "13": "Lolotiquillo",
-                    "15": "Osicala",
-                    "17": "San Carlos",
-                    "20": "San Isidro",
-                    "22": "Sensembra",
-                    "23": "Sociedad",
-                    "25": "Yamabal",
-                    "26": "Yoloaiquín"
-                }
-            }
+        "distritos": {
+            "01": {"nombre": "Arambala", "municipio_cod": "27", "municipio_nombre": "MORAZÁN NORTE"},
+            "02": {"nombre": "Cacaopera", "municipio_cod": "28", "municipio_nombre": "MORAZÁN SUR"},
+            "03": {"nombre": "Corinto", "municipio_cod": "27", "municipio_nombre": "MORAZÁN NORTE"},
+            "04": {"nombre": "Chilanga", "municipio_cod": "28", "municipio_nombre": "MORAZÁN SUR"},
+            "05": {"nombre": "Delicias de Concepción", "municipio_cod": "27", "municipio_nombre": "MORAZÁN NORTE"},
+            "06": {"nombre": "El Divisadero", "municipio_cod": "28", "municipio_nombre": "MORAZÁN SUR"},
+            "07": {"nombre": "El Rosario", "municipio_cod": "27", "municipio_nombre": "MORAZÁN NORTE"},
+            "08": {"nombre": "Gualococti", "municipio_cod": "28", "municipio_nombre": "MORAZÁN SUR"},
+            "09": {"nombre": "Guatajiagua", "municipio_cod": "28", "municipio_nombre": "MORAZÁN SUR"},
+            "10": {"nombre": "Joateca", "municipio_cod": "27", "municipio_nombre": "MORAZÁN NORTE"},
+            "11": {"nombre": "Jocoaitique", "municipio_cod": "27", "municipio_nombre": "MORAZÁN NORTE"},
+            "12": {"nombre": "Jocoro", "municipio_cod": "28", "municipio_nombre": "MORAZÁN SUR"},
+            "13": {"nombre": "Lolotiquillo", "municipio_cod": "28", "municipio_nombre": "MORAZÁN SUR"},
+            "14": {"nombre": "Meanguera", "municipio_cod": "27", "municipio_nombre": "MORAZÁN NORTE"},
+            "15": {"nombre": "Osicala", "municipio_cod": "28", "municipio_nombre": "MORAZÁN SUR"},
+            "16": {"nombre": "Perquín", "municipio_cod": "27", "municipio_nombre": "MORAZÁN NORTE"},
+            "17": {"nombre": "San Carlos", "municipio_cod": "28", "municipio_nombre": "MORAZÁN SUR"},
+            "18": {"nombre": "San Fernando", "municipio_cod": "27", "municipio_nombre": "MORAZÁN NORTE"},
+            "19": {"nombre": "San Francisco Gotera", "municipio_cod": "28", "municipio_nombre": "MORAZÁN SUR"},
+            "20": {"nombre": "San Isidro", "municipio_cod": "28", "municipio_nombre": "MORAZÁN SUR"},
+            "21": {"nombre": "San Simón", "municipio_cod": "27", "municipio_nombre": "MORAZÁN NORTE"},
+            "22": {"nombre": "Sensembra", "municipio_cod": "28", "municipio_nombre": "MORAZÁN SUR"},
+            "23": {"nombre": "Sociedad", "municipio_cod": "28", "municipio_nombre": "MORAZÁN SUR"},
+            "24": {"nombre": "Torola", "municipio_cod": "27", "municipio_nombre": "MORAZÁN NORTE"},
+            "25": {"nombre": "Yamabal", "municipio_cod": "28", "municipio_nombre": "MORAZÁN SUR"},
+            "26": {"nombre": "Yoloaiquín", "municipio_cod": "28", "municipio_nombre": "MORAZÁN SUR"}
         }
     },
     "14": { # La Unión
         "nombre": "La Unión",
-        "municipios": {
-            "19": {
-                "nombre": "LA UNIÓN NORTE",
-                "distritos": {
-                    "01": "Anamorós",
-                    "02": "Bolívar",
-                    "03": "Concepción de Oriente",
-                    "06": "El Sauce",
-                    "09": "Lislique",
-                    "11": "Nueva Esparta",
-                    "12": "Pasaquina",
-                    "13": "Polorós",
-                    "16": "Santa Rosa de Lima"
-                }
-            },
-            "20": {
-                "nombre": "LA UNIÓN SUR",
-                "distritos": {
-                    "08": "La Unión",
-                    "04": "Conchagua",
-                    "05": "El Carmen",
-                    "07": "Intipucá",
-                    "10": "Meanguera del Golfo",
-                    "14": "San Alejo",
-                    "15": "San José",
-                    "17": "Yayantique",
-                    "18": "Yucuaiquín"
-                }
-            }
+        "distritos": {
+            "01": {"nombre": "Anamorós", "municipio_cod": "19", "municipio_nombre": "LA UNIÓN NORTE"},
+            "02": {"nombre": "Bolívar", "municipio_cod": "19", "municipio_nombre": "LA UNIÓN NORTE"},
+            "03": {"nombre": "Concepción de Oriente", "municipio_cod": "19", "municipio_nombre": "LA UNIÓN NORTE"},
+            "04": {"nombre": "Conchagua", "municipio_cod": "20", "municipio_nombre": "LA UNIÓN SUR"},
+            "05": {"nombre": "El Carmen", "municipio_cod": "20", "municipio_nombre": "LA UNIÓN SUR"},
+            "06": {"nombre": "El Sauce", "municipio_cod": "19", "municipio_nombre": "LA UNIÓN NORTE"},
+            "07": {"nombre": "Intipucá", "municipio_cod": "20", "municipio_nombre": "LA UNIÓN SUR"},
+            "08": {"nombre": "La Unión", "municipio_cod": "20", "municipio_nombre": "LA UNIÓN SUR"},
+            "09": {"nombre": "Lislique", "municipio_cod": "19", "municipio_nombre": "LA UNIÓN NORTE"},
+            "10": {"nombre": "Meanguera del Golfo", "municipio_cod": "20", "municipio_nombre": "LA UNIÓN SUR"},
+            "11": {"nombre": "Nueva Esparta", "municipio_cod": "19", "municipio_nombre": "LA UNIÓN NORTE"},
+            "12": {"nombre": "Pasaquina", "municipio_cod": "19", "municipio_nombre": "LA UNIÓN NORTE"},
+            "13": {"nombre": "Polorós", "municipio_cod": "19", "municipio_nombre": "LA UNIÓN NORTE"},
+            "14": {"nombre": "San Alejo", "municipio_cod": "20", "municipio_nombre": "LA UNIÓN SUR"},
+            "15": {"nombre": "San José", "municipio_cod": "20", "municipio_nombre": "LA UNIÓN SUR"},
+            "16": {"nombre": "Santa Rosa de Lima", "municipio_cod": "19", "municipio_nombre": "LA UNIÓN NORTE"},
+            "17": {"nombre": "Yayantique", "municipio_cod": "20", "municipio_nombre": "LA UNIÓN SUR"},
+            "18": {"nombre": "Yucuaiquín", "municipio_cod": "20", "municipio_nombre": "LA UNIÓN SUR"}
         }
     }
 }
@@ -769,23 +550,24 @@ def obtener_tipo_documento_receptor(cliente) -> tuple[str, str]:
     else:
         return "36", "00000000000000"
 
-def obtener_geografia_cascada() -> dict:
+def obtener_geografia_exacta() -> dict:
     """
-    Retorna la estructura jerárquica para selectores desplegables en cascada:
-    Departamento -> Municipio -> Distritos
+    Retorna la estructura jerárquica exacta requerida:
+    1. Seleccionar Departamento -> 2. Filtrar Distritos -> 3. Auto-asignar Municipio.
     """
-    resultado = {}
-    for depto_id, depto_info in DEPARTAMENTOS_MUNICIPIOS_DISTRITOS.items():
-        resultado[depto_id] = {
-            "nombre": depto_info["nombre"],
-            "municipios": {}
-        }
-        for mun_id, mun_info in depto_info["municipios"].items():
-            resultado[depto_id]["municipios"][mun_id] = {
-                "nombre": mun_info["nombre"],
-                "distritos": [
-                    {"codigo": dist_id, "nombre": dist_nombre}
-                    for dist_id, dist_nombre in mun_info["distritos"].items()
-                ]
-            }
-    return resultado
+    departamentos = []
+    for depto_id, depto_info in ESTRUCTURA_GEOGRAFICA_MH.items():
+        distritos = []
+        for dist_id, dist_info in depto_info["distritos"].items():
+            distritos.append({
+                "codigo_distrito": dist_id,
+                "nombre_distrito": dist_info["nombre"],
+                "municipio_cod": dist_info["municipio_cod"],
+                "municipio_nombre": dist_info["municipio_nombre"]
+            })
+        departamentos.append({
+            "codigo_departamento": depto_id,
+            "nombre_departamento": depto_info["nombre"],
+            "distritos": distritos
+        })
+    return {"departamentos": departamentos}
