@@ -4,6 +4,300 @@ import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
 
+// Catálogo Oficial Geográfico MH El Salvador V1.1 (Resguardo Estático Inmediato)
+const DEPARTAMENTOS_MH = [
+  { codigo: "01", nombre: "Ahuachapán", distritos: [
+    { codigo: "01", nombre: "Ahuachapán", mun_cod: "14", mun_nom: "AHUACHAPÁN CENTRO" },
+    { codigo: "02", nombre: "Apaneca", mun_cod: "14", mun_nom: "AHUACHAPÁN CENTRO" },
+    { codigo: "03", nombre: "Atiquizaya", mun_cod: "13", mun_nom: "AHUACHAPÁN NORTE" },
+    { codigo: "04", nombre: "Concepción de Ataco", mun_cod: "14", mun_nom: "AHUACHAPÁN CENTRO" },
+    { codigo: "05", nombre: "El Refugio", mun_cod: "13", mun_nom: "AHUACHAPÁN NORTE" },
+    { codigo: "06", nombre: "Guaymango", mun_cod: "15", mun_nom: "AHUACHAPÁN SUR" },
+    { codigo: "07", nombre: "Jujutla", mun_cod: "15", mun_nom: "AHUACHAPÁN SUR" },
+    { codigo: "08", nombre: "San Francisco Menéndez", mun_cod: "15", mun_nom: "AHUACHAPÁN SUR" },
+    { codigo: "09", nombre: "San Lorenzo", mun_cod: "13", mun_nom: "AHUACHAPÁN NORTE" },
+    { codigo: "10", nombre: "San Pedro Puxtla", mun_cod: "15", mun_nom: "AHUACHAPÁN SUR" },
+    { codigo: "11", nombre: "Tacuba", mun_cod: "14", mun_nom: "AHUACHAPÁN CENTRO" },
+    { codigo: "12", nombre: "Turín", mun_cod: "13", mun_nom: "AHUACHAPÁN NORTE" }
+  ]},
+  { codigo: "02", nombre: "Santa Ana", distritos: [
+    { codigo: "01", nombre: "Candelaria de la Frontera", mun_cod: "17", mun_nom: "SANTA ANA OESTE" },
+    { codigo: "02", nombre: "Coatepeque", mun_cod: "16", mun_nom: "SANTA ANA ESTE" },
+    { codigo: "03", nombre: "Chalchuapa", mun_cod: "17", mun_nom: "SANTA ANA OESTE" },
+    { codigo: "04", nombre: "El Congo", mun_cod: "16", mun_nom: "SANTA ANA ESTE" },
+    { codigo: "05", nombre: "El Porvenir", mun_cod: "17", mun_nom: "SANTA ANA OESTE" },
+    { codigo: "06", nombre: "Masahuat", mun_cod: "14", mun_nom: "SANTA ANA NORTE" },
+    { codigo: "07", nombre: "Metapán", mun_cod: "14", mun_nom: "SANTA ANA NORTE" },
+    { codigo: "08", nombre: "San Antonio Pajonal", mun_cod: "14", mun_nom: "SANTA ANA NORTE" },
+    { codigo: "09", nombre: "San Sebastián Salitrillo", mun_cod: "17", mun_nom: "SANTA ANA OESTE" },
+    { codigo: "10", nombre: "Santa Ana", mun_cod: "15", mun_nom: "SANTA ANA CENTRO" },
+    { codigo: "11", nombre: "Santa Rosa Guachipilín", mun_cod: "14", mun_nom: "SANTA ANA NORTE" },
+    { codigo: "12", nombre: "Santiago de la Frontera", mun_cod: "17", mun_nom: "SANTA ANA OESTE" },
+    { codigo: "13", nombre: "Texistepeque", mun_cod: "17", mun_nom: "SANTA ANA OESTE" }
+  ]},
+  { codigo: "03", nombre: "Sonsonate", distritos: [
+    { codigo: "01", nombre: "Acajutla", mun_cod: "20", mun_nom: "SONSONATE OESTE" },
+    { codigo: "02", nombre: "Armenia", mun_cod: "19", mun_nom: "SONSONATE ESTE" },
+    { codigo: "03", nombre: "Caluco", mun_cod: "19", mun_nom: "SONSONATE ESTE" },
+    { codigo: "04", nombre: "Cuisnahuat", mun_cod: "19", mun_nom: "SONSONATE ESTE" },
+    { codigo: "05", nombre: "Santa Isabel Ishuatán", mun_cod: "19", mun_nom: "SONSONATE ESTE" },
+    { codigo: "06", nombre: "Izalco", mun_cod: "19", mun_nom: "SONSONATE ESTE" },
+    { codigo: "07", nombre: "Juayúa", mun_cod: "17", mun_nom: "SONSONATE NORTE" },
+    { codigo: "08", nombre: "Nahuizalco", mun_cod: "17", mun_nom: "SONSONATE NORTE" },
+    { codigo: "09", nombre: "Nahulingo", mun_cod: "18", mun_nom: "SONSONATE CENTRO" },
+    { codigo: "10", nombre: "Salcoatitán", mun_cod: "17", mun_nom: "SONSONATE NORTE" },
+    { codigo: "11", nombre: "San Antonio del Monte", mun_cod: "18", mun_nom: "SONSONATE CENTRO" },
+    { codigo: "12", nombre: "San Julián", mun_cod: "19", mun_nom: "SONSONATE ESTE" },
+    { codigo: "13", nombre: "Santa Catarina Masahuat", mun_cod: "17", mun_nom: "SONSONATE NORTE" },
+    { codigo: "14", nombre: "Santo Domingo Guzmán", mun_cod: "18", mun_nom: "SONSONATE CENTRO" },
+    { codigo: "15", nombre: "Sonsonate", mun_cod: "18", mun_nom: "SONSONATE CENTRO" },
+    { codigo: "16", nombre: "Sonzacate", mun_cod: "18", mun_nom: "SONSONATE CENTRO" }
+  ]},
+  { codigo: "04", nombre: "Chalatenango", distritos: [
+    { codigo: "01", nombre: "Agua Caliente", mun_cod: "35", mun_nom: "CHALATENANGO CENTRO" },
+    { codigo: "02", nombre: "Arcatao", mun_cod: "36", mun_nom: "CHALATENANGO SUR" },
+    { codigo: "03", nombre: "Azacualpa", mun_cod: "36", mun_nom: "CHALATENANGO SUR" },
+    { codigo: "04", nombre: "Citalá", mun_cod: "34", mun_nom: "CHALATENANGO NORTE" },
+    { codigo: "05", nombre: "Comalapa", mun_cod: "36", mun_nom: "CHALATENANGO SUR" },
+    { codigo: "06", nombre: "Concepción Quezaltepeque", mun_cod: "35", mun_nom: "CHALATENANGO CENTRO" },
+    { codigo: "07", nombre: "Chalatenango", mun_cod: "35", mun_nom: "CHALATENANGO CENTRO" },
+    { codigo: "08", nombre: "Dulce Nombre de María", mun_cod: "35", mun_nom: "CHALATENANGO CENTRO" },
+    { codigo: "09", nombre: "El Carrizal", mun_cod: "35", mun_nom: "CHALATENANGO CENTRO" },
+    { codigo: "10", nombre: "El Paraíso", mun_cod: "35", mun_nom: "CHALATENANGO CENTRO" },
+    { codigo: "11", nombre: "La Laguna", mun_cod: "35", mun_nom: "CHALATENANGO CENTRO" },
+    { codigo: "12", nombre: "La Palma", mun_cod: "34", mun_nom: "CHALATENANGO NORTE" },
+    { codigo: "13", nombre: "La Reina", mun_cod: "35", mun_nom: "CHALATENANGO CENTRO" },
+    { codigo: "14", nombre: "Las Vueltas", mun_cod: "35", mun_nom: "CHALATENANGO CENTRO" },
+    { codigo: "15", nombre: "Nombre de Jesús", mun_cod: "36", mun_nom: "CHALATENANGO SUR" },
+    { codigo: "16", nombre: "Nueva Concepción", mun_cod: "36", mun_nom: "CHALATENANGO SUR" },
+    { codigo: "17", nombre: "Nueva Trinidad", mun_cod: "36", mun_nom: "CHALATENANGO SUR" },
+    { codigo: "18", nombre: "Ojos de Agua", mun_cod: "36", mun_nom: "CHALATENANGO SUR" },
+    { codigo: "19", nombre: "Potonico", mun_cod: "36", mun_nom: "CHALATENANGO SUR" },
+    { codigo: "20", nombre: "San Antonio de la Cruz", mun_cod: "36", mun_nom: "CHALATENANGO SUR" },
+    { codigo: "21", nombre: "San Antonio Los Ranchos", mun_cod: "36", mun_nom: "CHALATENANGO SUR" },
+    { codigo: "22", nombre: "San Fernando", mun_cod: "36", mun_nom: "CHALATENANGO SUR" },
+    { codigo: "23", nombre: "San Francisco Lempa", mun_cod: "36", mun_nom: "CHALATENANGO SUR" },
+    { codigo: "24", nombre: "San Francisco Morazán", mun_cod: "36", mun_nom: "CHALATENANGO SUR" },
+    { codigo: "25", nombre: "San Ignacio", mun_cod: "34", mun_nom: "CHALATENANGO NORTE" },
+    { codigo: "26", nombre: "San Isidro Labrador", mun_cod: "36", mun_nom: "CHALATENANGO SUR" },
+    { codigo: "27", nombre: "San José Cancasque", mun_cod: "35", mun_nom: "CHALATENANGO CENTRO" },
+    { codigo: "28", nombre: "San José Flores", mun_cod: "36", mun_nom: "CHALATENANGO SUR" },
+    { codigo: "29", nombre: "San Luis del Carmen", mun_cod: "36", mun_nom: "CHALATENANGO SUR" },
+    { codigo: "30", nombre: "San Miguel de Mercedes", mun_cod: "36", mun_nom: "CHALATENANGO SUR" },
+    { codigo: "31", nombre: "San Rafael", mun_cod: "35", mun_nom: "CHALATENANGO CENTRO" },
+    { codigo: "32", nombre: "Santa Rita", mun_cod: "35", mun_nom: "CHALATENANGO CENTRO" },
+    { codigo: "33", nombre: "Tejutla", mun_cod: "36", mun_nom: "CHALATENANGO SUR" }
+  ]},
+  { codigo: "05", nombre: "La Libertad", distritos: [
+    { codigo: "01", nombre: "Antiguo Cuscatlán", mun_cod: "26", mun_nom: "LA LIBERTAD ESTE" },
+    { codigo: "02", nombre: "Ciudad Arce", mun_cod: "24", mun_nom: "LA LIBERTAD CENTRO" },
+    { codigo: "03", nombre: "Colón", mun_cod: "25", mun_nom: "LA LIBERTAD OESTE" },
+    { codigo: "04", nombre: "Comasagua", mun_cod: "28", mun_nom: "LA LIBERTAD SUR" },
+    { codigo: "05", nombre: "Chiltiupán", mun_cod: "27", mun_nom: "LA LIBERTAD COSTA" },
+    { codigo: "06", nombre: "Huizúcar", mun_cod: "26", mun_nom: "LA LIBERTAD ESTE" },
+    { codigo: "07", nombre: "Jayaque", mun_cod: "25", mun_nom: "LA LIBERTAD OESTE" },
+    { codigo: "08", nombre: "Jicalapa", mun_cod: "27", mun_nom: "LA LIBERTAD COSTA" },
+    { codigo: "09", nombre: "La Libertad", mun_cod: "27", mun_nom: "LA LIBERTAD COSTA" },
+    { codigo: "10", nombre: "Nuevo Cuscatlán", mun_cod: "26", mun_nom: "LA LIBERTAD ESTE" },
+    { codigo: "11", nombre: "Santa Tecla", mun_cod: "26", mun_nom: "LA LIBERTAD ESTE" },
+    { codigo: "12", nombre: "Quezaltepeque", mun_cod: "23", mun_nom: "LA LIBERTAD NORTE" },
+    { codigo: "13", nombre: "Sacacoyo", mun_cod: "25", mun_nom: "LA LIBERTAD OESTE" },
+    { codigo: "14", nombre: "San José Villanueva", mun_cod: "28", mun_nom: "LA LIBERTAD SUR" },
+    { codigo: "15", nombre: "San Juan Opico", mun_cod: "24", mun_nom: "LA LIBERTAD CENTRO" },
+    { codigo: "16", nombre: "San Matías", mun_cod: "23", mun_nom: "LA LIBERTAD NORTE" },
+    { codigo: "17", nombre: "San Pablo Tacachico", mun_cod: "23", mun_nom: "LA LIBERTAD NORTE" },
+    { codigo: "18", nombre: "Tamanique", mun_cod: "27", mun_nom: "LA LIBERTAD COSTA" },
+    { codigo: "19", nombre: "Talnique", mun_cod: "25", mun_nom: "LA LIBERTAD OESTE" },
+    { codigo: "20", nombre: "Teotepeque", mun_cod: "27", mun_nom: "LA LIBERTAD COSTA" },
+    { codigo: "21", nombre: "Tepecoyo", mun_cod: "25", mun_nom: "LA LIBERTAD OESTE" },
+    { codigo: "22", nombre: "Zaragoza", mun_cod: "26", mun_nom: "LA LIBERTAD ESTE" }
+  ]},
+  { codigo: "06", nombre: "San Salvador", distritos: [
+    { codigo: "01", nombre: "Aguilares", mun_cod: "20", mun_nom: "SAN SALVADOR NORTE" },
+    { codigo: "02", nombre: "Apopa", mun_cod: "21", mun_nom: "SAN SALVADOR OESTE" },
+    { codigo: "03", nombre: "Ayutuxtepeque", mun_cod: "23", mun_nom: "SAN SALVADOR CENTRO" },
+    { codigo: "04", nombre: "Cuscatancingo", mun_cod: "23", mun_nom: "SAN SALVADOR CENTRO" },
+    { codigo: "05", nombre: "El Paisnal", mun_cod: "20", mun_nom: "SAN SALVADOR NORTE" },
+    { codigo: "06", nombre: "Guazapa", mun_cod: "20", mun_nom: "SAN SALVADOR NORTE" },
+    { codigo: "07", nombre: "Ilopango", mun_cod: "22", mun_nom: "SAN SALVADOR ESTE" },
+    { codigo: "08", nombre: "Mejicanos", mun_cod: "23", mun_nom: "SAN SALVADOR CENTRO" },
+    { codigo: "09", nombre: "Nejapa", mun_cod: "21", mun_nom: "SAN SALVADOR OESTE" },
+    { codigo: "10", nombre: "Panchimalco", mun_cod: "24", mun_nom: "SAN SALVADOR SUR" },
+    { codigo: "11", nombre: "Rosario de Mora", mun_cod: "24", mun_nom: "SAN SALVADOR SUR" },
+    { codigo: "12", nombre: "San Marcos", mun_cod: "24", mun_nom: "SAN SALVADOR SUR" },
+    { codigo: "13", nombre: "San Martín", mun_cod: "22", mun_nom: "SAN SALVADOR ESTE" },
+    { codigo: "14", nombre: "San Salvador", mun_cod: "23", mun_nom: "SAN SALVADOR CENTRO" },
+    { codigo: "15", nombre: "Santiago Texacuangos", mun_cod: "24", mun_nom: "SAN SALVADOR SUR" },
+    { codigo: "16", nombre: "Santo Tomás", mun_cod: "24", mun_nom: "SAN SALVADOR SUR" },
+    { codigo: "17", nombre: "Soyapango", mun_cod: "22", mun_nom: "SAN SALVADOR ESTE" },
+    { codigo: "18", nombre: "Tonacatepeque", mun_cod: "22", mun_nom: "SAN SALVADOR ESTE" },
+    { codigo: "19", nombre: "Ciudad Delgado", mun_cod: "23", mun_nom: "SAN SALVADOR CENTRO" }
+  ]},
+  { codigo: "07", nombre: "Cuscatlán", distritos: [
+    { codigo: "01", nombre: "Candelaria", mun_cod: "18", mun_nom: "CUSCATLÁN SUR" },
+    { codigo: "02", nombre: "Cojutepeque", mun_cod: "18", mun_nom: "CUSCATLÁN SUR" },
+    { codigo: "03", nombre: "El Carmen", mun_cod: "18", mun_nom: "CUSCATLÁN SUR" },
+    { codigo: "04", nombre: "El Rosario", mun_cod: "18", mun_nom: "CUSCATLÁN SUR" },
+    { codigo: "05", nombre: "Monte San Juan", mun_cod: "18", mun_nom: "CUSCATLÁN SUR" },
+    { codigo: "06", nombre: "Oratorio de Concepción", mun_cod: "18", mun_nom: "CUSCATLÁN SUR" },
+    { codigo: "07", nombre: "San Bartolomé Perulapía", mun_cod: "18", mun_nom: "CUSCATLÁN SUR" },
+    { codigo: "08", nombre: "San Cristóbal", mun_cod: "17", mun_nom: "CUSCATLÁN NORTE" },
+    { codigo: "09", nombre: "San José Guayabal", mun_cod: "17", mun_nom: "CUSCATLÁN NORTE" },
+    { codigo: "10", nombre: "San Pedro Perulapán", mun_cod: "18", mun_nom: "CUSCATLÁN SUR" },
+    { codigo: "11", nombre: "San Rafael Cedros", mun_cod: "17", mun_nom: "CUSCATLÁN NORTE" },
+    { codigo: "12", nombre: "San Ramón", mun_cod: "18", mun_nom: "CUSCATLÁN SUR" },
+    { codigo: "13", nombre: "Santa Cruz Analquito", mun_cod: "18", mun_nom: "CUSCATLÁN SUR" },
+    { codigo: "14", nombre: "Santa Cruz Michapa", mun_cod: "18", mun_nom: "CUSCATLÁN SUR" },
+    { codigo: "15", nombre: "Suchitoto", mun_cod: "17", mun_nom: "CUSCATLÁN NORTE" },
+    { codigo: "16", nombre: "Tenancingo", mun_cod: "17", mun_nom: "CUSCATLÁN NORTE" }
+  ]},
+  { codigo: "08", nombre: "La Paz", distritos: [
+    { codigo: "01", nombre: "Cuyultitán", mun_cod: "23", mun_nom: "LA PAZ OESTE" },
+    { codigo: "02", nombre: "El Rosario", mun_cod: "24", mun_nom: "LA PAZ CENTRO" },
+    { codigo: "03", nombre: "Jerusalén", mun_cod: "24", mun_nom: "LA PAZ CENTRO" },
+    { codigo: "04", nombre: "Merced La Ceiba", mun_cod: "24", mun_nom: "LA PAZ CENTRO" },
+    { codigo: "05", nombre: "Olocuilta", mun_cod: "23", mun_nom: "LA PAZ OESTE" },
+    { codigo: "06", nombre: "Paraíso Osorio", mun_cod: "24", mun_nom: "LA PAZ CENTRO" },
+    { codigo: "07", nombre: "San Antonio Masahuat", mun_cod: "23", mun_nom: "LA PAZ OESTE" },
+    { codigo: "08", nombre: "San Emigdio", mun_cod: "24", mun_nom: "LA PAZ CENTRO" },
+    { codigo: "09", nombre: "San Francisco Chinameca", mun_cod: "24", mun_nom: "LA PAZ CENTRO" },
+    { codigo: "10", nombre: "San Juan Nonualco", mun_cod: "25", mun_nom: "LA PAZ ESTE" },
+    { codigo: "11", nombre: "San Juan Talpa", mun_cod: "23", mun_nom: "LA PAZ OESTE" },
+    { codigo: "12", nombre: "San Juan Tepezontes", mun_cod: "24", mun_nom: "LA PAZ CENTRO" },
+    { codigo: "13", nombre: "San Luis Talpa", mun_cod: "23", mun_nom: "LA PAZ OESTE" },
+    { codigo: "14", nombre: "San Miguel Tepezontes", mun_cod: "24", mun_nom: "LA PAZ CENTRO" },
+    { codigo: "15", nombre: "San Pedro Masahuat", mun_cod: "23", mun_nom: "LA PAZ OESTE" },
+    { codigo: "16", nombre: "San Pedro Nonualco", mun_cod: "24", mun_nom: "LA PAZ CENTRO" },
+    { codigo: "17", nombre: "San Rafael Obrajuelo", mun_cod: "24", mun_nom: "LA PAZ CENTRO" },
+    { codigo: "18", nombre: "Santa María Ostuma", mun_cod: "24", mun_nom: "LA PAZ CENTRO" },
+    { codigo: "19", nombre: "Santiago Nonualco", mun_cod: "25", mun_nom: "LA PAZ ESTE" },
+    { codigo: "20", nombre: "Tapalhuaca", mun_cod: "23", mun_nom: "LA PAZ OESTE" },
+    { codigo: "21", nombre: "Zacatecoluca", mun_cod: "25", mun_nom: "LA PAZ ESTE" },
+    { codigo: "22", nombre: "San Luis La Herradura", mun_cod: "25", mun_nom: "LA PAZ ESTE" }
+  ]},
+  { codigo: "09", nombre: "Cabañas", distritos: [
+    { codigo: "01", nombre: "Cinquera", mun_cod: "11", mun_nom: "CABAÑAS OESTE" },
+    { codigo: "02", nombre: "Guacotecti", mun_cod: "11", mun_nom: "CABAÑAS OESTE" },
+    { codigo: "03", nombre: "Ilobasco", mun_cod: "11", mun_nom: "CABAÑAS OESTE" },
+    { codigo: "04", nombre: "Jutiapa", mun_cod: "10", mun_nom: "CABAÑAS ESTE" },
+    { codigo: "05", nombre: "San Isidro", mun_cod: "11", mun_nom: "CABAÑAS OESTE" },
+    { codigo: "06", nombre: "Sensuntepeque", mun_cod: "10", mun_nom: "CABAÑAS ESTE" },
+    { codigo: "07", nombre: "Tejutepeque", mun_cod: "10", mun_nom: "CABAÑAS ESTE" },
+    { codigo: "08", nombre: "Victoria", mun_cod: "10", mun_nom: "CABAÑAS ESTE" },
+    { codigo: "09", nombre: "Dolores", mun_cod: "10", mun_nom: "CABAÑAS ESTE" }
+  ]},
+  { codigo: "10", nombre: "San Vicente", distritos: [
+    { codigo: "01", nombre: "Apastepeque", mun_cod: "14", mun_nom: "SAN VICENTE NORTE" },
+    { codigo: "02", nombre: "Guadalupe", mun_cod: "15", mun_nom: "SAN VICENTE SUR" },
+    { codigo: "03", nombre: "San Cayetano Istepeque", mun_cod: "15", mun_nom: "SAN VICENTE SUR" },
+    { codigo: "04", nombre: "Santa Clara", mun_cod: "14", mun_nom: "SAN VICENTE NORTE" },
+    { codigo: "05", nombre: "Santo Domingo", mun_cod: "14", mun_nom: "SAN VICENTE NORTE" },
+    { codigo: "06", nombre: "San Esteban Catarina", mun_cod: "14", mun_nom: "SAN VICENTE NORTE" },
+    { codigo: "07", nombre: "San Ildefonso", mun_cod: "14", mun_nom: "SAN VICENTE NORTE" },
+    { codigo: "08", nombre: "San Lorenzo", mun_cod: "14", mun_nom: "SAN VICENTE NORTE" },
+    { codigo: "09", nombre: "San Sebastián", mun_cod: "14", mun_nom: "SAN VICENTE NORTE" },
+    { codigo: "10", nombre: "San Vicente", mun_cod: "15", mun_nom: "SAN VICENTE SUR" },
+    { codigo: "11", nombre: "Tecoluca", mun_cod: "15", mun_nom: "SAN VICENTE SUR" },
+    { codigo: "12", nombre: "Tepetitán", mun_cod: "15", mun_nom: "SAN VICENTE SUR" },
+    { codigo: "13", nombre: "Verapaz", mun_cod: "15", mun_nom: "SAN VICENTE SUR" }
+  ]},
+  { codigo: "11", nombre: "Usulután", distritos: [
+    { codigo: "01", nombre: "Alegría", mun_cod: "24", mun_nom: "USULUTÁN NORTE" },
+    { codigo: "02", nombre: "Berlín", mun_cod: "24", mun_nom: "USULUTÁN NORTE" },
+    { codigo: "03", nombre: "California", mun_cod: "24", mun_nom: "USULUTÁN NORTE" },
+    { codigo: "04", nombre: "Concepción Batres", mun_cod: "25", mun_nom: "USULUTÁN ESTE" },
+    { codigo: "05", nombre: "El Triunfo", mun_cod: "24", mun_nom: "USULUTÁN NORTE" },
+    { codigo: "06", nombre: "Ereguayquín", mun_cod: "25", mun_nom: "USULUTÁN ESTE" },
+    { codigo: "07", nombre: "Estanzuelas", mun_cod: "24", mun_nom: "USULUTÁN NORTE" },
+    { codigo: "08", nombre: "Jiquilisco", mun_cod: "26", mun_nom: "USULUTÁN OESTE" },
+    { codigo: "09", nombre: "Jucuapa", mun_cod: "24", mun_nom: "USULUTÁN NORTE" },
+    { codigo: "10", nombre: "Jucuarán", mun_cod: "25", mun_nom: "USULUTÁN ESTE" },
+    { codigo: "11", nombre: "Mercedes Umaña", mun_cod: "24", mun_nom: "USULUTÁN NORTE" },
+    { codigo: "12", nombre: "Nueva Granada", mun_cod: "24", mun_nom: "USULUTÁN NORTE" },
+    { codigo: "13", nombre: "Ozatlán", mun_cod: "25", mun_nom: "USULUTÁN ESTE" },
+    { codigo: "14", nombre: "Puerto El Triunfo", mun_cod: "26", mun_nom: "USULUTÁN OESTE" },
+    { codigo: "15", nombre: "San Agustín", mun_cod: "25", mun_nom: "USULUTÁN ESTE" },
+    { codigo: "16", nombre: "San Buenaventura", mun_cod: "26", mun_nom: "USULUTÁN OESTE" },
+    { codigo: "17", nombre: "San Dionisio", mun_cod: "25", mun_nom: "USULUTÁN ESTE" },
+    { codigo: "18", nombre: "Santa Elena", mun_cod: "25", mun_nom: "USULUTÁN ESTE" },
+    { codigo: "19", nombre: "San Francisco Javier", mun_cod: "25", mun_nom: "USULUTÁN ESTE" },
+    { codigo: "20", nombre: "Santa María", mun_cod: "25", mun_nom: "USULUTÁN ESTE" },
+    { codigo: "21", nombre: "Santiago de María", mun_cod: "24", mun_nom: "USULUTÁN NORTE" },
+    { codigo: "22", nombre: "Tecapán", mun_cod: "25", mun_nom: "USULUTÁN ESTE" },
+    { codigo: "23", nombre: "Usulután", mun_cod: "25", mun_nom: "USULUTÁN ESTE" }
+  ]},
+  { codigo: "12", nombre: "San Miguel", distritos: [
+    { codigo: "01", nombre: "Carolina", mun_cod: "21", mun_nom: "SAN MIGUEL NORTE" },
+    { codigo: "02", nombre: "Ciudad Barrios", mun_cod: "21", mun_nom: "SAN MIGUEL NORTE" },
+    { codigo: "03", nombre: "Comacarán", mun_cod: "22", mun_nom: "SAN MIGUEL CENTRO" },
+    { codigo: "04", nombre: "Chapeltique", mun_cod: "21", mun_nom: "SAN MIGUEL NORTE" },
+    { codigo: "05", nombre: "Chinameca", mun_cod: "22", mun_nom: "SAN MIGUEL CENTRO" },
+    { codigo: "06", nombre: "Chirilagua", mun_cod: "22", mun_nom: "SAN MIGUEL CENTRO" },
+    { codigo: "07", nombre: "El Tránsito", mun_cod: "22", mun_nom: "SAN MIGUEL CENTRO" },
+    { codigo: "08", nombre: "Lolotique", mun_cod: "23", mun_nom: "SAN MIGUEL OESTE" },
+    { codigo: "09", nombre: "Moncagua", mun_cod: "22", mun_nom: "SAN MIGUEL CENTRO" },
+    { codigo: "10", nombre: "Nueva Guadalupe", mun_cod: "23", mun_nom: "SAN MIGUEL OESTE" },
+    { codigo: "11", nombre: "Nuevo Edén de San Juan", mun_cod: "21", mun_nom: "SAN MIGUEL NORTE" },
+    { codigo: "12", nombre: "Quelepa", mun_cod: "22", mun_nom: "SAN MIGUEL CENTRO" },
+    { codigo: "13", nombre: "San Antonio del Mosco", mun_cod: "23", mun_nom: "SAN MIGUEL OESTE" },
+    { codigo: "14", nombre: "San Gerardo", mun_cod: "21", mun_nom: "SAN MIGUEL NORTE" },
+    { codigo: "15", nombre: "San Jorge", mun_cod: "23", mun_nom: "SAN MIGUEL OESTE" },
+    { codigo: "16", nombre: "San Luis de la Reina", mun_cod: "21", mun_nom: "SAN MIGUEL NORTE" },
+    { codigo: "17", nombre: "San Miguel", mun_cod: "22", mun_nom: "SAN MIGUEL CENTRO" },
+    { codigo: "18", nombre: "San Rafael Oriente", mun_cod: "23", mun_nom: "SAN MIGUEL OESTE" },
+    { codigo: "19", nombre: "Sesori", mun_cod: "21", mun_nom: "SAN MIGUEL NORTE" },
+    { codigo: "20", nombre: "Uluazapa", mun_cod: "23", mun_nom: "SAN MIGUEL OESTE" }
+  ]},
+  { codigo: "13", nombre: "Morazán", distritos: [
+    { codigo: "01", nombre: "Arambala", mun_cod: "27", mun_nom: "MORAZÁN NORTE" },
+    { codigo: "02", nombre: "Cacaopera", mun_cod: "28", mun_nom: "MORAZÁN SUR" },
+    { codigo: "03", nombre: "Corinto", mun_cod: "27", mun_nom: "MORAZÁN NORTE" },
+    { codigo: "04", nombre: "Chilanga", mun_cod: "28", mun_nom: "MORAZÁN SUR" },
+    { codigo: "05", nombre: "Delicias de Concepción", mun_cod: "27", mun_nom: "MORAZÁN NORTE" },
+    { codigo: "06", nombre: "El Divisadero", mun_cod: "28", mun_nom: "MORAZÁN SUR" },
+    { codigo: "07", nombre: "El Rosario", mun_cod: "27", mun_nom: "MORAZÁN NORTE" },
+    { codigo: "08", nombre: "Gualococti", mun_cod: "28", mun_nom: "MORAZÁN SUR" },
+    { codigo: "09", nombre: "Guatajiagua", mun_cod: "28", mun_nom: "MORAZÁN SUR" },
+    { codigo: "10", nombre: "Joateca", mun_cod: "27", mun_nom: "MORAZÁN NORTE" },
+    { codigo: "11", nombre: "Jocoaitique", mun_cod: "27", mun_nom: "MORAZÁN NORTE" },
+    { codigo: "12", nombre: "Jocoro", mun_cod: "28", mun_nom: "MORAZÁN SUR" },
+    { codigo: "13", nombre: "Lolotiquillo", mun_cod: "28", mun_nom: "MORAZÁN SUR" },
+    { codigo: "14", nombre: "Meanguera", mun_cod: "27", mun_nom: "MORAZÁN NORTE" },
+    { codigo: "15", nombre: "Osicala", mun_cod: "28", mun_nom: "MORAZÁN SUR" },
+    { codigo: "16", nombre: "Perquín", mun_cod: "27", mun_nom: "MORAZÁN NORTE" },
+    { codigo: "17", nombre: "San Carlos", mun_cod: "28", mun_nom: "MORAZÁN SUR" },
+    { codigo: "18", nombre: "San Fernando", mun_cod: "27", mun_nom: "MORAZÁN NORTE" },
+    { codigo: "19", nombre: "San Francisco Gotera", mun_cod: "28", mun_nom: "MORAZÁN SUR" },
+    { codigo: "20", nombre: "San Isidro", mun_cod: "28", mun_nom: "MORAZÁN SUR" },
+    { codigo: "21", nombre: "San Simón", mun_cod: "27", mun_nom: "MORAZÁN NORTE" },
+    { codigo: "22", nombre: "Sensembra", mun_cod: "28", mun_nom: "MORAZÁN SUR" },
+    { codigo: "23", nombre: "Sociedad", mun_cod: "28", mun_nom: "MORAZÁN SUR" },
+    { codigo: "24", nombre: "Torola", mun_cod: "27", mun_nom: "MORAZÁN NORTE" },
+    { codigo: "25", nombre: "Yamabal", mun_cod: "28", mun_nom: "MORAZÁN SUR" },
+    { codigo: "26", nombre: "Yoloaiquín", mun_cod: "28", mun_nom: "MORAZÁN SUR" }
+  ]},
+  { codigo: "14", nombre: "La Unión", distritos: [
+    { codigo: "01", nombre: "Anamorós", mun_cod: "19", mun_nom: "LA UNIÓN NORTE" },
+    { codigo: "02", nombre: "Bolívar", mun_cod: "19", mun_nom: "LA UNIÓN NORTE" },
+    { codigo: "03", nombre: "Concepción de Oriente", mun_cod: "19", mun_nom: "LA UNIÓN NORTE" },
+    { codigo: "04", nombre: "Conchagua", mun_cod: "20", mun_nom: "LA UNIÓN SUR" },
+    { codigo: "05", nombre: "El Carmen", mun_cod: "20", mun_nom: "LA UNIÓN SUR" },
+    { codigo: "06", nombre: "El Sauce", mun_cod: "19", mun_nom: "LA UNIÓN NORTE" },
+    { codigo: "07", nombre: "Intipucá", mun_cod: "20", mun_nom: "LA UNIÓN SUR" },
+    { codigo: "08", nombre: "La Unión", mun_cod: "20", mun_nom: "LA UNIÓN SUR" },
+    { codigo: "09", nombre: "Lislique", mun_cod: "19", mun_nom: "LA UNIÓN NORTE" },
+    { codigo: "10", nombre: "Meanguera del Golfo", mun_cod: "20", mun_nom: "LA UNIÓN SUR" },
+    { codigo: "11", nombre: "Nueva Esparta", mun_cod: "19", mun_nom: "LA UNIÓN NORTE" },
+    { codigo: "12", nombre: "Pasaquina", mun_cod: "19", mun_nom: "LA UNIÓN NORTE" },
+    { codigo: "13", nombre: "Polorós", mun_cod: "19", mun_nom: "LA UNIÓN NORTE" },
+    { codigo: "14", nombre: "San Alejo", mun_cod: "20", mun_nom: "LA UNIÓN SUR" },
+    { codigo: "15", nombre: "San José", mun_cod: "20", mun_nom: "LA UNIÓN SUR" },
+    { codigo: "16", nombre: "Santa Rosa de Lima", mun_cod: "19", mun_nom: "LA UNIÓN NORTE" },
+    { codigo: "17", nombre: "Yayantique", mun_cod: "20", mun_nom: "LA UNIÓN SUR" },
+    { codigo: "18", nombre: "Yucuaiquín", mun_cod: "20", mun_nom: "LA UNIÓN SUR" }
+  ]}
+];
+
 const Field = ({ label, children }) => (
   <div>
     <label className="text-xs font-semibold text-slate-500 uppercase block mb-1">{label}</label>
@@ -22,10 +316,8 @@ export default function ConfiguracionDTE() {
   const [smtpMensaje, setSmtpMensaje] = useState(null);
   const [instruccionesSmtp, setInstruccionesSmtp] = useState('');
 
-  // Estructura de Catálogos Geográficos en Cascada
-  const [geoData, setGeoData] = useState([]);
+  // Estructura de Catálogos Geográficos
   const [distritosDisponibles, setDistritosDisponibles] = useState([]);
-  const [distritoSeleccionado, setDistritoSeleccionado] = useState('');
 
   const [config, setConfig] = useState({
     nit: '', nrc: '', nombre_comercial: '', actividad_economica_cod: '',
@@ -45,14 +337,9 @@ export default function ConfiguracionDTE() {
       const datos = res.data;
       setConfig({ ...datos, api_pwd: '', certificado_pwd: '', smtp_password: '' });
 
-      // 2. Cargar Jerarquía Geográfica (Departamentos -> Distritos -> Auto Municipio)
-      const geoRes = await api.get('/api/v1/configuracion/configuracion-dte/catalogos-geograficos');
-      const deptos = geoRes.data.departamentos || [];
-      setGeoData(deptos);
-
-      // Si ya hay departamento seleccionado, cargar sus distritos
+      // 2. Si ya hay departamento seleccionado, cargar sus distritos inmediatamente
       if (datos.direccion_departamento) {
-        const deptoEncontrado = deptos.find(d => d.codigo_departamento === datos.direccion_departamento);
+        const deptoEncontrado = DEPARTAMENTOS_MH.find(d => d.codigo === datos.direccion_departamento);
         if (deptoEncontrado) {
           setDistritosDisponibles(deptoEncontrado.distritos || []);
         }
@@ -70,11 +357,10 @@ export default function ConfiguracionDTE() {
 
   // Handler: 1. Seleccionar Departamento
   const manejarCambioDepartamento = (deptoCod) => {
-    const deptoEncontrado = geoData.find(d => d.codigo_departamento === deptoCod);
+    const deptoEncontrado = DEPARTAMENTOS_MH.find(d => d.codigo === deptoCod);
     const dists = deptoEncontrado ? deptoEncontrado.distritos : [];
     
     setDistritosDisponibles(dists);
-    setDistritoSeleccionado('');
     
     setConfig(prev => ({
       ...prev,
@@ -86,16 +372,14 @@ export default function ConfiguracionDTE() {
 
   // Handler: 2. Seleccionar Distrito -> 3. Auto-asignar Municipio
   const manejarCambioDistrito = (distritoCod) => {
-    setDistritoSeleccionado(distritoCod);
-    const distEncontrado = distritosDisponibles.find(d => d.codigo_distrito === distritoCod);
+    const distEncontrado = distritosDisponibles.find(d => d.codigo === distritoCod);
 
     if (distEncontrado) {
-      // Auto-asignación automática del Municipio oficial del MH
       setConfig(prev => ({
         ...prev,
         direccion_distrito: distritoCod,
-        direccion_municipio: distEncontrado.municipio_cod,
-        direccion_municipio_nombre: distEncontrado.municipio_nombre
+        direccion_municipio: distEncontrado.mun_cod,
+        direccion_municipio_nombre: distEncontrado.mun_nom
       }));
     } else {
       setConfig(prev => ({
@@ -179,9 +463,8 @@ export default function ConfiguracionDTE() {
   if (cargando) return <div className="p-8 text-center text-slate-400">Cargando configuración...</div>;
 
   // Obtener nombre del municipio auto-asignado para mostrar al usuario
-  const nombreDeptoActual = geoData.find(d => d.codigo_departamento === config.direccion_departamento)?.nombre_departamento || '';
-  const distActual = distritosDisponibles.find(d => d.codigo_distrito === (config.direccion_distrito || distritoSeleccionado));
-  const nombreMunicipioAuto = distActual ? `${distActual.municipio_nombre} (Cod: ${distActual.municipio_cod})` : config.direccion_municipio;
+  const distActual = distritosDisponibles.find(d => d.codigo === config.direccion_distrito);
+  const nombreMunicipioAuto = distActual ? `${distActual.mun_nom} (Cod: ${distActual.mun_cod})` : (config.direccion_municipio ? `Cod MH: ${config.direccion_municipio}` : '');
 
   return (
     <div className="p-8 max-w-5xl mx-auto pb-24">
@@ -221,32 +504,32 @@ export default function ConfiguracionDTE() {
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="">-- Seleccione Departamento --</option>
-                {geoData.map(depto => (
-                  <option key={depto.codigo_departamento} value={depto.codigo_departamento}>
-                    {depto.codigo_departamento} - {depto.nombre_departamento}
+                {DEPARTAMENTOS_MH.map(depto => (
+                  <option key={depto.codigo} value={depto.codigo}>
+                    {depto.codigo} - {depto.nombre}
                   </option>
                 ))}
               </select>
             </Field>
 
-            {/* 2. DISTRITO (Desplegable filtrado) */}
+            {/* 2. DISTRITO (Desplegable filtrado por el Departamento seleccionado) */}
             <Field label="2. Distrito (MH)">
               <select
-                value={config.direccion_distrito || distritoSeleccionado || ''}
+                value={config.direccion_distrito || ''}
                 onChange={e => manejarCambioDistrito(e.target.value)}
                 disabled={!config.direccion_departamento}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
               >
                 <option value="">-- Seleccione Distrito --</option>
                 {distritosDisponibles.map(dist => (
-                  <option key={dist.codigo_distrito} value={dist.codigo_distrito}>
-                    {dist.nombre_distrito}
+                  <option key={dist.codigo} value={dist.codigo}>
+                    {dist.nombre}
                   </option>
                 ))}
               </select>
             </Field>
 
-            {/* 3. MUNICIPIO (Auto-Asignado Automáticamente) */}
+            {/* 3. MUNICIPIO (Auto-Asignado Automáticamente según el Distrito escogido) */}
             <div className="col-span-2 bg-indigo-50/60 p-4 rounded-xl border border-indigo-100 flex items-center justify-between">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 block mb-1">
