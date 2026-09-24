@@ -7,7 +7,7 @@ import './Login.css';
 
 const LOADING_STEPS = [
   { title: "Verificando credenciales...", sub: "Iniciando protocolo de seguridad SSL 256-Bit" },
-  { title: "Conectando con el Servidor Render Cloud...", sub: "Estableciendo sesión segura de alta velocidad" },
+  { title: "Conectando con el Servidor...", sub: "Estableciendo sesión segura de alta velocidad" },
   { title: "Sincronizando espacio de Facturación...", sub: "Cargando inventario, cajas y permisos de usuario" },
   { title: "¡Autenticación exitosa! Entrando al Dashboard...", sub: "Abriendo la plataforma principal" }
 ];
@@ -125,7 +125,7 @@ export default function Login() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
-            <span>Servidor Render • Conexión Segura</span>
+            <span>Servidor • Conexión Segura</span>
           </div>
 
           {/* Círculo Animado con Flecha Recorriendo el Borde */}
@@ -199,7 +199,7 @@ export default function Login() {
             <span className="flex items-center gap-1.5 font-medium">
               <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Facturación SaaS
             </span>
-            <span className="font-mono text-slate-400">v2.4 • Render Cloud</span>
+            <span className="font-mono text-slate-400">v2.4</span>
           </div>
         </div>
       </div>
