@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+.env
+node_modules/
+dist/
+build/
+dte-firmador/
+svfe-api-firmador/
+svfe-json-schemas/
