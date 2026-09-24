@@ -1,7 +1,6 @@
 import axios from 'axios';
 
-// La URL base por defecto será localhost para desarrollo
-// En producción, tomaremos la variable de entorno de Vercel
+// Configuración del cliente API
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8001',
 });

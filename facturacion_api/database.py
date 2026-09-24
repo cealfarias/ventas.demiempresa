@@ -7,17 +7,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://demiempresa_online_user:qPQ3Dt6qquqpOzRKESgTGf9NjefSeISK@dpg-d9uabv6417fc7383k650-a/demiempresa_online")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./facturacion.db")
 
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# Autodetect si se ejecuta dentro del entorno interno de Render
+# Detección de red interna si existe variable de entorno
 is_render = os.getenv("RENDER") == "true" or os.path.exists("/opt/render")
 
 if is_render and "@dpg-" in DATABASE_URL:
-    # Convertir el hostname externo de Render (dpg-...-a.virginia-postgres.render.com)
-    # al hostname interno de red privada (dpg-...-a) para cero problemas de SSL
     DATABASE_URL = re.sub(r'(@dpg-[a-z0-9]+-[a-z0-9]+)\.[a-z0-9-]+\.render\.com', r'\1', DATABASE_URL)
     DATABASE_URL = re.sub(r'(@dpg-[a-z0-9]+-[a-z0-9]+)\.render\.com', r'\1', DATABASE_URL)
 

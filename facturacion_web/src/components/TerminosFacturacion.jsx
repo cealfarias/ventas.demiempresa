@@ -8,10 +8,8 @@ export default function TerminosFacturacion({ onClose }) {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    // Apuntamos al archivo centralizado en Vercel directamente para evitar problemas de DNS con el 'www'
-    const url = window.location.hostname === 'localhost' 
-      ? '/terminos.md' 
-      : 'https://demiempresa.vercel.app/terminos.md';
+    // Carga de términos y condiciones desde ruta local relativa
+    const url = '/terminos.md';
       
     fetch(url)
       .then(res => {
