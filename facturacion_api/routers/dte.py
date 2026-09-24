@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from dte_service.builders.fse_01 import construir_json_dte_01
 from dte_service.builders.ccf_03 import construir_json_dte_03
 from dte_service.builders.invalidacion import construir_json_invalidacion
+from dte_service.validator.schema_validator import validar_json_contra_esquema_oficial_mh
 from dte_service.signer.jws_signer import firmar_json_dte_jws
 from dte_service.transmission.client import mh_client
 from dte_service.persistence.audit_service import registrar_auditoria_legal_10_anios
@@ -63,6 +64,11 @@ def transmitir_factura_mh(
 
     factura.codigo_generacion = codigo_generacion
     factura.numero_control = numero_control
+
+    # 1.5 Validar sintácticamente contra los JSON Schemas oficiales del MH (svfe-json-schemas)
+    valido_schema, msg_schema = validar_json_contra_esquema_oficial_mh(dte_json, tipo_dte)
+    if not valido_schema:
+        print(f"[SCHEMA VALIDATION WARNING] {msg_schema}")
 
     # 2. Firmar JSON (JWS RS256)
     jws_firmado = firmar_json_dte_jws(
