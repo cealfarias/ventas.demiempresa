@@ -909,5 +909,9 @@ class PagoArrendamiento(Base):
     usuario = relationship("Usuario")
 
 
+from .integracion_contable import ConfiguracionIntegracionContable, BitacoraPartidaContable
+
+
+
 
 

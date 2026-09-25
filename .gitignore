@@ -11,3 +11,5 @@ build/
 dte-firmador/
 svfe-api-firmador/
 svfe-json-schemas/
+*.db
+

@@ -298,7 +298,17 @@ def crear_factura(empresa_id: str, usuario_id: int, data: FacturaCreate, db: Ses
 
     db.commit()
     db.refresh(f)
+
+    # Integración Contable: Si es CCF o venta a Crédito, enviar partida individual inmediatamente
+    if f.tipo_doc in ("CCF", "EXPORTACION") or f.condicion_operacion == "CREDITO":
+        try:
+            from services.contabilidad_service import generar_y_enviar_ccf_individual
+            generar_y_enviar_ccf_individual(db, empresa_id, f.id)
+        except Exception as err:
+            print(f"[INTEGRACION CONTABLE WARNING] No se pudo enviar partida individual CCF #{f.id}: {err}")
+
     return _convertir_factura_response(f, db)
+
 
 
 @router.put("/{factura_id}", response_model=FacturaResponse)
