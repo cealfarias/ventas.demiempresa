@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from database import get_db
@@ -15,10 +16,12 @@ import httpx
 
 router = APIRouter(prefix="/integracion-contable", tags=["Integración Contable"])
 
+DEFAULT_CONTA_URL = os.getenv("CONTA_API_URL", "https://conta-api.demiempresa.online" if os.getenv("ENVIRONMENT") == "production" else "http://127.0.0.1:8000")
+
 
 class ConfiguracionContableSchema(BaseModel):
-    url_api_contable: str = "http://127.0.0.1:8000"
-    api_key_empresa: str
+    url_api_contable: Optional[str] = None
+    api_key_empresa: Optional[str] = None
     cuenta_caja_general: Optional[str] = "110101"
     cuenta_bancos: Optional[str] = "110201"
     cuenta_iva_debito: Optional[str] = "210201"
@@ -47,25 +50,35 @@ def obtener_configuracion(empresa_id: str, db: Session = Depends(get_db)):
     if not config:
         return {
             "empresa_id": empresa_id,
-            "url_api_contable": "http://127.0.0.1:8000",
-            "api_key_empresa": "",
-            "configurado": False
+            "url_api_contable": DEFAULT_CONTA_URL,
+            "api_key_empresa": f"auto_{empresa_id}",
+            "configurado": False,
+            "cuenta_caja_general": "110101",
+            "cuenta_bancos": "110201",
+            "cuenta_iva_debito": "210201",
+            "cuenta_iva_credito": "110601",
+            "cuenta_cxc_clientes": "110301",
+            "cuenta_cxp_proveedores": "210101",
+            "cuenta_ventas_cf": "410101",
+            "cuenta_ventas_ccf": "410102",
+            "cuenta_inventario": "110501",
+            "cuenta_costo_ventas": "510101"
         }
 
     return {
         "empresa_id": config.empresa_id,
-        "url_api_contable": config.url_api_contable,
-        "api_key_empresa": config.api_key_empresa,
-        "cuenta_caja_general": config.cuenta_caja_general,
-        "cuenta_bancos": config.cuenta_bancos,
-        "cuenta_iva_debito": config.cuenta_iva_debito,
-        "cuenta_iva_credito": config.cuenta_iva_credito,
-        "cuenta_cxc_clientes": config.cuenta_cxc_clientes,
-        "cuenta_cxp_proveedores": config.cuenta_cxp_proveedores,
-        "cuenta_ventas_cf": config.cuenta_ventas_cf,
-        "cuenta_ventas_ccf": config.cuenta_ventas_ccf,
-        "cuenta_inventario": config.cuenta_inventario,
-        "cuenta_costo_ventas": config.cuenta_costo_ventas,
+        "url_api_contable": config.url_api_contable or DEFAULT_CONTA_URL,
+        "api_key_empresa": config.api_key_empresa or f"auto_{empresa_id}",
+        "cuenta_caja_general": config.cuenta_caja_general or "110101",
+        "cuenta_bancos": config.cuenta_bancos or "110201",
+        "cuenta_iva_debito": config.cuenta_iva_debito or "210201",
+        "cuenta_iva_credito": config.cuenta_iva_credito or "110601",
+        "cuenta_cxc_clientes": config.cuenta_cxc_clientes or "110301",
+        "cuenta_cxp_proveedores": config.cuenta_cxp_proveedores or "210101",
+        "cuenta_ventas_cf": config.cuenta_ventas_cf or "410101",
+        "cuenta_ventas_ccf": config.cuenta_ventas_ccf or "410102",
+        "cuenta_inventario": config.cuenta_inventario or "110501",
+        "cuenta_costo_ventas": config.cuenta_costo_ventas or "510101",
         "configurado": True
     }
 
@@ -80,8 +93,8 @@ def guardar_configuracion(empresa_id: str, data: ConfiguracionContableSchema, db
         config = ConfiguracionIntegracionContable(empresa_id=empresa_id)
         db.add(config)
 
-    config.url_api_contable = data.url_api_contable
-    config.api_key_empresa = data.api_key_empresa
+    config.url_api_contable = data.url_api_contable or config.url_api_contable or DEFAULT_CONTA_URL
+    config.api_key_empresa = data.api_key_empresa or config.api_key_empresa or f"auto_{empresa_id}"
     config.cuenta_caja_general = data.cuenta_caja_general
     config.cuenta_bancos = data.cuenta_bancos
     config.cuenta_iva_debito = data.cuenta_iva_debito
@@ -157,11 +170,11 @@ def reintentar_envio_partida(bitacora_id: int, empresa_id: str, db: Session = De
 @router.get("/catalogo-remoto")
 def obtener_catalogo_cuentas_remoto(empresa_id: str, db: Session = Depends(get_db)):
     config = obtener_configuracion_integracion(db, empresa_id)
-    if not config or not config.url_api_contable or not config.api_key_empresa:
-        raise HTTPException(status_code=400, detail="Falta configurar la URL y API Key de contabilidad")
+    url_base = (config.url_api_contable if config and config.url_api_contable else DEFAULT_CONTA_URL).rstrip('/')
+    api_key = (config.api_key_empresa if config and config.api_key_empresa else f"auto_{empresa_id}")
 
-    url = f"{config.url_api_contable.rstrip('/')}/api/v1/integracion/catalogo-cuentas"
-    headers = {"X-API-Key": config.api_key_empresa}
+    url = f"{url_base}/api/v1/integracion/catalogo-cuentas"
+    headers = {"X-API-Key": api_key}
 
     try:
         with httpx.Client(timeout=10.0) as client:

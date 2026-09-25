@@ -58,10 +58,6 @@ export default function ConfiguracionContable() {
   };
 
   const cargarCatalogoRemoto = async () => {
-    if (!formData.api_key_empresa) {
-      setError("Por favor ingresa primero la API Key de Contabilidad");
-      return;
-    }
     setCargandoCatalogo(true);
     setError(null);
     try {
@@ -71,7 +67,7 @@ export default function ConfiguracionContable() {
         setMensaje(`¡Catálogo contable obtenido con éxito! (${res.data.length} cuentas cargadas)`);
       }
     } catch (err) {
-      setError("No se pudo obtener el catálogo remoto. Verifica la URL y la API Key de Contabilidad.");
+      setError("No se pudo obtener el catálogo remoto. Verifica la conexión con el servidor contable.");
     } finally {
       setCargandoCatalogo(false);
     }
@@ -107,7 +103,7 @@ export default function ConfiguracionContable() {
             Integración Contable del Ecosistema
           </h1>
           <p className="text-sm text-slate-500">
-            Conecta la Facturación con el Núcleo Contable (<span className="font-semibold text-indigo-600">c:\conta.demiempresa</span>) usando la API Key de tu Empresa.
+            Conecta la Facturación con el Núcleo Contable del Ecosistema (<span className="font-semibold text-indigo-600">demiempresa.online</span>).
           </p>
         </div>
       </div>
@@ -127,43 +123,25 @@ export default function ConfiguracionContable() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Card Credenciales API */}
+        {/* Card Estado de Conexión */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2 border-b pb-3">
-            <Key className="w-5 h-5 text-indigo-600" />
-            1. Servidor de Contabilidad y Credenciales de Servicio
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                URL del Servidor Contable
-              </label>
-              <input
-                type="text"
-                name="url_api_contable"
-                value={formData.url_api_contable}
-                onChange={handleChange}
-                placeholder="http://127.0.0.1:8000 o https://conta.demiempresa.online"
-                className="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 font-mono"
-                required
-              />
+              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Key className="w-5 h-5 text-indigo-600" />
+                1. Estado de Conexión del Servidor Contable
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                La comunicación entre Facturación y Contabilidad está sincronizada automáticamente en el ecosistema.
+              </p>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                API Key de la Empresa (X-API-Key)
-              </label>
-              <input
-                type="password"
-                name="api_key_empresa"
-                value={formData.api_key_empresa}
-                onChange={handleChange}
-                placeholder="Generada en Contabilidad -> Configuración -> API Keys"
-                className="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 font-mono"
-                required
-              />
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full text-emerald-700 text-xs font-bold self-start sm:self-auto">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Conexión Automática Activa
             </div>
           </div>
-          <div className="pt-2">
+
+          <div className="pt-1">
             <button
               type="button"
               onClick={cargarCatalogoRemoto}
