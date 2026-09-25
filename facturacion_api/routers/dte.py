@@ -223,3 +223,124 @@ def ejecutar_matriz_acreditacion(empresa_id: str, db: Session = Depends(get_db))
 
     resultados = ejecutar_matriz_pruebas_mh(db, config)
     return {"status": "OK", "total_escenarios": len(resultados), "detalles": resultados}
+
+
+class ReenviarEmailRequest(BaseModel):
+    email_destinatario: Optional[str] = None
+
+class EnviarWhatsAppRequest(BaseModel):
+    telefono_destinatario: Optional[str] = None
+
+@router.post("/reenviar-email/{factura_id}")
+def reenviar_email_dte(
+    factura_id: int,
+    empresa_id: str,
+    payload: Optional[ReenviarEmailRequest] = None,
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    db: Session = Depends(get_db)
+):
+    """
+    Envía o reenvía el correo electrónico con los adjuntos DTE (PDF y JSON) al cliente.
+    """
+    factura = db.query(Factura).filter(Factura.id == factura_id, Factura.empresa_id == empresa_id).first()
+    if not factura:
+        raise HTTPException(status_code=404, detail="Factura no encontrada")
+
+    config = db.query(ConfiguracionDTE).filter(ConfiguracionDTE.empresa_id == empresa_id).first()
+    if not config:
+        raise HTTPException(status_code=400, detail="Configuración DTE no encontrada para la empresa")
+
+    email_target = (payload and payload.email_destinatario) or (factura.cliente and factura.cliente.email)
+    if not email_target:
+        raise HTTPException(status_code=400, detail="El cliente no posee un correo electrónico registrado. Por favor ingrese un correo válido.")
+
+    pdf_bytes = generar_pdf_representacion_grafica(factura, config)
+    
+    punto_venta_cod = "0000"
+    if factura.tipo_doc == "FACTURA":
+        dte_json, _, _ = construir_json_dte_01(factura, config, punto_venta_cod)
+    else:
+        dte_json, _, _ = construir_json_dte_03(factura, config, punto_venta_cod)
+    
+    json_bytes = json.dumps(dte_json, ensure_ascii=False, indent=2).encode("utf-8")
+
+    asunto = f"Comprobante Electrónico DTE - {factura.numero_control or factura.numero}"
+    cuerpo = f"""
+    <h3>Estimado(a) {factura.cliente_nombre or (factura.cliente and factura.cliente.nombre) or 'Cliente'},</h3>
+    <p>Le adjuntamos la Representación Gráfica PDF y el archivo JSON oficial correspondiente a su comprobante de pago electrónico.</p>
+    <p><b>Tipo Documento:</b> {factura.tipo_doc}<br/>
+    <b>Número de Control:</b> {factura.numero_control or factura.numero}<br/>
+    <b>Código de Generación:</b> {factura.codigo_generacion or 'N/A'}<br/>
+    <b>Monto Total:</b> ${ (factura.total or 0) / 100.0 :.2f}<br/>
+    <b>Sello de Recepción MH:</b> {factura.sello_recepcion or 'En proceso'}</p>
+    <br/>
+    <p>Atentamente,<br/><b>{config.nombre_comercial or 'Nuestra Empresa'}</b></p>
+    """
+
+    background_tasks.add_task(
+        enviar_correo_dte_asincrono,
+        config=config,
+        email_destinatario=email_target,
+        asunto=asunto,
+        cuerpo_texto=cuerpo,
+        pdf_bytes=pdf_bytes,
+        nombre_pdf=f"{factura.numero_control or 'comprobante'}.pdf",
+        json_bytes=json_bytes,
+        nombre_json=f"{factura.codigo_generacion or 'comprobante'}.json"
+    )
+
+    return {"status": "OK", "mensaje": f"Correo programado exitosamente para enviar a {email_target}", "email": email_target}
+
+
+@router.post("/enviar-whatsapp/{factura_id}")
+def enviar_whatsapp_dte(
+    factura_id: int,
+    empresa_id: str,
+    payload: Optional[EnviarWhatsAppRequest] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Genera la URL directa de WhatsApp con el mensaje pre-formateado y la representación oficial DTE.
+    """
+    factura = db.query(Factura).filter(Factura.id == factura_id, Factura.empresa_id == empresa_id).first()
+    if not factura:
+        raise HTTPException(status_code=404, detail="Factura no encontrada")
+
+    config = db.query(ConfiguracionDTE).filter(ConfiguracionDTE.empresa_id == empresa_id).first()
+    nombre_emisor = config.nombre_comercial if config else "Nuestra Empresa"
+
+    telefono_raw = (payload and payload.telefono_destinatario) or (factura.cliente and (factura.cliente.telefono or factura.cliente.movil)) or ""
+    telef_digits = "".join(c for c in str(telefono_raw) if c.isdigit())
+    if len(telef_digits) == 8:
+        telef_digits = "503" + telef_digits
+
+    monto_usd = f"${(factura.total or 0) / 100.0 :.2f}"
+    pdf_link = f"https://ventas-demiempresa.onrender.com/api/v1/facturacion/facturas/{factura.id}/imprimir?empresa_id={empresa_id}"
+
+    mensaje_wa = (
+        f"📄 *COMPROBANTE ELECTRÓNICO DTE*\n"
+        f"🏢 *Emisor:* {nombre_emisor}\n"
+        f"👤 *Cliente:* {factura.cliente_nombre or 'Cliente'}\n"
+        f"📑 *Documento:* {factura.tipo_doc} N° {factura.numero_control or factura.numero}\n"
+        f"💵 *Monto Total:* {monto_usd}\n"
+        f"🔑 *Código Generación:* {factura.codigo_generacion or 'N/A'}\n"
+        f"✅ *Sello Recepción MH:* {factura.sello_recepcion or 'Aprobado'}\n\n"
+        f"Descargue o consulte su factura PDF oficial aquí:\n"
+        f"👉 {pdf_link}"
+    )
+
+    from urllib.parse import quote
+    encoded_text = quote(mensaje_wa)
+    
+    if telef_digits:
+        wa_url = f"https://api.whatsapp.com/send?phone={telef_digits}&text={encoded_text}"
+    else:
+        wa_url = f"https://api.whatsapp.com/send?text={encoded_text}"
+
+    return {
+        "status": "OK",
+        "telefono": telef_digits or "Sin especificar",
+        "mensaje_texto": mensaje_wa,
+        "wa_url": wa_url
+    }
+

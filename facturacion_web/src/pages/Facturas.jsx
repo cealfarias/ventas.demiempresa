@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Receipt, Plus, Search, FileText, CheckCircle2, DollarSign, XCircle, FileOutput, Lock, Wallet, AlertTriangle } from 'lucide-react';
+import { Receipt, Plus, Search, FileText, CheckCircle2, DollarSign, XCircle, FileOutput, Lock, Wallet, AlertTriangle, Mail, Send, Share2 } from 'lucide-react';
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
@@ -136,6 +136,71 @@ export default function Facturas() {
   const [cajaActiva, setCajaActiva] = useState(true);
   const [cajaTrasnochada, setCajaTrasnochada] = useState(false);
   const [showModalCajaRequerida, setShowModalCajaRequerida] = useState(false);
+
+  // Estado para compartir DTE por Email & WhatsApp
+  const [modalCompartirOpen, setModalCompartirOpen] = useState(false);
+  const [facturaCompartir, setFacturaCompartir] = useState(null);
+  const [tabCompartir, setTabCompartir] = useState('email');
+  const [targetEmail, setTargetEmail] = useState('');
+  const [targetPhone, setTargetPhone] = useState('');
+  const [enviandoCompartir, setEnviandoCompartir] = useState(false);
+
+  const abrirModalCompartir = (factura, defaultTab = 'email') => {
+    setFacturaCompartir(factura);
+    setTabCompartir(defaultTab);
+    setTargetEmail(factura.cliente_email || (factura.cliente && factura.cliente.email) || '');
+    setTargetPhone(factura.cliente_telefono || (factura.cliente && (factura.cliente.telefono || factura.cliente.movil)) || '');
+    setModalCompartirOpen(true);
+  };
+
+  const ejecutarEnviarEmail = async () => {
+    if (!facturaCompartir) return;
+    setEnviandoCompartir(true);
+    try {
+      const res = await api.post(`/api/v1/facturacion/dte/reenviar-email/${facturaCompartir.id}?empresa_id=${empresaId()}`, {
+        email_destinatario: targetEmail
+      });
+      window.dispatchEvent(new CustomEvent('avatar:say', {
+        detail: {
+          text: `📧 ${res.data.mensaje}`,
+          options: [{ label: '¡Excelente!', action: null }]
+        }
+      }));
+      setModalCompartirOpen(false);
+    } catch (e) {
+      window.dispatchEvent(new CustomEvent('avatar:say', {
+        detail: {
+          text: e.response?.data?.detail || 'Error al enviar el correo electrónico con los adjuntos DTE.',
+          options: [{ label: 'Aceptar', action: null }]
+        }
+      }));
+    } finally {
+      setEnviandoCompartir(false);
+    }
+  };
+
+  const ejecutarEnviarWhatsApp = async () => {
+    if (!facturaCompartir) return;
+    setEnviandoCompartir(true);
+    try {
+      const res = await api.post(`/api/v1/facturacion/dte/enviar-whatsapp/${facturaCompartir.id}?empresa_id=${empresaId()}`, {
+        telefono_destinatario: targetPhone
+      });
+      if (res.data?.wa_url) {
+        window.open(res.data.wa_url, '_blank');
+      }
+      setModalCompartirOpen(false);
+    } catch (e) {
+      window.dispatchEvent(new CustomEvent('avatar:say', {
+        detail: {
+          text: e.response?.data?.detail || 'Error al generar enlace oficial de WhatsApp.',
+          options: [{ label: 'Aceptar', action: null }]
+        }
+      }));
+    } finally {
+      setEnviandoCompartir(false);
+    }
+  };
 
   const facturasFiltradas = facturas.filter(f => {
     const term = busqueda.toLowerCase().trim();
@@ -774,15 +839,16 @@ export default function Facturas() {
                       </button>
                     )}
                     <button
-                      onClick={() => {
-                        const baseUrl = import.meta.env.VITE_API_URL || 'https://ventas-demiempresa.onrender.com';
-                        const pdfUrl = `${baseUrl}/api/v1/facturacion/facturas/${f.id}/imprimir?empresa_id=${empresaId()}`;
-                        const texto = `Hola, le comparto la factura N° ${f.numero} por un total de ${fmt(f.total)}:\n\n📄 Ver PDF: ${pdfUrl}`;
-                        const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
-                        window.open(waUrl, '_blank');
-                      }}
+                      onClick={() => abrirModalCompartir(f, 'email')}
+                      className="text-indigo-600 hover:text-indigo-700 hover:scale-110 transition-transform inline-flex items-center p-1"
+                      title="Enviar Comprobante DTE por Correo (Email PDF+JSON)"
+                    >
+                      <Mail className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => abrirModalCompartir(f, 'whatsapp')}
                       className="text-emerald-600 hover:text-emerald-700 hover:scale-110 transition-transform inline-flex items-center p-1"
-                      title="enviar por whatsap"
+                      title="Enviar por WhatsApp"
                     >
                       <WhatsAppIcon className="w-4 h-4" />
                     </button>
@@ -847,6 +913,113 @@ export default function Facturas() {
                 <Wallet className="w-4 h-4" /> {cajaTrasnochada ? 'Ir a Cierre Z Ahora' : 'Aperturar Caja Ahora'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Interactivo para compartir DTE por Email & WhatsApp */}
+      {modalCompartirOpen && facturaCompartir && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-slate-100">
+            <div className="flex items-center justify-between border-b pb-4 mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                  <Share2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-800 text-base">Enviar Comprobante DTE</h3>
+                  <p className="text-xs text-slate-500">{facturaCompartir.tipo_doc} N° {facturaCompartir.numero_control || facturaCompartir.numero} — Total: {fmt(facturaCompartir.total)}</p>
+                </div>
+              </div>
+              <button onClick={() => setModalCompartirOpen(false)} className="text-slate-400 hover:text-slate-600 text-lg font-bold p-1">&times;</button>
+            </div>
+
+            <div className="flex gap-2 mb-4 bg-slate-100 p-1 rounded-2xl">
+              <button
+                onClick={() => setTabCompartir('email')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${tabCompartir === 'email' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+              >
+                <Mail className="w-4 h-4" />
+                <span>Enviar por Correo (Email)</span>
+              </button>
+              <button
+                onClick={() => setTabCompartir('whatsapp')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${tabCompartir === 'whatsapp' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
+              >
+                <WhatsAppIcon className="w-4 h-4" />
+                <span>Enviar por WhatsApp</span>
+              </button>
+            </div>
+
+            {tabCompartir === 'email' ? (
+              <div className="space-y-4">
+                <div className="p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100 text-xs text-indigo-900 leading-relaxed">
+                  <b>📧 Adjuntos Automáticos:</b> Se enviará un correo electrónico con la Representación Gráfica PDF y el archivo JSON oficial firmado por el Ministerio de Hacienda.
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Correo Electrónico del Destinatario:</label>
+                  <input
+                    type="email"
+                    value={targetEmail}
+                    onChange={(e) => setTargetEmail(e.target.value)}
+                    placeholder="ejemplo@cliente.com"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    onClick={() => setModalCompartirOpen(false)}
+                    className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={ejecutarEnviarEmail}
+                    disabled={enviandoCompartir || !targetEmail}
+                    className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-2 transition-all"
+                  >
+                    <Send className="w-4 h-4" />
+                    <span>{enviandoCompartir ? 'Enviando...' : 'Enviar Correo DTE'}</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-3 bg-emerald-50/50 rounded-2xl border border-emerald-100 text-xs text-emerald-900 leading-relaxed">
+                  <b>💬 Enlace Oficial WhatsApp:</b> Se abrirá WhatsApp con el resumen formateado de la factura DTE y enlace directo para visualizar o descargar el PDF oficial.
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Número de Teléfono / WhatsApp:</label>
+                  <input
+                    type="text"
+                    value={targetPhone}
+                    onChange={(e) => setTargetPhone(e.target.value)}
+                    placeholder="50370000000"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    onClick={() => setModalCompartirOpen(false)}
+                    className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={ejecutarEnviarWhatsApp}
+                    disabled={enviandoCompartir}
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-2 transition-all"
+                  >
+                    <WhatsAppIcon className="w-4 h-4" />
+                    <span>{enviandoCompartir ? 'Generando...' : 'Abrir en WhatsApp'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
