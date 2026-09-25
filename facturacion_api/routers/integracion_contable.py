@@ -16,7 +16,7 @@ import httpx
 
 router = APIRouter(prefix="/integracion-contable", tags=["Integración Contable"])
 
-DEFAULT_CONTA_URL = os.getenv("CONTA_API_URL", "https://conta-api.demiempresa.online" if os.getenv("ENVIRONMENT") == "production" else "http://127.0.0.1:8000")
+DEFAULT_CONTA_URL = os.getenv("CONTA_API_URL", "https://conta-demiempresa.onrender.com")
 
 
 class ConfiguracionContableSchema(BaseModel):

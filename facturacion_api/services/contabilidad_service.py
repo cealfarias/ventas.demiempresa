@@ -17,7 +17,7 @@ def enviar_partida_webhook(config: ConfiguracionIntegracionContable, payload: di
     Envía el JSON de la partida contable al webhook de contabilidad_api mediante HTTP POST.
     """
     import os
-    default_url = os.getenv("CONTA_API_URL", "https://conta-api.demiempresa.online" if os.getenv("ENVIRONMENT") == "production" else "http://127.0.0.1:8000")
+    default_url = os.getenv("CONTA_API_URL", "https://conta-demiempresa.onrender.com")
     
     url_base = (config.url_api_contable if config and config.url_api_contable else default_url).rstrip('/')
     api_key = (config.api_key_empresa if config and config.api_key_empresa else f"auto_{payload.get('empresa_id', '')}")
