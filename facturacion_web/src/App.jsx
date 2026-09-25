@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, NavLink, useLocation, Nav
 import {
   LayoutDashboard, Receipt, Package, Users, Settings, LogOut, Menu,
   Warehouse, BarChart3, ChevronDown, ChevronRight, Truck, ShoppingCart, CreditCard, BookOpen
-, Wallet, DollarSign, Calculator, ShieldCheck, UserCheck, Headphones, Building, Sparkles } from 'lucide-react';
+, Wallet, DollarSign, Calculator, ShieldCheck, UserCheck, Headphones, Building, Sparkles, FileText } from 'lucide-react';
 import Productos from './pages/Productos';
 import Login from './pages/Login';
 import Registro from './pages/Registro';
@@ -36,6 +36,7 @@ import Vendedores from './pages/Vendedores';
 import Kardex from './pages/Kardex';
 import ConfiguracionContable from './pages/ConfiguracionContable';
 import ResumenDiarioContable from './pages/ResumenDiarioContable';
+import LibrosIVAPage from './pages/LibrosIVAPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 import { api } from './services/api';
@@ -271,6 +272,7 @@ const Layout = ({ children }) => {
               <SidebarLink to="/configuracion-dte" icon={Settings} label="Configuración DTE" expanded={expanded} />
               <SidebarLink to="/configuracion-contable" icon={Calculator} label="Integración Contable" expanded={expanded} />
               <SidebarLink to="/resumen-diario-contable" icon={BookOpen} label="Resumen Diario Contable" expanded={expanded} />
+              <SidebarLink to="/libros-iva" icon={FileText} label="Libros de IVA (F-07)" expanded={expanded} />
               <SidebarLink to="/usuarios" icon={Users} label="Gestión de Usuarios" expanded={expanded} />
               <SidebarLink to="/backup-recovery" icon={ShieldCheck} label="Backup y Restauración" expanded={expanded} />
             </SidebarSection>
@@ -423,6 +425,7 @@ function App() {
                     <Route path="/configuracion-dte" element={<ConfiguracionDTE />} />
                     <Route path="/configuracion-contable" element={<ConfiguracionContable />} />
                     <Route path="/resumen-diario-contable" element={<ResumenDiarioContable />} />
+                    <Route path="/libros-iva" element={<LibrosIVAPage />} />
                     <Route path="/usuarios" element={<Usuarios />} />
                     <Route path="/backup-recovery" element={<BackupRecovery />} />
 
