@@ -27,6 +27,7 @@ export default function ConfiguracionContable() {
 
   useEffect(() => {
     cargarConfiguracion();
+    cargarCatalogoRemoto();
   }, []);
 
   const cargarConfiguracion = async () => {
@@ -142,7 +143,7 @@ export default function ConfiguracionContable() {
             </div>
           </div>
 
-          <div className="pt-1">
+          <div className="pt-1 flex items-center justify-between">
             <button
               type="button"
               onClick={cargarCatalogoRemoto}
@@ -150,7 +151,7 @@ export default function ConfiguracionContable() {
               className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs flex items-center gap-2 transition-colors border border-indigo-200"
             >
               <RefreshCw className={`w-4 h-4 ${cargandoCatalogo ? 'animate-spin' : ''}`} />
-              Probador de Conexión / Cargar Catálogo Contable
+              Recargar Catálogo Contable ({catalogoRemoto.length} Cuentas)
             </button>
           </div>
         </div>
@@ -162,120 +163,90 @@ export default function ConfiguracionContable() {
             2. Mapeo de Cuentas Contables por Defecto
           </h2>
           <p className="text-xs text-slate-500 mb-4">
-            Ingresa los códigos de cuenta según el Catálogo de tu Empresa en el sistema contable.
+            Selecciona la cuenta contable correspondiente de tu Catálogo para cada concepto operativo.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Caja General (Efectivo)</label>
-              <input
-                type="text"
-                name="cuenta_caja_general"
-                value={formData.cuenta_caja_general}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-xl text-sm font-mono"
-                placeholder="Ej: 110101"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Bancos / Transferencias</label>
-              <input
-                type="text"
-                name="cuenta_bancos"
-                value={formData.cuenta_bancos}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-xl text-sm font-mono"
-                placeholder="Ej: 110201"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Débito Fiscal IVA (13%)</label>
-              <input
-                type="text"
-                name="cuenta_iva_debito"
-                value={formData.cuenta_iva_debito}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-xl text-sm font-mono"
-                placeholder="Ej: 210201"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Crédito Fiscal IVA (Compras)</label>
-              <input
-                type="text"
-                name="cuenta_iva_credito"
-                value={formData.cuenta_iva_credito}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-xl text-sm font-mono"
-                placeholder="Ej: 110601"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Cuentas por Cobrar Clientes</label>
-              <input
-                type="text"
-                name="cuenta_cxc_clientes"
-                value={formData.cuenta_cxc_clientes}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-xl text-sm font-mono"
-                placeholder="Ej: 110301"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Cuentas por Pagar Proveedores</label>
-              <input
-                type="text"
-                name="cuenta_cxp_proveedores"
-                value={formData.cuenta_cxp_proveedores}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-xl text-sm font-mono"
-                placeholder="Ej: 210101"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Ventas Consumidor Final</label>
-              <input
-                type="text"
-                name="cuenta_ventas_cf"
-                value={formData.cuenta_ventas_cf}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-xl text-sm font-mono"
-                placeholder="Ej: 410101"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Ventas Crédito Fiscal (CCF)</label>
-              <input
-                type="text"
-                name="cuenta_ventas_ccf"
-                value={formData.cuenta_ventas_ccf}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-xl text-sm font-mono"
-                placeholder="Ej: 410102"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Inventario de Mercaderías</label>
-              <input
-                type="text"
-                name="cuenta_inventario"
-                value={formData.cuenta_inventario}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-xl text-sm font-mono"
-                placeholder="Ej: 110501"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Costo de Ventas</label>
-              <input
-                type="text"
-                name="cuenta_costo_ventas"
-                value={formData.cuenta_costo_ventas}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-xl text-sm font-mono"
-                placeholder="Ej: 510101"
-              />
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <CuentaSelector
+              label="Caja General (Efectivo)"
+              name="cuenta_caja_general"
+              value={formData.cuenta_caja_general}
+              onChange={handleChange}
+              catalogoRemoto={catalogoRemoto}
+              placeholder="Ej: 110101"
+            />
+            <CuentaSelector
+              label="Bancos / Transferencias"
+              name="cuenta_bancos"
+              value={formData.cuenta_bancos}
+              onChange={handleChange}
+              catalogoRemoto={catalogoRemoto}
+              placeholder="Ej: 110201"
+            />
+            <CuentaSelector
+              label="Débito Fiscal IVA (13%)"
+              name="cuenta_iva_debito"
+              value={formData.cuenta_iva_debito}
+              onChange={handleChange}
+              catalogoRemoto={catalogoRemoto}
+              placeholder="Ej: 210201"
+            />
+            <CuentaSelector
+              label="Crédito Fiscal IVA (Compras)"
+              name="cuenta_iva_credito"
+              value={formData.cuenta_iva_credito}
+              onChange={handleChange}
+              catalogoRemoto={catalogoRemoto}
+              placeholder="Ej: 110601"
+            />
+            <CuentaSelector
+              label="Cuentas por Cobrar Clientes"
+              name="cuenta_cxc_clientes"
+              value={formData.cuenta_cxc_clientes}
+              onChange={handleChange}
+              catalogoRemoto={catalogoRemoto}
+              placeholder="Ej: 110301"
+            />
+            <CuentaSelector
+              label="Cuentas por Pagar Proveedores"
+              name="cuenta_cxp_proveedores"
+              value={formData.cuenta_cxp_proveedores}
+              onChange={handleChange}
+              catalogoRemoto={catalogoRemoto}
+              placeholder="Ej: 210101"
+            />
+            <CuentaSelector
+              label="Ventas Consumidor Final"
+              name="cuenta_ventas_cf"
+              value={formData.cuenta_ventas_cf}
+              onChange={handleChange}
+              catalogoRemoto={catalogoRemoto}
+              placeholder="Ej: 410101"
+            />
+            <CuentaSelector
+              label="Ventas Crédito Fiscal (CCF)"
+              name="cuenta_ventas_ccf"
+              value={formData.cuenta_ventas_ccf}
+              onChange={handleChange}
+              catalogoRemoto={catalogoRemoto}
+              placeholder="Ej: 410102"
+            />
+            <CuentaSelector
+              label="Inventario de Mercaderías"
+              name="cuenta_inventario"
+              value={formData.cuenta_inventario}
+              onChange={handleChange}
+              catalogoRemoto={catalogoRemoto}
+              placeholder="Ej: 110501"
+            />
+            <CuentaSelector
+              label="Costo de Ventas"
+              name="cuenta_costo_ventas"
+              value={formData.cuenta_costo_ventas}
+              onChange={handleChange}
+              catalogoRemoto={catalogoRemoto}
+              placeholder="Ej: 510101"
+            />
           </div>
         </div>
 
@@ -290,6 +261,48 @@ export default function ConfiguracionContable() {
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+function CuentaSelector({ label, name, value, onChange, catalogoRemoto, placeholder }) {
+  const selectedCuenta = catalogoRemoto.find(c => String(c.cuenta_codigo) === String(value));
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-1">
+        <label className="block text-xs font-bold text-slate-700 truncate">{label}</label>
+        {selectedCuenta && (
+          <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md truncate max-w-[170px]" title={selectedCuenta.nombre}>
+            {selectedCuenta.nombre}
+          </span>
+        )}
+      </div>
+
+      {catalogoRemoto.length > 0 ? (
+        <select
+          name={name}
+          value={value}
+          onChange={onChange}
+          className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm transition-all text-slate-800"
+        >
+          <option value="">-- Seleccionar cuenta ({catalogoRemoto.length}) --</option>
+          {catalogoRemoto.map((c) => (
+            <option key={c.cuenta_codigo} value={c.cuenta_codigo}>
+              {c.cuenta_codigo} - {c.nombre} {!c.permite_movimiento ? ' (Resumen)' : ''}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input
+          type="text"
+          name={name}
+          value={value}
+          onChange={onChange}
+          className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono focus:ring-2 focus:ring-indigo-500"
+          placeholder={placeholder}
+        />
+      )}
     </div>
   );
 }
