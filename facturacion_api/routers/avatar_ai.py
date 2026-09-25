@@ -124,8 +124,19 @@ MODULOS_KNOWLEDGE = {
         "titulo": "🛡️ Copia de Seguridad y Restauración",
         "guia": "1. **Exportar:** Presiona 'Exportar Backup' para descargar un archivo JSON firmado digitalmente con clave criptográfica HMAC-SHA256.\n2. **Restaurar:** Carga el archivo `.json` de respaldo y presiona 'Verificar y Restaurar'. El sistema validará la firma para asegurar que no fue alterado.",
         "faqs": "P: ¿Es seguro?\nR: 100% seguro. Cualquier modificación manual en el archivo invalidará la firma y rechazará la restauración."
+    },
+    "/configuracion-contable": {
+        "titulo": "📐 Integración Contable del Ecosistema",
+        "guia": "1. **Obtener API Key:** Entra al sistema de Contabilidad (`conta.demiempresa.online`), ve a Configuración -> Integraciones API y genera la API Key de tu empresa.\n2. **Configurar en Facturación:** Pega la URL del servidor contable y tu `API Key` de la empresa.\n3. **Mapear Cuentas:** Ingresa los códigos de tu Catálogo de Cuentas (Caja General, Débito Fiscal IVA, Ventas CF, Ventas CCF, Inventarios, Costo de Ventas).\n4. **Verificar:** Haz clic en 'Probador de Conexión / Cargar Catálogo' y guarda los cambios.",
+        "faqs": "P: ¿Qué hace esta pantalla?\nR: Conecta Facturación con Contabilidad para enviar facturas y compras automáticamente."
+    },
+    "/resumen-diario-contable": {
+        "titulo": "📅 Resumen Diario Contable (Consumidor Final)",
+        "guia": "1. Selecciona la fecha de las ventas a procesar.\n2. Presiona 'Generar y Enviar Partida Diaria'.\n3. El sistema agrupará todas las facturas a Consumidor Final de esa fecha y enviará 1 sola partida limpia de ventas, IVA y costo de lo vendido a la Contabilidad.\n4. Revisa el estado del envío en la Bitácora de Integración.",
+        "faqs": "P: ¿Puedo reintentar un envío fallido?\nR: Sí, usa el botón 'Reintentar' en la tabla de bitácora."
     }
 }
+
 
 # Base de Preguntas Frecuentes / Intenciones Específicas
 PROCEDIMIENTOS_KNOWLEDGE = [
@@ -248,6 +259,19 @@ PROCEDIMIENTOS_KNOWLEDGE = [
         "keywords": ["configurar dte", "certificado p12", "firma hacienda", "llave api mh"],
         "respuesta": "⚙️ **¿Cómo configurar la Facturación Electrónica DTE?**\n\n1. Ve a **Configuración -> Configuración DTE** (`/configuracion-dte`).\n2. Carga tu archivo de **Certificado Digital `.p12`** y su contraseña.\n3. Ingresa la **Clave API de Hacienda** y selecciona el entorno.",
         "redirect": "/configuracion-dte"
+    },
+    {
+        "intent": "configuracion_contable_pasos",
+        "keywords": ["configurar integracion", "configurar integración", "configurar contabilidad", "integracion contable", "integración contable", "como conecto contabilidad", "cómo conecto contabilidad", "como configurar", "cómo configuro", "como configuro", "pasos integracion", "pasos integración", "api key contable", "mapeo de cuentas", "conectar contabilidad", "configuracion contable", "configuración contable", "pasos para configurar"],
+        "respuesta": "📐 **Paso a Paso para Configurar la Integración Contable:**\n\n1️⃣ **Generar API Key en Contabilidad:**\n   • Entra a Contabilidad (`conta.demiempresa.online`).\n   • Ve a **Configuración -> Integraciones API** y genera tu `X-API-Key`.\n\n2️⃣ **Configurar en Facturación (`/configuracion-contable`):**\n   • En Facturación, ve a **Configuración -> Integración Contable**.\n   • Pega la **URL del Servidor Contable** y tu **API Key**.\n\n3️⃣ **Mapear Cuentas Contables:**\n   • Ingresa los códigos de tu catálogo (Caja General `110101`, IVA Débito `210201`, Ventas CF `410101`, Ventas CCF `410102`, Costo de Ventas `510101`, Inventarios `110501`).\n\n4️⃣ **Guardar y Probar:**\n   • Presiona **'Probador de Conexión / Cargar Catálogo'** y guarda los cambios.",
+        "redirect": "/configuracion-contable"
+    },
+
+    {
+        "intent": "resumen_diario_pasos",
+        "keywords": ["resumen diario", "partida diaria", "enviar partida del dia", "enviar partida del día", "partida diario ventas", "cierre contable diario", "como envio la partida diaria", "cómo envío la partida diaria", "generar resumen diario"],
+        "respuesta": "📅 **¿Cómo Generar y Enviar el Resumen Diario Contable?**\n\n1. Ve a **Configuración -> Resumen Diario Contable** (`/resumen-diario-contable`).\n2. Selecciona la **Fecha de Ventas** a procesar.\n3. Presiona **'Generar y Enviar Partida Diaria'**.\n4. El sistema consolidará todas las facturas a consumidor final de ese día en **1 sola partida limpia** (Ingreso, Ventas, IVA y Costo Kardex) enviada a Contabilidad.\n5. Consulta la tabla de **Bitácora** para confirmar el estado de entrega.",
+        "redirect": "/resumen-diario-contable"
     }
 ]
 
@@ -261,8 +285,9 @@ ERP_KEYWORDS = [
     "opciones", "manual", "configuración", "certificación", "token", "sucursal",
     "inicio", "dashboard", "sesión", "turno", "arqueo", "guia", "como", "usar", "cómo", "hago", "puedo", "pasos",
     "trasnochada", "inyectar", "acreedor", "aportante", "backup", "restaurar", "firmar",
-    "que haces", "que puedes hacer", "sirves", "funciones"
+    "que haces", "que puedes hacer", "sirves", "funciones", "integración", "integracion", "contable", "resumen diario", "api key", "mapeo"
 ]
+
 
 MESSAGE_PAID_SERVICE = (
     "Soy tu asistente virtual especializado exclusivamente en el sistema de Facturación e Inventarios ERP. "
