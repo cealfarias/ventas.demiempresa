@@ -67,7 +67,8 @@ export default function ConfiguracionContable() {
         setMensaje(`¡Catálogo contable obtenido con éxito! (${res.data.length} cuentas cargadas)`);
       }
     } catch (err) {
-      setError("No se pudo obtener el catálogo remoto. Verifica la conexión con el servidor contable.");
+      const detalle = err.response?.data?.detail || err.message || "Error desconocido";
+      setError(`No se pudo obtener el catálogo remoto: ${detalle}`);
     } finally {
       setCargandoCatalogo(false);
     }
