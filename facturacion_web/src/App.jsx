@@ -34,7 +34,10 @@ import Dashboard from './pages/Dashboard';
 import Despachos from './pages/Despachos';
 import Vendedores from './pages/Vendedores';
 import Kardex from './pages/Kardex';
+import ConfiguracionContable from './pages/ConfiguracionContable';
+import ResumenDiarioContable from './pages/ResumenDiarioContable';
 import { ErrorBoundary } from './components/ErrorBoundary';
+
 import { api } from './services/api';
 
 const NombreEmpresa = () => {
@@ -266,10 +269,13 @@ const Layout = ({ children }) => {
           {canSeeConfiguracion && (
             <SidebarSection label="Configuración" expanded={expanded} defaultOpen={false}>
               <SidebarLink to="/configuracion-dte" icon={Settings} label="Configuración DTE" expanded={expanded} />
+              <SidebarLink to="/configuracion-contable" icon={Calculator} label="Integración Contable" expanded={expanded} />
+              <SidebarLink to="/resumen-diario-contable" icon={BookOpen} label="Resumen Diario Contable" expanded={expanded} />
               <SidebarLink to="/usuarios" icon={Users} label="Gestión de Usuarios" expanded={expanded} />
               <SidebarLink to="/backup-recovery" icon={ShieldCheck} label="Backup y Restauración" expanded={expanded} />
             </SidebarSection>
           )}
+
 
           {/* Banner Interactivo de Invitación al Avatar IA */}
           {expanded && (
@@ -413,10 +419,13 @@ function App() {
                     <Route path="/clientes" element={<Clientes />} />
                     <Route path="/facturas" element={<Facturas />} />
                     <Route path="/cuentas-cobrar" element={<CuentasCobrar />} />
-                    {/* Fase 4 — DTE */}
+                    {/* Fase 4 — DTE & Integraciones */}
                     <Route path="/configuracion-dte" element={<ConfiguracionDTE />} />
+                    <Route path="/configuracion-contable" element={<ConfiguracionContable />} />
+                    <Route path="/resumen-diario-contable" element={<ResumenDiarioContable />} />
                     <Route path="/usuarios" element={<Usuarios />} />
                     <Route path="/backup-recovery" element={<BackupRecovery />} />
+
                     {/* Fase 5 — Logística */}
                     <Route path="/despachos" element={<Despachos />} />
                     <Route path="/vendedores" element={<Vendedores />} />
