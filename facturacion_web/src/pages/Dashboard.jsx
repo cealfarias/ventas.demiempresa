@@ -30,8 +30,8 @@ export default function Dashboard() {
     const cargarListas = async () => {
       try {
         const [resBodegas, resCajas] = await Promise.all([
-          api.get(`/api/v1/bodegas/?empresa_id=${empresaId()}`),
-          api.get(`/api/v1/cajas/?empresa_id=${empresaId()}`)
+          api.get(`/api/v1/almacen/bodegas/?empresa_id=${empresaId()}`).catch(() => api.get(`/api/v1/bodegas/?empresa_id=${empresaId()}`)),
+          api.get(`/api/v1/cajas/?empresa_id=${empresaId()}`).catch(() => ({ data: [] }))
         ]);
         setBodegas(resBodegas.data || []);
         setCajas(resCajas.data || []);
@@ -59,9 +59,9 @@ export default function Dashboard() {
 
         const [resKpis, resChart, resTop, resVentasBod] = await Promise.all([
           api.get(`/api/v1/dashboard/kpis?${params}`),
-          api.get(`/api/v1/dashboard/grafico-ventas?${chartParams}`),
-          api.get(`/api/v1/dashboard/top-productos?${chartParams}`),
-          api.get(`/api/v1/dashboard/ventas-por-bodega?empresa_id=${empresaId()}&periodo=${periodo}&tz=${tz}`)
+          api.get(`/api/v1/dashboard/grafico-ventas?${chartParams}`).catch(() => ({ data: [] })),
+          api.get(`/api/v1/dashboard/top-productos?${chartParams}`).catch(() => ({ data: [] })),
+          api.get(`/api/v1/dashboard/ventas-por-bodega?empresa_id=${empresaId()}&periodo=${periodo}&tz=${tz}`).catch(() => ({ data: [] }))
         ]);
 
         setKpis(resKpis.data);
