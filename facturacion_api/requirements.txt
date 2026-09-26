@@ -29,3 +29,4 @@ qrcode>=7.4.2
 reportlab>=4.0.0
 jsonschema>=4.18.0
 requests>=2.31.0
+gunicorn>=21.2.0
