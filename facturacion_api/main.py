@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import engine
 from models import Base
 from routers import productos, clientes, facturas, auth, bodegas, kardex, proveedores, ordenes_compra, cuentas_pagar, cuentas_cobrar, configuracion_dte, dte, despachos, dashboard, vendedores
-from routers import cajas, gastos, usuarios, avatar_ai, acreedores, aportantes, backup, soporte, arrendamientos, integracion_contable, libros_iva
+from routers import cajas, gastos, usuarios, avatar_ai, acreedores, aportantes, backup, soporte, arrendamientos, integracion_contable, libros_iva, planilla
 import uvicorn
 
 from sqlalchemy import text
@@ -105,6 +105,7 @@ app.include_router(backup.router, prefix="/api/v1/backup")
 app.include_router(soporte.router, prefix="/api/v1")
 app.include_router(integracion_contable.router, prefix="/api/v1")
 app.include_router(libros_iva.router, prefix="/api/v1")
+app.include_router(planilla.router, prefix="/api/v1")
 
 
 @app.get("/")

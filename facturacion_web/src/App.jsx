@@ -37,6 +37,7 @@ import Kardex from './pages/Kardex';
 import ConfiguracionContable from './pages/ConfiguracionContable';
 import ResumenDiarioContable from './pages/ResumenDiarioContable';
 import LibrosIVAPage from './pages/LibrosIVAPage';
+import PlanillaPage from './pages/PlanillaPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 import { api } from './services/api';
@@ -234,6 +235,10 @@ const Layout = ({ children }) => {
             <SidebarLink to="/arrendamientos" icon={Building} label="Contrato de arrendamiento" expanded={expanded} />
           </SidebarSection>
 
+          <SidebarSection label="Planillas & RRHH" expanded={expanded} defaultOpen={false}>
+            <SidebarLink to="/planilla" icon={Users} label="Planilla de Sueldos (SV)" expanded={expanded} />
+          </SidebarSection>
+
           {canSeeAlmacen && (
             <SidebarSection label="Almacén" expanded={expanded} defaultOpen={false}>
               <SidebarLink to="/bodegas" icon={Warehouse} label="Bodegas" expanded={expanded} />
@@ -426,6 +431,7 @@ function App() {
                     <Route path="/configuracion-contable" element={<ConfiguracionContable />} />
                     <Route path="/resumen-diario-contable" element={<ResumenDiarioContable />} />
                     <Route path="/libros-iva" element={<LibrosIVAPage />} />
+                    <Route path="/planilla" element={<PlanillaPage />} />
                     <Route path="/usuarios" element={<Usuarios />} />
                     <Route path="/backup-recovery" element={<BackupRecovery />} />
 
