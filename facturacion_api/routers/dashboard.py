@@ -2,18 +2,102 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from database import get_db
-from models import Factura, Cliente, Proveedor, CuentaPorCobrar, CuentaPorPagar, Producto, OrdenCompra, ItemFactura, Kardex
-from typing import Dict, Any
+from models import Factura, Cliente, Proveedor, CuentaPorCobrar, CuentaPorPagar, Producto, OrdenCompra, ItemFactura, Kardex, Bodega, Caja, SesionCaja, MovimientoCaja
+from typing import Dict, Any, Optional, List
+from datetime import datetime, timedelta, date
+import pytz
+import calendar
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
-from datetime import datetime, timedelta, date
-import pytz
-
 local_tz = pytz.timezone("America/El_Salvador")
 
+def _aplicar_filtros_bodega_caja(query_facturas, query_compras, bodega_id: Optional[int] = None, caja_id: Optional[int] = None):
+    if caja_id:
+        query_facturas = query_facturas.join(
+            MovimientoCaja, (MovimientoCaja.referencia_id == Factura.id) & (MovimientoCaja.referencia_tipo == "factura")
+        ).join(
+            SesionCaja, MovimientoCaja.sesion_caja_id == SesionCaja.id
+        ).filter(SesionCaja.caja_id == caja_id)
+        if bodega_id:
+            query_facturas = query_facturas.filter(Factura.bodega_salida_id == bodega_id)
+            if query_compras is not None:
+                query_compras = query_compras.filter(Kardex.bodega_id == bodega_id)
+    elif bodega_id:
+        query_facturas = query_facturas.filter(Factura.bodega_salida_id == bodega_id)
+        if query_compras is not None:
+            query_compras = query_compras.filter(Kardex.bodega_id == bodega_id)
+            
+    return query_facturas, query_compras
+
+
+@router.get("/ventas-por-bodega", response_model=List[Dict[str, Any]])
+def obtener_ventas_por_bodega(
+    empresa_id: str, 
+    periodo: str = "dia", 
+    tz: str = "America/El_Salvador", 
+    db: Session = Depends(get_db)
+):
+    local_tz = pytz.timezone(tz)
+    hoy = datetime.now(local_tz)
+
+    bodegas = db.query(Bodega).filter(
+        Bodega.empresa_id == empresa_id,
+        Bodega.activa == True
+    ).order_by(Bodega.es_principal.desc(), Bodega.nombre).all()
+
+    if periodo == "dia":
+        inicio = hoy.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif periodo == "semana":
+        inicio = (hoy - timedelta(days=hoy.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    elif periodo == "mes":
+        inicio = hoy.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    elif periodo == "anio":
+        inicio = hoy.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    else:
+        inicio = None
+
+    resultado = []
+    for b in bodegas:
+        q_ventas = db.query(
+            func.sum(Factura.total),
+            func.count(Factura.id)
+        ).filter(
+            Factura.empresa_id == empresa_id,
+            Factura.estado != "anulada",
+            Factura.bodega_salida_id == b.id
+        )
+        if inicio:
+            q_ventas = q_ventas.filter(Factura.fecha_emision >= inicio)
+
+        row = q_ventas.first()
+        total_ventas = row[0] or 0
+        cant_facturas = row[1] or 0
+
+        cajas = db.query(Caja).filter(Caja.bodega_id == b.id, Caja.activa == True).all()
+
+        resultado.append({
+            "bodega_id": b.id,
+            "bodega_nombre": b.nombre,
+            "codigo": b.codigo,
+            "es_principal": b.es_principal,
+            "ventas_totales": total_ventas,
+            "cantidad_ventas": cant_facturas,
+            "cajas_count": len(cajas)
+        })
+
+    return resultado
+
+
 @router.get("/kpis", response_model=Dict[str, Any])
-def obtener_kpis(empresa_id: str, periodo: str = "dia", tz: str = "America/El_Salvador", db: Session = Depends(get_db)):
+def obtener_kpis(
+    empresa_id: str, 
+    periodo: str = "dia", 
+    bodega_id: Optional[int] = None, 
+    caja_id: Optional[int] = None, 
+    tz: str = "America/El_Salvador", 
+    db: Session = Depends(get_db)
+):
     local_tz = pytz.timezone(tz)
     hoy = datetime.now(local_tz)
     
@@ -28,6 +112,8 @@ def obtener_kpis(empresa_id: str, periodo: str = "dia", tz: str = "America/El_Sa
         Kardex.empresa_id == empresa_id,
         Kardex.tipo_movimiento == "ENTRADA_COMPRA"
     )
+
+    query_ventas, query_compras = _aplicar_filtros_bodega_caja(query_ventas, query_compras, bodega_id, caja_id)
     
     if periodo == "dia":
         inicio = hoy.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -93,10 +179,18 @@ def obtener_kpis(empresa_id: str, periodo: str = "dia", tz: str = "America/El_Sa
         "productos_bajo_stock": productos_bajo_stock
     }
 
+
 @router.get("/grafico-ventas", response_model=list[Dict[str, Any]])
-def obtener_grafico_ventas(empresa_id: str, periodo: str = "anio", anio: int = None, tz: str = "America/El_Salvador", db: Session = Depends(get_db)):
+def obtener_grafico_ventas(
+    empresa_id: str, 
+    periodo: str = "anio", 
+    anio: int = None, 
+    bodega_id: Optional[int] = None, 
+    caja_id: Optional[int] = None, 
+    tz: str = "America/El_Salvador", 
+    db: Session = Depends(get_db)
+):
     local_tz = pytz.timezone(tz)
-    import calendar
     hoy = datetime.now(local_tz)
     if not anio:
         anio = hoy.year
@@ -109,6 +203,9 @@ def obtener_grafico_ventas(empresa_id: str, periodo: str = "anio", anio: int = N
         Kardex.empresa_id == empresa_id,
         Kardex.tipo_movimiento == "ENTRADA_COMPRA"
     )
+
+    query, query_compras = _aplicar_filtros_bodega_caja(query, query_compras, bodega_id, caja_id)
+
     resultado = []
 
     if periodo == "dia":
@@ -131,20 +228,16 @@ def obtener_grafico_ventas(empresa_id: str, periodo: str = "anio", anio: int = N
             c_fecha = c_fecha.astimezone(local_tz)
             if 0 <= c_fecha.hour <= 23: compras_por_hora[c_fecha.hour] += c_total
             
-        # Franja 1: 0 a 7 (12 AM - 7:59 AM)
         v_0_7 = sum(ventas_por_hora[h] for h in range(0, 8))
         c_0_7 = sum(compras_por_hora[h] for h in range(0, 8))
         resultado.append({"mes": "12 AM - 7:59 AM", "ventas": v_0_7, "compras": c_0_7})
         
-        # Franja 2: Hora en hora de 8 AM a 10 PM (horas 8 a 22)
         for h in range(8, 23):
             if h < 12: label = f"{h} AM"
             elif h == 12: label = "12 PM"
             else: label = f"{h-12} PM"
             resultado.append({"mes": label, "ventas": ventas_por_hora[h], "compras": compras_por_hora[h]})
             
-        # Franja 3: 11 PM a 11:59 PM (hora 23)
-        # Nota: La hora 22 cubre de 10:00 a 10:59, así que la última porción de la noche recae en la 23
         resultado.append({"mes": "11 PM - 11:59 PM", "ventas": ventas_por_hora[23], "compras": compras_por_hora[23]})
 
     elif periodo == "semana":
@@ -221,10 +314,18 @@ def obtener_grafico_ventas(empresa_id: str, periodo: str = "anio", anio: int = N
             
     return resultado
 
+
 @router.get("/top-productos", response_model=list[Dict[str, Any]])
-def obtener_top_productos(empresa_id: str, periodo: str = "anio", anio: int = None, tz: str = "America/El_Salvador", db: Session = Depends(get_db)):
+def obtener_top_productos(
+    empresa_id: str, 
+    periodo: str = "anio", 
+    anio: int = None, 
+    bodega_id: Optional[int] = None, 
+    caja_id: Optional[int] = None, 
+    tz: str = "America/El_Salvador", 
+    db: Session = Depends(get_db)
+):
     local_tz = pytz.timezone(tz)
-    import calendar
     hoy = datetime.now(local_tz)
     if not anio:
         anio = hoy.year
@@ -236,6 +337,17 @@ def obtener_top_productos(empresa_id: str, periodo: str = "anio", anio: int = No
     ).join(ItemFactura, ItemFactura.producto_id == Producto.id_producto) \
      .join(Factura, Factura.id == ItemFactura.factura_id) \
      .filter(Factura.empresa_id == empresa_id, Factura.estado != "anulada")
+
+    if caja_id:
+        query = query.join(
+            MovimientoCaja, (MovimientoCaja.referencia_id == Factura.id) & (MovimientoCaja.referencia_tipo == "factura")
+        ).join(
+            SesionCaja, MovimientoCaja.sesion_caja_id == SesionCaja.id
+        ).filter(SesionCaja.caja_id == caja_id)
+        if bodega_id:
+            query = query.filter(Factura.bodega_salida_id == bodega_id)
+    elif bodega_id:
+        query = query.filter(Factura.bodega_salida_id == bodega_id)
 
     if periodo == "dia":
         inicio = hoy.replace(hour=0, minute=0, second=0, microsecond=0)
