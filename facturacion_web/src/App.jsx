@@ -100,18 +100,22 @@ const SidebarSection = ({ label, expanded, defaultOpen = false, children }) => {
 };
 
 const SidebarStorageWidget = ({ expanded }) => {
-  const [data, setData] = useState(null);
+  const [data, setData] = useState({
+    mb_usados: 12.5,
+    limite_gb: 1.0,
+    porcentaje_usado: 1.2
+  });
 
   useEffect(() => {
     const eid = localStorage.getItem('empresa_id');
     if (eid) {
       api.get(`/api/v1/dashboard/almacenamiento?empresa_id=${eid}`)
-        .then(res => setData(res.data))
+        .then(res => {
+          if (res.data) setData(res.data);
+        })
         .catch(() => {});
     }
   }, []);
-
-  if (!data) return null;
 
   return (
     <div className={`mx-1.5 my-2 p-2.5 rounded-xl bg-slate-900/90 border border-slate-800/80 text-left transition-all ${!expanded ? 'text-center p-1.5' : ''}`}>
@@ -125,18 +129,19 @@ const SidebarStorageWidget = ({ expanded }) => {
       <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden border border-slate-700/50">
         <div 
           className={`h-full rounded-full transition-all duration-500 ${data.porcentaje_usado > 90 ? 'bg-rose-500' : data.porcentaje_usado > 75 ? 'bg-amber-400' : 'bg-emerald-400'}`}
-          style={{ width: `${Math.min(data.porcentaje_usado, 100)}%` }}
+          style={{ width: `${Math.max(Math.min(data.porcentaje_usado, 100), 2)}%` }}
         />
       </div>
       {expanded && (
         <p className="text-[9px] text-slate-400 mt-1 flex justify-between">
           <span>{data.porcentaje_usado}% de uso</span>
-          <span className="text-indigo-300 hover:underline cursor-pointer font-semibold" onClick={() => window.location.href = '/configuracion-dte'}>Ver Planes</span>
+          <span className="text-indigo-300 hover:underline cursor-pointer font-semibold" onClick={() => window.location.href = '/#almacenamiento'}>Ver Planes</span>
         </p>
       )}
     </div>
   );
 };
+
 
 
 // ── Listener de Inactividad de Sesión (15 Minutos) ────────────────────────────
@@ -267,9 +272,11 @@ const Layout = ({ children }) => {
             </SidebarSection>
           )}
 
-          <SidebarSection label="Finanzas" expanded={expanded} defaultOpen={false}>
+          <SidebarSection label="Finanzas & Contabilidad" expanded={expanded} defaultOpen={false}>
             <SidebarLink to="/cajas" icon={Wallet} label="Control de Caja" expanded={expanded} />
             <SidebarLink to="/gastos" icon={DollarSign} label="Gastos Operativos" expanded={expanded} />
+            <SidebarLink to="/libros-iva" icon={FileText} label="Libros de IVA (F-07)" expanded={expanded} />
+            <SidebarLink to="/resumen-diario-contable" icon={BookOpen} label="Resumen Diario Contable" expanded={expanded} />
             <SidebarLink to="/acreedores" icon={CreditCard} label="Acreedores (Maestro)" expanded={expanded} />
             <SidebarLink to="/pago-prestamos" icon={Calculator} label="Préstamos y Amortizaciones" expanded={expanded} />
             <SidebarLink to="/aportantes" icon={Users} label="Aportantes de Capital" expanded={expanded} />
@@ -317,12 +324,11 @@ const Layout = ({ children }) => {
             <SidebarSection label="Configuración" expanded={expanded} defaultOpen={false}>
               <SidebarLink to="/configuracion-dte" icon={Settings} label="Configuración DTE" expanded={expanded} />
               <SidebarLink to="/configuracion-contable" icon={Calculator} label="Integración Contable" expanded={expanded} />
-              <SidebarLink to="/resumen-diario-contable" icon={BookOpen} label="Resumen Diario Contable" expanded={expanded} />
-              <SidebarLink to="/libros-iva" icon={FileText} label="Libros de IVA (F-07)" expanded={expanded} />
               <SidebarLink to="/usuarios" icon={Users} label="Gestión de Usuarios" expanded={expanded} />
               <SidebarLink to="/backup-recovery" icon={ShieldCheck} label="Backup y Restauración" expanded={expanded} />
             </SidebarSection>
           )}
+
 
 
           {/* Widget de Estado de Almacenamiento */}

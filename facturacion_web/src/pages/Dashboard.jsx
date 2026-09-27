@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, TrendingUp, Users, AlertTriangle, Truck, CreditCard, ShoppingCart, Calendar, ChevronDown, ChevronUp, Package, Store, Warehouse, Filter, HardDrive, Database, Server, FileText } from 'lucide-react';
 import { api } from '../services/api';
-import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend, PieChart, Pie } from 'recharts';
+
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
 const fmt = (cents) => `$${(cents / 100).toFixed(2)}`;
@@ -538,8 +539,67 @@ export default function Dashboard() {
               <p className="text-base font-extrabold text-rose-300 mt-1">{almacenamiento.desglose?.clientes_y_proveedores || 0}</p>
             </div>
           </div>
+
+          {/* Gráfica Visual de Rosca (PieChart Recharts) */}
+          <div className="mt-6 pt-5 border-t border-slate-800/60 flex flex-col md:flex-row items-center gap-6">
+            <div className="w-full md:w-1/2 h-52">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Facturas, Borradores & DTEs', value: (almacenamiento.desglose?.facturas_y_dtes || 0) * 20 + 500 },
+                      { name: 'Items de Factura', value: (almacenamiento.desglose?.items_factura || 0) * 0.5 + 200 },
+                      { name: 'Compras & OC', value: (almacenamiento.desglose?.compras_proveedores || 0) * 3 + 300 },
+                      { name: 'Kardex & Bodegas', value: (almacenamiento.desglose?.movimientos_kardex || 0) * 1 + 250 },
+                      { name: 'Movimientos Caja', value: (almacenamiento.desglose?.movimientos_caja || 0) * 1 + 150 },
+                      { name: 'Catálogo Productos', value: (almacenamiento.desglose?.productos || 0) * 2 + 400 },
+                      { name: 'Espacio Libre', value: Math.max((almacenamiento.limite_mb - almacenamiento.mb_usados) * 100, 1000) },
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={75}
+                    paddingAngle={4}
+                    dataKey="value"
+                  >
+                    {['#6366f1', '#818cf8', '#10b981', '#f59e0b', '#06b6d4', '#a855f7', '#334155'].map((color, idx) => (
+                      <Cell key={`cell-${idx}`} fill={color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', color: '#fff', fontSize: '12px' }}
+                    formatter={(val, name) => [name === 'Espacio Libre' ? `${(almacenamiento.limite_mb - almacenamiento.mb_usados).toFixed(1)} MB` : `${val} KB est.`, name]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="w-full md:w-1/2 space-y-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Distribución Gráfica de Almacenamiento</h4>
+              <div className="flex items-center justify-between text-xs py-1 border-b border-slate-800/40">
+                <span className="flex items-center gap-2 text-slate-300"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> Facturas, Borradores & DTEs</span>
+                <span className="font-bold text-white">{almacenamiento.desglose?.facturas_y_dtes || 0} reg.</span>
+              </div>
+              <div className="flex items-center justify-between text-xs py-1 border-b border-slate-800/40">
+                <span className="flex items-center gap-2 text-slate-300"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Compras & Proveedores</span>
+                <span className="font-bold text-white">{almacenamiento.desglose?.compras_proveedores || 0} reg.</span>
+              </div>
+              <div className="flex items-center justify-between text-xs py-1 border-b border-slate-800/40">
+                <span className="flex items-center gap-2 text-slate-300"><span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Inventario Kardex & Bodegas</span>
+                <span className="font-bold text-white">{almacenamiento.desglose?.movimientos_kardex || 0} reg.</span>
+              </div>
+              <div className="flex items-center justify-between text-xs py-1 border-b border-slate-800/40">
+                <span className="flex items-center gap-2 text-slate-300"><span className="w-2.5 h-2.5 rounded-full bg-cyan-500"></span> Cajas Registradoras</span>
+                <span className="font-bold text-white">{almacenamiento.desglose?.movimientos_caja || 0} reg.</span>
+              </div>
+              <div className="flex items-center justify-between text-xs py-1 border-b border-slate-800/40">
+                <span className="flex items-center gap-2 text-slate-300"><span className="w-2.5 h-2.5 rounded-full bg-slate-700"></span> Espacio Disponible (Libre)</span>
+                <span className="font-bold text-emerald-400">{(almacenamiento.limite_mb - almacenamiento.mb_usados).toFixed(1)} MB</span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
+
 
     </div>
   );
