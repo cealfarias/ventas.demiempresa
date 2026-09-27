@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Warehouse, Plus, Edit2, CheckCircle2, XCircle, Star, MapPin, User, AlertTriangle, ArrowLeftRight, History, Trash2, Package, Check, Search, X, Clock, ShieldCheck, FileCheck } from 'lucide-react';
+import { Warehouse, Plus, Edit2, CheckCircle2, XCircle, Star, MapPin, User, AlertTriangle, ArrowLeftRight, History, Trash2, Package, Check, Search, X, Clock, ShieldCheck, FileCheck, Truck } from 'lucide-react';
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
@@ -29,10 +29,11 @@ export default function Bodegas() {
   const [procesandoTransferencia, setProcesandoTransferencia] = useState(false);
   const [cargandoStock, setCargandoStock] = useState(false);
 
-  // Estados para Historial y Confirmación de Recepción
+  // Estados para Productos en Tránsito y Historial
+  const [todasTransferencias, setTodasTransferencias] = useState([]);
+  const [transferenciasEnTransito, setTransferenciasEnTransito] = useState([]);
+  const [cargandoTransferencias, setCargandoTransferencias] = useState(true);
   const [modalHistorial, setModalHistorial] = useState(false);
-  const [historialTransferencias, setHistorialTransferencias] = useState([]);
-  const [cargandoHistorial, setCargandoHistorial] = useState(false);
 
   // Estados para Modal de Recepción (Confirmación Destino)
   const [modalRecepcion, setModalRecepcion] = useState(false);
@@ -45,14 +46,22 @@ export default function Bodegas() {
 
   const cargar = async () => {
     setCargando(true);
+    setCargandoTransferencias(true);
     setError('');
     try {
-      const res = await api.get(`/api/v1/almacen/bodegas/?empresa_id=${empresaId()}&solo_activas=false`);
-      setBodegas(res.data);
+      const [resBodegas, resTrans] = await Promise.all([
+        api.get(`/api/v1/almacen/bodegas/?empresa_id=${empresaId()}&solo_activas=false`),
+        api.get(`/api/v1/almacen/kardex/transferencias?empresa_id=${empresaId()}`)
+      ]);
+      setBodegas(resBodegas.data || []);
+      const todasTrans = resTrans.data || [];
+      setTodasTransferencias(todasTrans);
+      setTransferenciasEnTransito(todasTrans.filter(t => t.estado === 'en_transito'));
     } catch {
-      setError('No se pudieron cargar las bodegas.');
+      setError('No se pudieron cargar las bodegas o cargamentos.');
     } finally {
       setCargando(false);
+      setCargandoTransferencias(false);
     }
   };
 
@@ -128,17 +137,8 @@ export default function Bodegas() {
     setModalTransferencia(true);
   };
 
-  const abrirHistorial = async () => {
+  const abrirHistorial = () => {
     setModalHistorial(true);
-    setCargandoHistorial(true);
-    try {
-      const res = await api.get(`/api/v1/almacen/kardex/transferencias?empresa_id=${empresaId()}`);
-      setHistorialTransferencias(res.data || []);
-    } catch (e) {
-      console.error("Error al cargar historial de transferencias:", e);
-    } finally {
-      setCargandoHistorial(false);
-    }
   };
 
   const abrirModalRecepcion = (traspaso) => {
@@ -255,8 +255,7 @@ export default function Bodegas() {
       alert(res.data?.mensaje || "Recepción confirmada exitosamente.");
       setModalRecepcion(false);
       setTraspasoAConfirmar(null);
-      abrirHistorial(); // recargar historial
-      cargar(); // recargar existencias
+      cargar();
     } catch (e) {
       alert(e.response?.data?.detail || "Error al confirmar la recepción.");
     } finally {
@@ -300,7 +299,7 @@ export default function Bodegas() {
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <Warehouse className="w-6 h-6 text-indigo-600" /> Bodegas / Almacenes
           </h1>
-          <p className="text-sm text-slate-500 mt-1">Administra los puntos de almacenamiento y traspasos entre sucursales con firma de recepción</p>
+          <p className="text-sm text-slate-500 mt-1">Administra los puntos de almacenamiento y recepción de cargamentos entre sucursales</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
@@ -308,7 +307,7 @@ export default function Bodegas() {
             onClick={abrirHistorial}
             className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer"
           >
-            <History className="w-4 h-4 text-slate-600" /> Historial de Traspasos
+            <History className="w-4 h-4 text-slate-600" /> Bitácora Completa
           </button>
 
           <button
@@ -333,7 +332,107 @@ export default function Bodegas() {
         </div>
       )}
 
-      {/* Grid de bodegas */}
+      {/* Tabla Prominente de Productos y Cargamentos en Tránsito */}
+      <div className="bg-white rounded-2xl border border-amber-200 shadow-sm mb-8 overflow-hidden">
+        <div className="p-5 border-b border-amber-100 bg-amber-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <div>
+            <h2 className="text-lg font-bold text-amber-950 flex items-center gap-2">
+              <Truck className="w-5 h-5 text-amber-600" /> Cargamentos y Productos en Tránsito (Pendientes de Recepción)
+            </h2>
+            <p className="text-xs text-amber-700/80 mt-0.5">
+              Envíos en camino ordenados por fecha. El encargado de la bodega de destino debe presionar "Recibir Cargamento" para firmar y acreditar las existencias.
+            </p>
+          </div>
+          <span className="text-xs font-extrabold px-3 py-1 bg-amber-200/80 text-amber-900 rounded-full border border-amber-300 flex items-center gap-1.5 shrink-0">
+            <Clock className="w-3.5 h-3.5 text-amber-700" />
+            {transferenciasEnTransito.length} {transferenciasEnTransito.length === 1 ? 'cargamento pendiente' : 'cargamentos pendientes'}
+          </span>
+        </div>
+
+        {cargandoTransferencias ? (
+          <div className="p-8 text-center text-slate-400 text-sm">Cargando cargamentos en tránsito...</div>
+        ) : transferenciasEnTransito.length === 0 ? (
+          <div className="p-8 text-center text-slate-400">
+            <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-2 opacity-50" />
+            <p className="font-semibold text-slate-700 text-sm">No hay cargamentos pendientes de recepción</p>
+            <p className="text-xs text-slate-400 mt-1">Todos los traspasos de bodega han sido confirmados y recibidos a conformidad.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
+                  <th className="px-5 py-3">CÓDIGO / FECHA ENVÍO</th>
+                  <th className="px-5 py-3">ORIGEN ➔ DESTINO</th>
+                  <th className="px-5 py-3">DESPACHADO POR</th>
+                  <th className="px-5 py-3">PRODUCTOS EN EL TRASPASO</th>
+                  <th className="px-5 py-3 text-center">ACCIÓN DE RECEPCIÓN</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs">
+                {transferenciasEnTransito.map((t) => (
+                  <tr key={t.id} className="hover:bg-amber-50/20 transition-colors">
+                    {/* Código y Fecha */}
+                    <td className="px-5 py-4">
+                      <span className="font-black text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md text-xs">
+                        {t.numero}
+                      </span>
+                      <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1 font-medium">
+                        <Clock className="w-3 h-3 text-slate-400" />
+                        {new Date(t.fecha_envio).toLocaleString()}
+                      </p>
+                    </td>
+
+                    {/* Origen y Destino */}
+                    <td className="px-5 py-4">
+                      <div className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                        <span>{t.bodega_origen_nombre}</span>
+                        <span className="text-indigo-600 font-extrabold">➔</span>
+                        <span className="text-emerald-700 font-black bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                          {t.bodega_destino_nombre}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Despachado por */}
+                    <td className="px-5 py-4">
+                      <p className="font-bold text-slate-700">{t.nombre_envio || 'Responsable Origen'}</p>
+                      {t.notas_envio && <p className="text-[11px] text-slate-500 italic mt-0.5 max-w-xs truncate">"{t.notas_envio}"</p>}
+                    </td>
+
+                    {/* Productos */}
+                    <td className="px-5 py-4">
+                      <div className="flex flex-wrap gap-1 max-w-xs">
+                        {t.items.map((it) => (
+                          <span key={it.id} className="text-[11px] bg-slate-100 text-slate-700 font-semibold px-2 py-0.5 rounded-md border border-slate-200">
+                            {it.producto_nombre} <strong className="text-emerald-600 font-extrabold">(x{it.cantidad_enviada})</strong>
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+
+                    {/* Botón Acción de Recepción */}
+                    <td className="px-5 py-4 text-center">
+                      <button
+                        onClick={() => abrirModalRecepcion(t)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 mx-auto cursor-pointer transform hover:scale-105"
+                      >
+                        <FileCheck className="w-4 h-4" /> Recibir Cargamento
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Grid de Bodegas */}
+      <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+        <Warehouse className="w-5 h-5 text-indigo-600" /> Bodegas y Puntos de Almacenamiento
+      </h2>
+
       {cargando ? (
         <div className="text-center py-20 text-slate-400">Cargando bodegas...</div>
       ) : bodegas.length === 0 ? (
@@ -738,9 +837,9 @@ export default function Bodegas() {
             <div className="flex justify-between items-center mb-5">
               <div>
                 <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                  <History className="w-5 h-5 text-indigo-600" /> Bitácora de Traspasos e Inspección de Recepción
+                  <History className="w-5 h-5 text-indigo-600" /> Bitácora Completa de Traspasos Entre Bodegas
                 </h2>
-                <p className="text-xs text-slate-500">Cadena de custodia con firmas y sellos de fecha y hora</p>
+                <p className="text-xs text-slate-500">Histórico inalterable de envíos y recepciones confirmadas</p>
               </div>
               <button
                 onClick={() => setModalHistorial(false)}
@@ -750,16 +849,14 @@ export default function Bodegas() {
               </button>
             </div>
 
-            {cargandoHistorial ? (
-              <div className="text-center py-12 text-slate-400">Cargando historial...</div>
-            ) : historialTransferencias.length === 0 ? (
+            {todasTransferencias.length === 0 ? (
               <div className="text-center py-12 text-slate-400">
                 <History className="w-10 h-10 mx-auto mb-2 opacity-30" />
                 <p className="font-medium">No se han registrado transferencias aún.</p>
               </div>
             ) : (
               <div className="space-y-4">
-                {historialTransferencias.map((h) => (
+                {todasTransferencias.map((h) => (
                   <div key={h.id} className="border border-slate-200 rounded-xl p-5 bg-slate-50/50 shadow-xs">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3 pb-3 border-b border-slate-200">
                       <div>
@@ -817,10 +914,10 @@ export default function Bodegas() {
                           <div>
                             <p className="text-xs text-amber-800 font-medium mb-2">Pendiente de confirmación por el responsable de la bodega de destino.</p>
                             <button
-                              onClick={() => abrirModalRecepcion(h)}
+                              onClick={() => { setModalHistorial(false); abrirModalRecepcion(h); }}
                               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
                             >
-                              <CheckCircle2 className="w-4 h-4" /> Confirmar Recepción de Mercadería
+                              <CheckCircle2 className="w-4 h-4" /> Recibir Cargamento
                             </button>
                           </div>
                         )}
