@@ -5,57 +5,54 @@
 
 ---
 
-## 1. TIPOS DE LICENCIAS Y PLANES DE SUSCRIPCIÓN
+## 1. MARCO DE REFERENCIA Y ALINEACIÓN CON EL MINISTERIO DE HACIENDA DE EL SALVADOR
 
-DemiEmpresa ofrece diferentes modalidades de licenciamiento diseñadas para adaptarse a las distintas etapas de crecimiento de las empresas:
+Conforme a las disposiciones normativas de la **Dirección General de Impuestos Internos (DGII) del Ministerio de Hacienda de El Salvador** y las políticas de la plataforma oficial de facturación electrónica ([factura.gob.sv](https://factura.gob.sv)), el Estado salvadoreño provee un *Facturador Gratuito* destinado a microcontribuyentes cuyo volumen operativo no exceda los **500 Documentos Tributarios Electrónicos (DTE) al mes**.
 
-### 1.1. Cuenta Freemium (Gratuita Permanente)
-* **Objetivo:** Permitir a microemprendedores y pequeños comercios emitir comprobantes y gestionar inventario básico de forma continua sin costo.
-* **Almacenamiento Base Ocupado:** Hasta **250 MB** de espacio total en servidor.
-* **Capacidad Estimada:** ~10,000 comprobantes electrónicos / DTE.
-* **Restricciones:** 1 usuario, 1 bodega y 1 caja. Compresión automática de imágenes adjuntas (máx. 100 KB por archivo).
-
-### 1.2. Período de Prueba (Trial Días Gratis - 30 Días)
-* **Objetivo:** Toda cuenta nueva registrada dispondrá automáticamente de **30 días de prueba gratuita** con acceso completo a las funciones de la Licencia Pro.
-* **Almacenamiento Asignado durante la Prueba:** **2.0 GB (2,048 MB)**.
-* **Vencimiento de los Días Gratis:** Al finalizar los 30 días, si la empresa no selecciona un plan de pago (Básico, Pro o Enterprise), la cuenta migrará automáticamente a la modalidad **Freemium** (250 MB). Si el almacenamiento consumido durante la prueba supera los 250 MB, la cuenta entrará en *Modo Consulta y Solo Lectura* hasta liberar espacio o adquirir un plan comercial.
-
-### 1.3. Licencia Básico / Emprendedor
-* **Precio:** Suscripción Mensual o Anual.
-* **Almacenamiento Incluido:** **1.0 GB (1,024 MB)**.
-* **Capacidad Estimada:** ~40,000 DTEs e histórico de transacciones.
-* **Incluye:** Facturación DTE El Salvador, Cajas, Clientes, Kardex e Inventario general.
-
-### 1.4. Licencia Pro / PyME
-* **Precio:** Suscripción Mensual o Anual.
-* **Almacenamiento Incluido:** **5.0 GB (5,120 MB)**.
-* **Capacidad Estimada:** ~200,000 DTEs, múltiples bodegas y sucursales.
-* **Incluye:** Transferencia entre bodegas con firma electrónica, contabilidad integrada, planillas, cuentas por cobrar/pagar y soporte prioritario.
-
-### 1.5. Licencia Enterprise / Corporativo
-* **Almacenamiento Incluido:** Desde **20.0 GB (20,480 MB)** en adelante.
-* **Incluye:** Servidores o esquemas de base de datos dedicados, límites personalizados y auditoría extendida.
+Tomando dicho parámetro oficial instituido por el Ministerio de Hacienda como marco de referencia para el país, **DemiEmpresa** estructura sus licencias para complementar y potenciar la gestión empresarial:
 
 ---
 
-## 2. POLÍTICA DE CAPACIDAD DE ALMACENAMIENTO Y EXPANSION DE ESPACIO
+## 2. TIPOS DE LICENCIAS Y PLANES DE SUSCRIPCIÓN
 
-### 2.1. Cómputo del Almacenamiento Consumido
-El almacenamiento total consumido por la EMPRESA incluye:
-1. Registros en Base de Datos (Facturas, Detalles de Facturas, DTEs en JSON firmado por el Ministerio de Hacienda, Kardex, Proveedores, Clientes y Asientos Contables).
-2. Archivos Digitales Adjuntos (Logotipos de empresa, firmas digitales de recepción/despacho en bodegas, documentos de contingencia y fotos de productos).
+### 2.1. Cuenta Freemium (Gratuita Permanente - Hasta 500 DTEs/mes)
+* **Fundamento Oficial:** Basada en el parámetro nacional de 500 DTEs/mes establecido por el Ministerio de Hacienda para microempresas.
+* **Límite de Emisión:** Hasta **500 DTEs al mes** de forma totalmente gratuita.
+* **Almacenamiento Base Incluido:** Hasta **250 MB** de almacenamiento total en servidor.
+* **Funcionalidades:** Facturación electrónica directa con firma DTE, catálogo básico y 1 punto de venta. Compresión de adjuntos (máx. 100 KB por archivo).
 
-### 2.2. Niveles de Alerta y Notificación de Espacio
-El sistema emitirá notificaciones automáticas en el panel de administración según el uso del espacio contratado:
-* **75% de Uso (Informativo):** Indicador visual en el menú de configuración.
-* **90% de Uso (Advertencia):** Banner de alerta sugiriendo la ampliación de espacio o la actualización de plan.
-* **98% de Uso (Crítico):** Notificación prioritaria con acceso a compra directa de almacenamiento extra.
-* **100% de Uso (Límite Ocupado):** Se protegerá la integridad de los datos existentes. El sistema no borrará ningún registro histórico, manteniendo activo el acceso a consultas, reportes, descargas y facturación esencial, pero restringiendo la subida de archivos adjuntos pesados y cargas masivas hasta ampliar la cuota.
+### 2.2. Período de Prueba (Trial 30 Días Gratis - Cobertura Pro)
+* **Objetivo:** Toda empresa registrada obtiene **30 días de prueba gratuita** con acceso ilimitado a las funciones avanzadas de la Licencia Pro (múltiples bodegas, cajas y transferencias).
+* **Almacenamiento en Prueba:** **2.0 GB (2,048 MB)**.
+* **Finalización de la Prueba:** Al concluir los 30 días, si la empresa emite menos de 500 DTEs/mes y su almacenamiento consumido es menor a 250 MB, podrá continuar operando bajo la modalidad **Freemium**. Si excede los 500 DTEs/mes o requiere funciones multilimite/multibodega, elegirá el plan comercial correspondiente.
 
-### 2.3. Paquetes de Expansión de Almacenamiento Adicional (Add-ons)
-Si una empresa requiere más espacio dentro de su misma licencia, podrá contratar **Bloques Adicionales de Almacenamiento**:
+### 2.3. Licencia Básico / Emprendedor (Hasta 2,000 DTEs/mes)
+* **Público Objetivo:** Empresas que superan la barrera de 500 DTEs/mes del sistema público o requieren control de inventario y caja registradora.
+* **Límite de Emisión:** Hasta **2,000 DTEs al mes**.
+* **Almacenamiento Incluido:** **1.0 GB (1,024 MB)** (~40,000 DTEs acumulados).
+* **Incluye:** Facturación DTE El Salvador, Cajas registradoras, Clientes, Control de Kardex e Inventario.
 
-| Paquete Extra | Facturación Mensual | Facturación Anual (Ahorra 17%) |
+### 2.4. Licencia Pro / PyME (Ilimitado / Hasta 10,000 DTEs/mes)
+* **Almacenamiento Incluido:** **5.0 GB (5,120 MB)** (~200,000 DTEs acumulados).
+* **Incluye:** Múltiples bodegas y almacenes, transferencias de productos en tránsito con firma de despacho y recepción, contabilidad integrada, planillas, cuentas por cobrar/pagar y soporte prioritario.
+
+### 2.5. Licencia Enterprise / Corporativo (Emisión Masiva)
+* **Almacenamiento Incluido:** Desde **20.0 GB (20,480 MB)** en adelante.
+* **Incluye:** Infraestructura de servidor y base de datos dedicada, volúmenes de facturación a medida y auditoría extendida.
+
+---
+
+## 3. POLÍTICA DE CAPACIDAD DE ALMACENAMIENTO Y EXPANSION DE ESPACIO
+
+### 3.1. Cómputo del Almacenamiento Consumido
+El almacenamiento total incluye:
+1. Base de Datos (Comprobantes DTE en formato JSON firmado por el Ministerio de Hacienda, Kardex, Clientes, Proveedores y Libros de IVA).
+2. Archivos Adjuntos (Firmas electrónicas de despacho/recepción en bodegas, logotipos y fotografías de catálogo).
+
+### 3.2. Umbrales de Notificación y Almacenamiento Extra (Add-ons)
+Al alcanzar el 75%, 90% y 98% del espacio asignado, el sistema notificará al administrador. Al llegar al 100%, se preservan todos los datos e históricos para consulta y descarga, requiriendo un paquete de expansión para cargas masivas adicionales:
+
+| Paquete Extra | Facturación Mensual | Facturación Anual (Ahorro 17%) |
 | :--- | :---: | :---: |
 | **+ 5 GB Extra** | **$ 3.99 USD / mes** | **$ 39.99 USD / año** |
 | **+ 15 GB Extra** | **$ 9.99 USD / mes** | **$ 99.99 USD / año** |
@@ -63,8 +60,7 @@ Si una empresa requiere más espacio dentro de su misma licencia, podrá contrat
 
 ---
 
-## 3. CONSERVACIÓN Y PROPIEDAD DE LOS DATOS
+## 4. CONSERVACIÓN Y PROPIEDAD DE LOS DATOS
 
-* **3.1. Propiedad de la Información:** El CLIENTE es el único propietario de los datos tributarios, comerciales e inventarios ingresados en la plataforma.
-* **3.2. Resguardo Legal Fiscal:** DemiEmpresa garantiza el resguardo seguro y la disponibilidad de consulta de los Documentos Tributarios Electrónicos (DTE) conforme a las exigencias normativas del Ministerio de Hacienda de El Salvador.
-* **3.3. Exportación y Descargas:** El CLIENTE podrá exportar sus respaldos de información, catálogo de productos, clientes y libros de IVA en formatos estándar (Excel/JSON/PDF) en cualquier momento.
+* **Propiedad de los Datos:** El CLIENTE es propietario exclusivo de sus registros comerciales e inventarios.
+* **Cumplimiento Tributario:** DemiEmpresa garantiza el resguardo seguro y la disponibilidad de los DTEs conforme a los requerimientos de la ley tributaria de El Salvador.
