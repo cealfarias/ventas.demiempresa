@@ -25,6 +25,7 @@ export default function LibrosIVAPage() {
   const [mes, setMes] = useState(currentDate.getMonth() + 1);
   const [anio, setAnio] = useState(currentDate.getFullYear());
   const [activeTab, setActiveTab] = useState('f07'); // 'f07', 'cf', 'ccf', 'compras'
+  const [soloDte, setSoloDte] = useState(true); // true = Solo DTEs oficiales ante MH | false = Todas las operaciones
   
   const [loading, setLoading] = useState(false);
   const [dataCF, setDataCF] = useState(null);
@@ -40,10 +41,10 @@ export default function LibrosIVAPage() {
     setError(null);
     try {
       const [resCF, resCCF, resCompras, resF07] = await Promise.all([
-        api.get(`/api/v1/libros-iva/ventas-consumidor-final?empresa_id=${empresaId}&anio=${anio}&mes=${mes}`),
-        api.get(`/api/v1/libros-iva/ventas-contribuyentes?empresa_id=${empresaId}&anio=${anio}&mes=${mes}`),
-        api.get(`/api/v1/libros-iva/compras?empresa_id=${empresaId}&anio=${anio}&mes=${mes}`),
-        api.get(`/api/v1/libros-iva/resumen-f07?empresa_id=${empresaId}&anio=${anio}&mes=${mes}`)
+        api.get(`/api/v1/libros-iva/ventas-consumidor-final?empresa_id=${empresaId}&anio=${anio}&mes=${mes}&solo_dte=${soloDte}`),
+        api.get(`/api/v1/libros-iva/ventas-contribuyentes?empresa_id=${empresaId}&anio=${anio}&mes=${mes}&solo_dte=${soloDte}`),
+        api.get(`/api/v1/libros-iva/compras?empresa_id=${empresaId}&anio=${anio}&mes=${mes}&solo_dte=${soloDte}`),
+        api.get(`/api/v1/libros-iva/resumen-f07?empresa_id=${empresaId}&anio=${anio}&mes=${mes}&solo_dte=${soloDte}`)
       ]);
 
       setDataCF(resCF.data);
@@ -60,7 +61,8 @@ export default function LibrosIVAPage() {
 
   useEffect(() => {
     cargarDatos();
-  }, [mes, anio]);
+  }, [mes, anio, soloDte]);
+
 
   const handlePrint = () => {
     window.print();
@@ -187,6 +189,77 @@ export default function LibrosIVAPage() {
           </button>
         </div>
       </div>
+
+      {/* Filtro Mutuamente Excluyente: Solo DTEs vs Todas las Operaciones */}
+      <div className="bg-slate-900 text-white rounded-2xl p-4 shadow-lg border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 print:hidden">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-400 shrink-0">
+            <ShieldCheck className="w-5 h-5 text-amber-400" />
+          </div>
+          <div>
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+              Filtro de Validez Tributaria (Ministerio de Hacienda)
+              {soloDte ? (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  SOLO DTEs OFICIALES (Declaración F-07)
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  TODAS LAS OPERACIONES (Interno + Borradores)
+                </span>
+              )}
+            </h4>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {soloDte 
+                ? "Resumen legal para el F-07: Incluye únicamente comprobantes DTE procesados y autorizados por el MH."
+                : "Resumen gerencial: Incluye documentos internos, borradores y operaciones aún no transmitidas al MH."
+              }
+            </p>
+          </div>
+        </div>
+
+        {/* Radio Option Buttons Mutuamente Excluyentes */}
+        <div className="inline-flex p-1 rounded-xl bg-slate-950 border border-slate-800 shrink-0 self-stretch md:self-auto">
+          <label 
+            onClick={() => setSoloDte(true)}
+            className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+              soloDte 
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-900/40' 
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <input 
+              type="radio" 
+              name="filtro_dte_oficial" 
+              checked={soloDte} 
+              onChange={() => setSoloDte(true)}
+              className="hidden"
+            />
+            <span className={`w-2.5 h-2.5 rounded-full ${soloDte ? 'bg-amber-300 animate-pulse' : 'bg-slate-600'}`}></span>
+            <span>SOLO DTE</span>
+          </label>
+
+          <label 
+            onClick={() => setSoloDte(false)}
+            className={`flex-1 md:flex-initial flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+              !soloDte 
+                ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md shadow-amber-900/40' 
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <input 
+              type="radio" 
+              name="filtro_dte_oficial" 
+              checked={!soloDte} 
+              onChange={() => setSoloDte(false)}
+              className="hidden"
+            />
+            <span className={`w-2.5 h-2.5 rounded-full ${!soloDte ? 'bg-amber-300 animate-pulse' : 'bg-slate-600'}`}></span>
+            <span>Todas las Operaciones</span>
+          </label>
+        </div>
+      </div>
+
 
       {/* Titular en caso de Impresión */}
       <div className="hidden print:block text-center border-b pb-4 mb-4">

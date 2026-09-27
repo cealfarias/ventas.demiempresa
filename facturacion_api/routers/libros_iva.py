@@ -15,20 +15,30 @@ def libro_ventas_consumidor_final(
     empresa_id: str,
     anio: int = Query(..., description="Año a consultar, ej: 2026"),
     mes: int = Query(..., description="Mes a consultar (1-12)"),
+    solo_dte: bool = Query(True, description="Si es True, incluye SOLO DTEs oficiales transmitidos al MH. Si es False, incluye todas las operaciones"),
     db: Session = Depends(get_db)
 ):
     """
     Genera el Libro de Ventas a Consumidor Final (Art. 141 C.T. El Salvador).
     Resumen consolidado diario de facturas/tickets de consumidor final.
     """
-    # Buscar facturas consumidor final emitidas (no anuladas) en el mes/año
-    facturas = db.query(Factura).filter(
+    query = db.query(Factura).filter(
         Factura.empresa_id == empresa_id,
         extract('year', Factura.fecha_emision) == anio,
         extract('month', Factura.fecha_emision) == mes,
         Factura.tipo_doc.in_(["FACTURA", "CONSUMIDOR_FINAL"]),
         Factura.estado != "anulada"
-    ).order_by(Factura.fecha_emision.asc(), Factura.id.asc()).all()
+    )
+
+    if solo_dte:
+        # Solo DTEs legalmente procesados/transmitidos ante el MH
+        query = query.filter(
+            (Factura.sello_recepcion != None) | 
+            (Factura.codigo_generacion != None) | 
+            (Factura.estado.in_(["procesado", "firmado"]))
+        )
+
+    facturas = query.order_by(Factura.fecha_emision.asc(), Factura.id.asc()).all()
 
     # Agrupar por día
     dias_map = {}
@@ -93,6 +103,7 @@ def libro_ventas_consumidor_final(
     return {
         "empresa_id": empresa_id,
         "tipo_libro": "VENTAS_CONSUMIDOR_FINAL",
+        "filtro_aplicado": "SOLO_DTE" if solo_dte else "TODAS_LAS_OPERACIONES",
         "anio": anio,
         "mes": mes,
         "nombre_mes": calendar.month_name[mes],
@@ -114,19 +125,29 @@ def libro_ventas_contribuyentes(
     empresa_id: str,
     anio: int = Query(..., description="Año a consultar, ej: 2026"),
     mes: int = Query(..., description="Mes a consultar (1-12)"),
+    solo_dte: bool = Query(True, description="Si es True, incluye SOLO DTEs oficiales transmitidos al MH. Si es False, incluye todas las operaciones"),
     db: Session = Depends(get_db)
 ):
     """
     Genera el Libro de Ventas a Contribuyentes / Crédito Fiscal (CCF).
     Detalla uno a uno los Comprobantes de Crédito Fiscal emitidos en el mes.
     """
-    facturas_ccf = db.query(Factura).filter(
+    query = db.query(Factura).filter(
         Factura.empresa_id == empresa_id,
         extract('year', Factura.fecha_emision) == anio,
         extract('month', Factura.fecha_emision) == mes,
         Factura.tipo_doc.in_(["CCF", "EXPORTACION"]),
         Factura.estado != "anulada"
-    ).order_by(Factura.fecha_emision.asc(), Factura.id.asc()).all()
+    )
+
+    if solo_dte:
+        query = query.filter(
+            (Factura.sello_recepcion != None) | 
+            (Factura.codigo_generacion != None) | 
+            (Factura.estado.in_(["procesado", "firmado"]))
+        )
+
+    facturas_ccf = query.order_by(Factura.fecha_emision.asc(), Factura.id.asc()).all()
 
     lineas_libro = []
     num_item = 1
@@ -175,6 +196,7 @@ def libro_ventas_contribuyentes(
     return {
         "empresa_id": empresa_id,
         "tipo_libro": "VENTAS_CONTRIBUYENTES_CCF",
+        "filtro_aplicado": "SOLO_DTE" if solo_dte else "TODAS_LAS_OPERACIONES",
         "anio": anio,
         "mes": mes,
         "nombre_mes": calendar.month_name[mes],
@@ -196,18 +218,28 @@ def libro_compras(
     empresa_id: str,
     anio: int = Query(..., description="Año a consultar, ej: 2026"),
     mes: int = Query(..., description="Mes a consultar (1-12)"),
+    solo_dte: bool = Query(True, description="Si es True, incluye SOLO DTEs oficiales de compra. Si es False, incluye todas las operaciones"),
     db: Session = Depends(get_db)
 ):
     """
     Genera el Libro de Compras (Art. 141 C.T. El Salvador).
     Detalla los Comprobantes de Crédito Fiscal de Compras recibidos de Proveedores.
     """
-    ordenes_compra = db.query(OrdenCompra).filter(
+    query = db.query(OrdenCompra).filter(
         OrdenCompra.empresa_id == empresa_id,
         extract('year', OrdenCompra.fecha_emision) == anio,
         extract('month', OrdenCompra.fecha_emision) == mes,
         OrdenCompra.estado.in_(["recibida", "recibida_parcial", "enviada", "borrador"])
-    ).order_by(OrdenCompra.fecha_emision.asc(), OrdenCompra.id.asc()).all()
+    )
+
+    if solo_dte:
+        query = query.filter(
+            (OrdenCompra.codigo_generacion_proveedor != None) | 
+            (OrdenCompra.sello_recepcion_proveedor != None) |
+            (OrdenCompra.tipo_doc == "CCF")
+        )
+
+    ordenes_compra = query.order_by(OrdenCompra.fecha_emision.asc(), OrdenCompra.id.asc()).all()
 
     lineas_libro = []
     num_item = 1
@@ -256,6 +288,7 @@ def libro_compras(
     return {
         "empresa_id": empresa_id,
         "tipo_libro": "LIBRO_COMPRAS",
+        "filtro_aplicado": "SOLO_DTE" if solo_dte else "TODAS_LAS_OPERACIONES",
         "anio": anio,
         "mes": mes,
         "nombre_mes": calendar.month_name[mes],
@@ -276,15 +309,16 @@ def resumen_declaracion_f07(
     empresa_id: str,
     anio: int = Query(..., description="Año a consultar, ej: 2026"),
     mes: int = Query(..., description="Mes a consultar (1-12)"),
+    solo_dte: bool = Query(True, description="Si es True, incluye SOLO DTEs oficiales. Si es False, incluye todas las operaciones"),
     db: Session = Depends(get_db)
 ):
     """
     Genera el Cuadro Resumen Estimado para la Declaración Mensual de IVA F-07 (Ministerio de Hacienda).
     Calcula Débito Fiscal Total vs Crédito Fiscal Total, Impuesto Neto a Pagar / Crédito a Favor y Pago a Cuenta (1.75%).
     """
-    cf_data = libro_ventas_consumidor_final(empresa_id, anio, mes, db)
-    ccf_data = libro_ventas_contribuyentes(empresa_id, anio, mes, db)
-    compras_data = libro_compras(empresa_id, anio, mes, db)
+    cf_data = libro_ventas_consumidor_final(empresa_id, anio, mes, solo_dte, db)
+    ccf_data = libro_ventas_contribuyentes(empresa_id, anio, mes, solo_dte, db)
+    compras_data = libro_compras(empresa_id, anio, mes, solo_dte, db)
 
     debito_cf = cf_data["resumen_totales"]["total_debito_fiscal"]
     debito_ccf = ccf_data["resumen_totales"]["total_debito_fiscal"]
@@ -309,6 +343,7 @@ def resumen_declaracion_f07(
         "empresa_id": empresa_id,
         "anio": anio,
         "mes": mes,
+        "filtro_aplicado": "SOLO_DTE" if solo_dte else "TODAS_LAS_OPERACIONES",
         "nombre_mes": calendar.month_name[mes],
         "debito_fiscal": {
             "ventas_consumidor_final": debito_cf,
@@ -331,3 +366,4 @@ def resumen_declaracion_f07(
         },
         "total_estimado_declaracion_f07": total_impuestos_a_pagar_f07
     }
+
