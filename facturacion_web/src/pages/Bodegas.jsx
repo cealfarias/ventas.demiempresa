@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Warehouse, Plus, Edit2, CheckCircle2, XCircle, Star, MapPin, User, AlertTriangle, ArrowLeftRight, History, Trash2, Package, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Warehouse, Plus, Edit2, CheckCircle2, XCircle, Star, MapPin, User, AlertTriangle, ArrowLeftRight, History, Trash2, Package, Check, Search, X } from 'lucide-react';
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
@@ -20,6 +20,9 @@ export default function Bodegas() {
   const [notasTransferencia, setNotasTransferencia] = useState('');
   const [existenciasOrigen, setExistenciasOrigen] = useState([]);
   const [productoSeleccionado, setProductoSeleccionado] = useState('');
+  const [productoSeleccionadoObj, setProductoSeleccionadoObj] = useState(null);
+  const [busquedaProductoText, setBusquedaProductoText] = useState('');
+  const [menuProductoAbierto, setMenuProductoAbierto] = useState(false);
   const [cantidadTransferir, setCantidadTransferir] = useState('');
   const [itemsTransferencia, setItemsTransferencia] = useState([]);
   const [procesandoTransferencia, setProcesandoTransferencia] = useState(false);
@@ -29,6 +32,8 @@ export default function Bodegas() {
   const [modalHistorial, setModalHistorial] = useState(false);
   const [historialTransferencias, setHistorialTransferencias] = useState([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(false);
+
+  const cantidadInputRef = useRef(null);
 
   const cargar = async () => {
     setCargando(true);
@@ -50,6 +55,9 @@ export default function Bodegas() {
     if (!bodegaOrigen) {
       setExistenciasOrigen([]);
       setProductoSeleccionado('');
+      setProductoSeleccionadoObj(null);
+      setBusquedaProductoText('');
+      setMenuProductoAbierto(false);
       return;
     }
     const cargarStockOrigen = async () => {
@@ -65,6 +73,26 @@ export default function Bodegas() {
     };
     cargarStockOrigen();
   }, [bodegaOrigen]);
+
+  // Filtrado para Búsqueda Inteligente de productos
+  const existenciasFiltradas = existenciasOrigen.filter(e => {
+    if (!busquedaProductoText.trim()) return true;
+    const term = busquedaProductoText.toLowerCase();
+    return (
+      (e.producto_nombre && e.producto_nombre.toLowerCase().includes(term)) ||
+      (e.producto_codigo && e.producto_codigo.toLowerCase().includes(term))
+    );
+  });
+
+  const seleccionarProductoInteligente = (prodObj) => {
+    setProductoSeleccionado(prodObj.producto_id.toString());
+    setProductoSeleccionadoObj(prodObj);
+    setBusquedaProductoText(`[${prodObj.producto_codigo}] ${prodObj.producto_nombre}`);
+    setMenuProductoAbierto(false);
+    if (cantidadInputRef.current) {
+      cantidadInputRef.current.focus();
+    }
+  };
 
   const abrirNueva = () => {
     setBodegaEditando(null);
@@ -84,7 +112,10 @@ export default function Bodegas() {
     setNotasTransferencia('');
     setItemsTransferencia([]);
     setProductoSeleccionado('');
+    setProductoSeleccionadoObj(null);
+    setBusquedaProductoText('');
     setCantidadTransferir('');
+    setMenuProductoAbierto(false);
     setModalTransferencia(true);
   };
 
@@ -138,6 +169,8 @@ export default function Bodegas() {
     }
 
     setProductoSeleccionado('');
+    setProductoSeleccionadoObj(null);
+    setBusquedaProductoText('');
     setCantidadTransferir('');
   };
 
@@ -372,14 +405,14 @@ export default function Bodegas() {
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setModalAbierto(false)}
-                className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 text-sm font-medium transition-colors"
+                className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 text-sm font-medium transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 onClick={guardar}
                 disabled={guardando || !form.codigo.trim() || !form.nombre.trim()}
-                className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {guardando ? 'Guardando...' : (bodegaEditando ? 'Guardar Cambios' : 'Crear Bodega')}
               </button>
@@ -445,52 +478,126 @@ export default function Bodegas() {
                 />
               </div>
 
-              {/* Selector de Producto a añadir */}
-              <div className="border border-indigo-100 bg-indigo-50/30 p-4 rounded-xl">
-                <h3 className="text-xs font-bold text-indigo-900 uppercase tracking-wider mb-3">Agregar Producto a Transferir</h3>
+              {/* Selector Inteligente de Producto a añadir */}
+              <div className="border border-indigo-100 bg-indigo-50/30 p-4 rounded-xl relative">
+                <h3 className="text-xs font-bold text-indigo-900 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <Search className="w-3.5 h-3.5 text-indigo-600" /> Agregar Producto a Transferir
+                </h3>
                 
                 {!bodegaOrigen ? (
                   <p className="text-xs text-amber-600 font-medium">Por favor seleccione primero la Bodega de Origen para ver los productos disponibles.</p>
                 ) : cargandoStock ? (
-                  <p className="text-xs text-slate-400">Cargando existencias de origen...</p>
+                  <p className="text-xs text-slate-400">Cargando existencias de la bodega de origen...</p>
                 ) : (
-                  <div className="flex flex-col sm:flex-row gap-3 items-end">
-                    <div className="flex-1">
-                      <label className="text-[11px] font-bold text-slate-500 block mb-1">Producto Disponible</label>
-                      <select
-                        value={productoSeleccionado}
-                        onChange={e => setProductoSeleccionado(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      >
-                        <option value="">Seleccionar Producto...</option>
-                        {existenciasOrigen.map(e => (
-                          <option key={e.producto_id} value={e.producto_id}>
-                            [{e.producto_codigo}] {e.producto_nombre} (Stock: {e.stock_actual})
-                          </option>
-                        ))}
-                      </select>
+                  <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+                    {/* Búsqueda Inteligente Autocomplete */}
+                    <div className="flex-1 w-full relative">
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                        Búsqueda Inteligente de Producto
+                      </label>
+                      <div className="relative">
+                        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <input
+                          type="text"
+                          value={busquedaProductoText}
+                          onChange={(e) => {
+                            setBusquedaProductoText(e.target.value);
+                            setMenuProductoAbierto(true);
+                            if (!e.target.value) {
+                              setProductoSeleccionado('');
+                              setProductoSeleccionadoObj(null);
+                            }
+                          }}
+                          onFocus={() => setMenuProductoAbierto(true)}
+                          placeholder="Escriba nombre o código del producto..."
+                          className="w-full pl-9 pr-8 py-2 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-slate-800"
+                        />
+                        {busquedaProductoText && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBusquedaProductoText('');
+                              setProductoSeleccionado('');
+                              setProductoSeleccionadoObj(null);
+                              setMenuProductoAbierto(false);
+                            }}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Dropdown flotante con resultados filtrados */}
+                      {menuProductoAbierto && (
+                        <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-56 overflow-y-auto divide-y divide-slate-100">
+                          {existenciasFiltradas.length === 0 ? (
+                            <div className="p-3 text-xs text-slate-400 text-center">
+                              No se encontraron productos coincidentes en la bodega de origen
+                            </div>
+                          ) : (
+                            existenciasFiltradas.map((e) => {
+                              const esSel = productoSeleccionado.toString() === e.producto_id.toString();
+                              return (
+                                <div
+                                  key={e.producto_id}
+                                  onClick={() => seleccionarProductoInteligente(e)}
+                                  className={`p-2.5 hover:bg-indigo-50/70 cursor-pointer flex justify-between items-center transition-colors ${
+                                    esSel ? 'bg-indigo-50 text-indigo-900 font-bold' : ''
+                                  }`}
+                                >
+                                  <div>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-[10px] font-extrabold px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-200">
+                                        {e.producto_codigo}
+                                      </span>
+                                      <span className="text-sm font-semibold text-slate-800">{e.producto_nombre}</span>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-xs font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                      Stock: {e.stock_actual}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      )}
                     </div>
 
+                    {/* Input de Cantidad */}
                     <div className="w-full sm:w-32">
-                      <label className="text-[11px] font-bold text-slate-500 block mb-1">Cantidad</label>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Cantidad</label>
                       <input
+                        ref={cantidadInputRef}
                         type="number"
                         min="0.01"
                         step="any"
                         value={cantidadTransferir}
                         onChange={e => setCantidadTransferir(e.target.value)}
                         placeholder="0.00"
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
 
+                    {/* Botón Agregar */}
                     <button
                       type="button"
                       onClick={agregarItemTransferencia}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-sm font-semibold rounded-xl transition-all shadow-sm shrink-0 cursor-pointer"
+                      className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-sm font-semibold rounded-xl transition-all shadow-sm shrink-0 cursor-pointer flex items-center justify-center gap-1"
                     >
-                      + Agregar
+                      <Plus className="w-4 h-4" /> Agregar
                     </button>
+                  </div>
+                )}
+
+                {/* Badge con el stock del producto seleccionado */}
+                {productoSeleccionadoObj && (
+                  <div className="mt-2.5 flex items-center gap-2 text-xs bg-emerald-50 text-emerald-800 p-2 rounded-lg border border-emerald-200 font-semibold">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Seleccionado: <strong className="font-extrabold">{productoSeleccionadoObj.producto_nombre}</strong> — Stock disponible en origen: <strong className="font-extrabold text-emerald-700">{productoSeleccionadoObj.stock_actual} unidades</strong></span>
                   </div>
                 )}
               </div>
