@@ -11,6 +11,18 @@ router = APIRouter(prefix="/kardex", tags=["Kardex"])
 
 # ── Schemas ──────────────────────────────────────────────────────────────────
 
+class ItemTransferencia(BaseModel):
+    producto_id: int
+    cantidad: float
+
+class TransferenciaBodegaRequest(BaseModel):
+    empresa_id: str
+    bodega_origen_id: int
+    bodega_destino_id: int
+    usuario_id: Optional[int] = None
+    notas: Optional[str] = None
+    items: List[ItemTransferencia]
+
 class AjusteManualRequest(BaseModel):
     empresa_id: str
     bodega_id: int
@@ -100,7 +112,7 @@ def registrar_movimiento(
     stock_anterior = saldo.stock_actual
 
     # Calcular nuevo stock
-    if tipo_movimiento in ("ENTRADA_COMPRA", "AJUSTE_POSITIVO"):
+    if tipo_movimiento in ("ENTRADA_COMPRA", "AJUSTE_POSITIVO", "TRANSFERENCIA_ENTRADA"):
         nuevo_stock = stock_anterior + cantidad
         # Costo promedio ponderado
         if nuevo_stock > 0:
@@ -108,7 +120,7 @@ def registrar_movimiento(
                 (stock_anterior * saldo.costo_promedio + cantidad * costo_unitario) / nuevo_stock
             )
         saldo.stock_actual = nuevo_stock
-    elif tipo_movimiento in ("SALIDA_VENTA", "AJUSTE_NEGATIVO"):
+    elif tipo_movimiento in ("SALIDA_VENTA", "AJUSTE_NEGATIVO", "TRANSFERENCIA_SALIDA"):
         if stock_anterior < cantidad:
             raise HTTPException(
                 status_code=400,
@@ -146,7 +158,7 @@ def registrar_movimiento(
             StockBodega.empresa_id == empresa_id,
             StockBodega.producto_id == producto_id
         ).scalar() or 0.0
-        producto.stock = total_stock + (cantidad if tipo_movimiento in ("ENTRADA_COMPRA", "AJUSTE_POSITIVO") else -cantidad)
+        producto.stock = total_stock + (cantidad if tipo_movimiento in ("ENTRADA_COMPRA", "AJUSTE_POSITIVO", "TRANSFERENCIA_ENTRADA") else -cantidad)
 
     return movimiento
 
@@ -256,6 +268,121 @@ def registrar_ajuste(ajuste: AjusteManualRequest, db: Session = Depends(get_db))
     )
     db.commit()
     return {"mensaje": "Ajuste registrado", "kardex_id": movimiento.id}
+
+
+@router.post("/transferencia", status_code=201)
+def registrar_transferencia_bodegas(req: TransferenciaBodegaRequest, db: Session = Depends(get_db)):
+    if req.bodega_origen_id == req.bodega_destino_id:
+        raise HTTPException(status_code=400, detail="La bodega de origen y destino deben ser diferentes.")
+
+    if not req.items:
+        raise HTTPException(status_code=400, detail="Debe seleccionar al menos un producto a transferir.")
+
+    bodega_origen = db.query(Bodega).filter(Bodega.id == req.bodega_origen_id, Bodega.empresa_id == req.empresa_id).first()
+    bodega_destino = db.query(Bodega).filter(Bodega.id == req.bodega_destino_id, Bodega.empresa_id == req.empresa_id).first()
+
+    if not bodega_origen or not bodega_destino:
+        raise HTTPException(status_code=404, detail="Bodega de origen o destino no encontrada.")
+
+    # Validar existencias en la bodega de origen
+    for item in req.items:
+        if item.cantidad <= 0:
+            raise HTTPException(status_code=400, detail="La cantidad a transferir debe ser mayor a cero.")
+
+        stock_origen = db.query(StockBodega).filter(
+            StockBodega.empresa_id == req.empresa_id,
+            StockBodega.bodega_id == req.bodega_origen_id,
+            StockBodega.producto_id == item.producto_id
+        ).first()
+
+        disponible = stock_origen.stock_actual if stock_origen else 0.0
+        if disponible < item.cantidad:
+            prod = db.query(Producto).filter(Producto.id_producto == item.producto_id).first()
+            p_nom = prod.nombre if prod else f"ID {item.producto_id}"
+            raise HTTPException(
+                status_code=400,
+                detail=f"Stock insuficiente para '{p_nom}' en '{bodega_origen.nombre}'. Disponible: {disponible}, Solicitado: {item.cantidad}"
+            )
+
+    ref_id = int(datetime.now().timestamp() * 1000)
+
+    for item in req.items:
+        mov_salida = registrar_movimiento(
+            db=db,
+            empresa_id=req.empresa_id,
+            bodega_id=req.bodega_origen_id,
+            producto_id=item.producto_id,
+            tipo_movimiento="TRANSFERENCIA_SALIDA",
+            cantidad=item.cantidad,
+            costo_unitario=0.0,
+            referencia_tipo="transferencia",
+            referencia_id=ref_id,
+            usuario_id=req.usuario_id,
+            notas=f"Traspaso enviado a '{bodega_destino.nombre}'. {req.notas or ''}".strip()
+        )
+
+        mov_entrada = registrar_movimiento(
+            db=db,
+            empresa_id=req.empresa_id,
+            bodega_id=req.bodega_destino_id,
+            producto_id=item.producto_id,
+            tipo_movimiento="TRANSFERENCIA_ENTRADA",
+            cantidad=item.cantidad,
+            costo_unitario=mov_salida.costo_unitario,
+            referencia_tipo="transferencia",
+            referencia_id=ref_id,
+            usuario_id=req.usuario_id,
+            notas=f"Traspaso recibido de '{bodega_origen.nombre}'. {req.notas or ''}".strip()
+        )
+
+    db.commit()
+
+    return {
+        "mensaje": f"Transferencia registrada correctamente entre '{bodega_origen.nombre}' y '{bodega_destino.nombre}'.",
+        "referencia_id": ref_id,
+        "items_count": len(req.items)
+    }
+
+
+@router.get("/transferencias")
+def listar_transferencias(
+    empresa_id: str,
+    bodega_id: Optional[int] = None,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    query = db.query(Kardex).filter(
+        Kardex.empresa_id == empresa_id,
+        Kardex.referencia_tipo == "transferencia"
+    )
+    if bodega_id:
+        query = query.filter(Kardex.bodega_id == bodega_id)
+
+    movimientos = query.order_by(Kardex.fecha.desc()).limit(limit).all()
+
+    grupos = {}
+    for m in movimientos:
+        ref = m.referencia_id or m.id
+        if ref not in grupos:
+            grupos[ref] = {
+                "referencia_id": ref,
+                "fecha": m.fecha,
+                "usuario": m.usuario.username if m.usuario else "Sistema",
+                "notas": m.notas,
+                "items": []
+            }
+        grupos[ref]["items"].append({
+            "kardex_id": m.id,
+            "bodega_id": m.bodega_id,
+            "bodega_nombre": m.bodega.nombre if m.bodega else "—",
+            "producto_id": m.producto_id,
+            "producto_nombre": m.producto.nombre if m.producto else "—",
+            "producto_codigo": m.producto.codigo if m.producto else "—",
+            "tipo_movimiento": m.tipo_movimiento,
+            "cantidad": m.cantidad
+        })
+
+    return list(grupos.values())
 
 
 @router.post("/recalcular-saldos")

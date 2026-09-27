@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Warehouse, Plus, Edit2, CheckCircle2, XCircle, Star, MapPin, User, AlertTriangle } from 'lucide-react';
+import { Warehouse, Plus, Edit2, CheckCircle2, XCircle, Star, MapPin, User, AlertTriangle, ArrowLeftRight, History, Trash2, Package, Check } from 'lucide-react';
 import { api } from '../services/api';
 
 const empresaId = () => localStorage.getItem('empresa_id') || '';
@@ -12,6 +12,23 @@ export default function Bodegas() {
   const [bodegaEditando, setBodegaEditando] = useState(null);
   const [form, setForm] = useState({ codigo: '', nombre: '', ubicacion: '', es_principal: false });
   const [guardando, setGuardando] = useState(false);
+
+  // Estados para Modal de Transferencia entre Bodegas
+  const [modalTransferencia, setModalTransferencia] = useState(false);
+  const [bodegaOrigen, setBodegaOrigen] = useState('');
+  const [bodegaDestino, setBodegaDestino] = useState('');
+  const [notasTransferencia, setNotasTransferencia] = useState('');
+  const [existenciasOrigen, setExistenciasOrigen] = useState([]);
+  const [productoSeleccionado, setProductoSeleccionado] = useState('');
+  const [cantidadTransferir, setCantidadTransferir] = useState('');
+  const [itemsTransferencia, setItemsTransferencia] = useState([]);
+  const [procesandoTransferencia, setProcesandoTransferencia] = useState(false);
+  const [cargandoStock, setCargandoStock] = useState(false);
+
+  // Estados para Historial de Transferencias
+  const [modalHistorial, setModalHistorial] = useState(false);
+  const [historialTransferencias, setHistorialTransferencias] = useState([]);
+  const [cargandoHistorial, setCargandoHistorial] = useState(false);
 
   const cargar = async () => {
     setCargando(true);
@@ -28,6 +45,27 @@ export default function Bodegas() {
 
   useEffect(() => { cargar(); }, []);
 
+  // Cargar existencias disponibles cuando cambia la bodega de origen
+  useEffect(() => {
+    if (!bodegaOrigen) {
+      setExistenciasOrigen([]);
+      setProductoSeleccionado('');
+      return;
+    }
+    const cargarStockOrigen = async () => {
+      setCargandoStock(true);
+      try {
+        const res = await api.get(`/api/v1/almacen/kardex/existencias?empresa_id=${empresaId()}&bodega_id=${bodegaOrigen}&solo_con_stock=true`);
+        setExistenciasOrigen(res.data || []);
+      } catch (e) {
+        console.error("Error al cargar stock de la bodega de origen:", e);
+      } finally {
+        setCargandoStock(false);
+      }
+    };
+    cargarStockOrigen();
+  }, [bodegaOrigen]);
+
   const abrirNueva = () => {
     setBodegaEditando(null);
     setForm({ codigo: '', nombre: '', ubicacion: '', es_principal: false });
@@ -38,6 +76,108 @@ export default function Bodegas() {
     setBodegaEditando(b);
     setForm({ codigo: b.codigo, nombre: b.nombre, ubicacion: b.ubicacion || '', es_principal: b.es_principal });
     setModalAbierto(true);
+  };
+
+  const abrirTransferencia = () => {
+    setBodegaOrigen('');
+    setBodegaDestino('');
+    setNotasTransferencia('');
+    setItemsTransferencia([]);
+    setProductoSeleccionado('');
+    setCantidadTransferir('');
+    setModalTransferencia(true);
+  };
+
+  const abrirHistorial = async () => {
+    setModalHistorial(true);
+    setCargandoHistorial(true);
+    try {
+      const res = await api.get(`/api/v1/almacen/kardex/transferencias?empresa_id=${empresaId()}`);
+      setHistorialTransferencias(res.data || []);
+    } catch (e) {
+      console.error("Error al cargar historial de transferencias:", e);
+    } finally {
+      setCargandoHistorial(false);
+    }
+  };
+
+  const agregarItemTransferencia = () => {
+    if (!productoSeleccionado || !cantidadTransferir || parseFloat(cantidadTransferir) <= 0) return;
+    
+    const prodExistencia = existenciasOrigen.find(e => e.producto_id.toString() === productoSeleccionado.toString());
+    if (!prodExistencia) return;
+
+    const cant = parseFloat(cantidadTransferir);
+    if (cant > prodExistencia.stock_actual) {
+      alert(`La cantidad (${cant}) excede el stock disponible en origen (${prodExistencia.stock_actual}).`);
+      return;
+    }
+
+    const existe = itemsTransferencia.find(i => i.producto_id.toString() === productoSeleccionado.toString());
+    if (existe) {
+      if (existe.cantidad + cant > prodExistencia.stock_actual) {
+        alert(`La cantidad acumulada excede el stock disponible en la bodega de origen.`);
+        return;
+      }
+      setItemsTransferencia(itemsTransferencia.map(i => 
+        i.producto_id.toString() === productoSeleccionado.toString()
+          ? { ...i, cantidad: i.cantidad + cant }
+          : i
+      ));
+    } else {
+      setItemsTransferencia([
+        ...itemsTransferencia,
+        {
+          producto_id: prodExistencia.producto_id,
+          producto_codigo: prodExistencia.producto_codigo,
+          producto_nombre: prodExistencia.producto_nombre,
+          cantidad: cant,
+          stock_disponible: prodExistencia.stock_actual
+        }
+      ]);
+    }
+
+    setProductoSeleccionado('');
+    setCantidadTransferir('');
+  };
+
+  const eliminarItemTransferencia = (prodId) => {
+    setItemsTransferencia(itemsTransferencia.filter(i => i.producto_id !== prodId));
+  };
+
+  const ejecutarTransferencia = async () => {
+    if (!bodegaOrigen || !bodegaDestino) {
+      alert("Por favor seleccione las bodegas de origen y destino.");
+      return;
+    }
+    if (bodegaOrigen === bodegaDestino) {
+      alert("La bodega de origen y destino deben ser diferentes.");
+      return;
+    }
+    if (itemsTransferencia.length === 0) {
+      alert("Debe agregar al menos un producto a la lista de transferencia.");
+      return;
+    }
+
+    setProcesandoTransferencia(true);
+    try {
+      const body = {
+        empresa_id: empresaId(),
+        bodega_origen_id: parseInt(bodegaOrigen),
+        bodega_destino_id: parseInt(bodegaDestino),
+        notas: notasTransferencia,
+        items: itemsTransferencia.map(i => ({ producto_id: i.producto_id, cantidad: i.cantidad }))
+      };
+
+      const res = await api.post('/api/v1/almacen/kardex/transferencia', body);
+      alert(res.data?.mensaje || "Transferencia completada con éxito.");
+      setModalTransferencia(false);
+      cargar();
+    } catch (e) {
+      alert(e.response?.data?.detail || "Error al procesar la transferencia.");
+    } finally {
+      setProcesandoTransferencia(false);
+    }
   };
 
   const guardar = async () => {
@@ -69,21 +209,38 @@ export default function Bodegas() {
   };
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
+    <div className="p-8 max-w-6xl mx-auto pb-24">
       {/* Header */}
-      <div className="flex justify-between items-start mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <Warehouse className="w-6 h-6 text-indigo-600" /> Bodegas / Almacenes
           </h1>
-          <p className="text-sm text-slate-500 mt-1">Administra los puntos de almacenamiento de tu empresa</p>
+          <p className="text-sm text-slate-500 mt-1">Administra los puntos de almacenamiento y traspasos entre sucursales</p>
         </div>
-        <button
-          onClick={abrirNueva}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 shadow-lg shadow-indigo-500/30 transition-all transform hover:-translate-y-0.5"
-        >
-          <Plus className="w-4 h-4" /> Nueva Bodega
-        </button>
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={abrirHistorial}
+            className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer"
+          >
+            <History className="w-4 h-4 text-slate-600" /> Historial
+          </button>
+
+          <button
+            onClick={abrirTransferencia}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 shadow-md shadow-emerald-600/20 transition-all transform hover:-translate-y-0.5 cursor-pointer"
+          >
+            <ArrowLeftRight className="w-4 h-4" /> Transferir Productos
+          </button>
+
+          <button
+            onClick={abrirNueva}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 shadow-md shadow-indigo-600/30 transition-all transform hover:-translate-y-0.5 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> Nueva Bodega
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -124,26 +281,26 @@ export default function Bodegas() {
 
               {b.ubicacion && (
                 <p className="text-sm text-slate-500 flex items-center gap-1 mb-1">
-                  <MapPin className="w-3.5 h-3.5" /> {b.ubicacion}
+                  <MapPin className="w-3.5 h-3.5 text-slate-400" /> {b.ubicacion}
                 </p>
               )}
               {b.responsable_nombre && (
                 <p className="text-sm text-slate-500 flex items-center gap-1">
-                  <User className="w-3.5 h-3.5" /> {b.responsable_nombre}
+                  <User className="w-3.5 h-3.5 text-slate-400" /> {b.responsable_nombre}
                 </p>
               )}
 
               <div className="flex gap-2 mt-4 pt-4 border-t border-slate-100">
                 <button
                   onClick={() => abrirEditar(b)}
-                  className="flex-1 text-sm text-indigo-600 hover:bg-indigo-50 font-medium py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1"
+                  className="flex-1 text-sm text-indigo-600 hover:bg-indigo-50 font-medium py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <Edit2 className="w-3.5 h-3.5" /> Editar
                 </button>
                 {b.activa && !b.es_principal && (
                   <button
                     onClick={() => desactivar(b)}
-                    className="flex-1 text-sm text-red-500 hover:bg-red-50 font-medium py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1"
+                    className="flex-1 text-sm text-red-500 hover:bg-red-50 font-medium py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
                   >
                     <XCircle className="w-3.5 h-3.5" /> Desactivar
                   </button>
@@ -154,7 +311,7 @@ export default function Bodegas() {
         </div>
       )}
 
-      {/* Modal Crear / Editar */}
+      {/* Modal Crear / Editar Bodega */}
       {modalAbierto && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
@@ -227,6 +384,251 @@ export default function Bodegas() {
                 {guardando ? 'Guardando...' : (bodegaEditando ? 'Guardar Cambios' : 'Crear Bodega')}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Transferencia de Productos entre Bodegas */}
+      {modalTransferencia && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold text-slate-800 mb-1 flex items-center gap-2">
+              <ArrowLeftRight className="w-5 h-5 text-emerald-600" /> Transferencia de Productos Entre Bodegas
+            </h2>
+            <p className="text-xs text-slate-500 mb-6">Traspaso directo de inventario manteniendo el valor de costo</p>
+
+            <div className="space-y-5">
+              {/* Selección de Bodegas */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div>
+                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-1 block">Bodega de Origen (Salida) *</label>
+                  <select
+                    value={bodegaOrigen}
+                    onChange={e => setBodegaOrigen(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">Seleccione Origen</option>
+                    {bodegas.filter(b => b.activa).map(b => (
+                      <option key={b.id} value={b.id}>
+                        {b.nombre} ({b.codigo})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-1 block">Bodega de Destino (Entrada) *</label>
+                  <select
+                    value={bodegaDestino}
+                    onChange={e => setBodegaDestino(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">Seleccione Destino</option>
+                    {bodegas.filter(b => b.activa && b.id.toString() !== bodegaOrigen.toString()).map(b => (
+                      <option key={b.id} value={b.id}>
+                        {b.nombre} ({b.codigo})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Justificación / Notas */}
+              <div>
+                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1 block">Notas / Observaciones</label>
+                <input
+                  type="text"
+                  value={notasTransferencia}
+                  onChange={e => setNotasTransferencia(e.target.value)}
+                  placeholder="Ej. Reabastecimiento de mercancía por alta demanda"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              {/* Selector de Producto a añadir */}
+              <div className="border border-indigo-100 bg-indigo-50/30 p-4 rounded-xl">
+                <h3 className="text-xs font-bold text-indigo-900 uppercase tracking-wider mb-3">Agregar Producto a Transferir</h3>
+                
+                {!bodegaOrigen ? (
+                  <p className="text-xs text-amber-600 font-medium">Por favor seleccione primero la Bodega de Origen para ver los productos disponibles.</p>
+                ) : cargandoStock ? (
+                  <p className="text-xs text-slate-400">Cargando existencias de origen...</p>
+                ) : (
+                  <div className="flex flex-col sm:flex-row gap-3 items-end">
+                    <div className="flex-1">
+                      <label className="text-[11px] font-bold text-slate-500 block mb-1">Producto Disponible</label>
+                      <select
+                        value={productoSeleccionado}
+                        onChange={e => setProductoSeleccionado(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        <option value="">Seleccionar Producto...</option>
+                        {existenciasOrigen.map(e => (
+                          <option key={e.producto_id} value={e.producto_id}>
+                            [{e.producto_codigo}] {e.producto_nombre} (Stock: {e.stock_actual})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="w-full sm:w-32">
+                      <label className="text-[11px] font-bold text-slate-500 block mb-1">Cantidad</label>
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="any"
+                        value={cantidadTransferir}
+                        onChange={e => setCantidadTransferir(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={agregarItemTransferencia}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-sm font-semibold rounded-xl transition-all shadow-sm shrink-0 cursor-pointer"
+                    >
+                      + Agregar
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Lista de Items a Transferir */}
+              <div>
+                <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Productos en este Traspaso ({itemsTransferencia.length})</h3>
+                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 font-bold text-slate-600 uppercase">
+                      <tr>
+                        <th className="px-4 py-2.5">Código</th>
+                        <th className="px-4 py-2.5">Producto</th>
+                        <th className="px-4 py-2.5 text-right">Cantidad</th>
+                        <th className="px-4 py-2.5 text-center">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {itemsTransferencia.length === 0 ? (
+                        <tr>
+                          <td colSpan="4" className="px-4 py-6 text-center text-slate-400">No se ha agregado ningún producto a la lista</td>
+                        </tr>
+                      ) : (
+                        itemsTransferencia.map((item) => (
+                          <tr key={item.producto_id} className="hover:bg-slate-50/50">
+                            <td className="px-4 py-2.5 font-bold text-slate-700">{item.producto_codigo}</td>
+                            <td className="px-4 py-2.5 font-medium text-slate-800">{item.producto_nombre}</td>
+                            <td className="px-4 py-2.5 text-right font-extrabold text-emerald-600">{item.cantidad}</td>
+                            <td className="px-4 py-2.5 text-center">
+                              <button
+                                onClick={() => eliminarItemTransferencia(item.producto_id)}
+                                className="text-red-500 hover:bg-red-50 p-1 rounded-md transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="w-4 h-4 mx-auto" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6 pt-4 border-t border-slate-100">
+              <button
+                onClick={() => setModalTransferencia(false)}
+                className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 text-sm font-medium transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={ejecutarTransferencia}
+                disabled={procesandoTransferencia || itemsTransferencia.length === 0 || !bodegaOrigen || !bodegaDestino}
+                className="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {procesandoTransferencia ? 'Procesando...' : 'Confirmar Transferencia'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Historial de Transferencias */}
+      {modalHistorial && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-5">
+              <div>
+                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                  <History className="w-5 h-5 text-indigo-600" /> Historial de Traspasos Entre Bodegas
+                </h2>
+                <p className="text-xs text-slate-500">Registro histórico de transferencias procesadas</p>
+              </div>
+              <button
+                onClick={() => setModalHistorial(false)}
+                className="text-slate-400 hover:text-slate-600 text-sm font-bold px-2 py-1 bg-slate-100 rounded-lg cursor-pointer"
+              >
+                ✕ Cerrar
+              </button>
+            </div>
+
+            {cargandoHistorial ? (
+              <div className="text-center py-12 text-slate-400">Cargando historial...</div>
+            ) : historialTransferencias.length === 0 ? (
+              <div className="text-center py-12 text-slate-400">
+                <History className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                <p className="font-medium">No se han registrado transferencias aún.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {historialTransferencias.map((h, idx) => (
+                  <div key={idx} className="border border-slate-200 rounded-xl p-4 bg-slate-50/50">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <span className="text-[11px] font-extrabold text-indigo-600 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md">
+                          Ref: #{h.referencia_id}
+                        </span>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Fecha: <span className="font-semibold text-slate-700">{new Date(h.fecha).toLocaleString()}</span> • Operador: <span className="font-semibold text-slate-700">{h.usuario}</span>
+                        </p>
+                      </div>
+                    </div>
+                    {h.notas && <p className="text-xs text-slate-600 italic mb-3 bg-white p-2 rounded-lg border border-slate-100">"{h.notas}"</p>}
+
+                    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-100 text-slate-600 font-bold uppercase">
+                          <tr>
+                            <th className="px-3 py-2">Bodega</th>
+                            <th className="px-3 py-2">Movimiento</th>
+                            <th className="px-3 py-2">Producto</th>
+                            <th className="px-3 py-2 text-right">Cantidad</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {h.items.map((it) => (
+                            <tr key={it.kardex_id}>
+                              <td className="px-3 py-2 font-semibold text-slate-800">{it.bodega_nombre}</td>
+                              <td className="px-3 py-2 font-bold">
+                                <span className={`px-2 py-0.5 rounded-md text-[10px] uppercase ${
+                                  it.tipo_movimiento === 'TRANSFERENCIA_ENTRADA' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                                }`}>
+                                  {it.tipo_movimiento === 'TRANSFERENCIA_ENTRADA' ? 'Entrada (Destino)' : 'Salida (Origen)'}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-slate-700">{it.producto_nombre} ({it.producto_codigo})</td>
+                              <td className="px-3 py-2 text-right font-extrabold text-slate-800">{it.cantidad}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
