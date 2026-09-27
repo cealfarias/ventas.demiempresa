@@ -3,11 +3,12 @@ import { BrowserRouter as Router, Routes, Route, Link, NavLink, useLocation, Nav
 import {
   LayoutDashboard, Receipt, Package, Users, Settings, LogOut, Menu,
   Warehouse, BarChart3, ChevronDown, ChevronRight, Truck, ShoppingCart, CreditCard, BookOpen
-, Wallet, DollarSign, Calculator, ShieldCheck, UserCheck, Headphones, Building, Sparkles, FileText } from 'lucide-react';
+, Wallet, DollarSign, Calculator, ShieldCheck, UserCheck, Headphones, Building, Sparkles, FileText, HardDrive } from 'lucide-react';
 import Productos from './pages/Productos';
 import Login from './pages/Login';
 import Registro from './pages/Registro';
 import Bodegas from './pages/Bodegas';
+
 import Existencias from './pages/Existencias';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
@@ -97,6 +98,46 @@ const SidebarSection = ({ label, expanded, defaultOpen = false, children }) => {
     </div>
   );
 };
+
+const SidebarStorageWidget = ({ expanded }) => {
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    const eid = localStorage.getItem('empresa_id');
+    if (eid) {
+      api.get(`/api/v1/dashboard/almacenamiento?empresa_id=${eid}`)
+        .then(res => setData(res.data))
+        .catch(() => {});
+    }
+  }, []);
+
+  if (!data) return null;
+
+  return (
+    <div className={`mx-1.5 my-2 p-2.5 rounded-xl bg-slate-900/90 border border-slate-800/80 text-left transition-all ${!expanded ? 'text-center p-1.5' : ''}`}>
+      <div className="flex items-center justify-between text-[10px] font-bold text-slate-300 mb-1">
+        <span className="flex items-center gap-1">
+          <HardDrive className="w-3.5 h-3.5 text-indigo-400" />
+          {expanded && "Espacio BD"}
+        </span>
+        {expanded && <span className="text-amber-300 font-extrabold">{data.mb_usados} MB / {data.limite_gb} GB</span>}
+      </div>
+      <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden border border-slate-700/50">
+        <div 
+          className={`h-full rounded-full transition-all duration-500 ${data.porcentaje_usado > 90 ? 'bg-rose-500' : data.porcentaje_usado > 75 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+          style={{ width: `${Math.min(data.porcentaje_usado, 100)}%` }}
+        />
+      </div>
+      {expanded && (
+        <p className="text-[9px] text-slate-400 mt-1 flex justify-between">
+          <span>{data.porcentaje_usado}% de uso</span>
+          <span className="text-indigo-300 hover:underline cursor-pointer font-semibold" onClick={() => window.location.href = '/configuracion-dte'}>Ver Planes</span>
+        </p>
+      )}
+    </div>
+  );
+};
+
 
 // ── Listener de Inactividad de Sesión (15 Minutos) ────────────────────────────
 const SessionTimeoutListener = () => {
@@ -283,6 +324,9 @@ const Layout = ({ children }) => {
             </SidebarSection>
           )}
 
+
+          {/* Widget de Estado de Almacenamiento */}
+          <SidebarStorageWidget expanded={expanded} />
 
           {/* Banner Interactivo de Invitación al Avatar IA */}
           {expanded && (

@@ -382,3 +382,62 @@ def obtener_top_productos(
         })
         
     return lista
+
+
+@router.get("/almacenamiento", response_model=Dict[str, Any])
+def obtener_almacenamiento_empresa(empresa_id: str, db: Session = Depends(get_db)):
+    # 1. Facturas emitidas, borradores, tickets no transmitidos y DTEs
+    cant_facturas = db.query(func.count(Factura.id)).filter(Factura.empresa_id == empresa_id).scalar() or 0
+    cant_items = db.query(func.count(ItemFactura.id)).join(Factura).filter(Factura.empresa_id == empresa_id).scalar() or 0
+    
+    # 2. Compras y Órdenes de Compra
+    cant_compras = db.query(func.count(OrdenCompra.id)).filter(OrdenCompra.empresa_id == empresa_id).scalar() or 0
+    
+    # 3. Kardex, Bodegas y Productos
+    cant_kardex = db.query(func.count(Kardex.id)).filter(Kardex.empresa_id == empresa_id).scalar() or 0
+    cant_productos = db.query(func.count(Producto.id_producto)).filter(Producto.empresa_id == empresa_id).scalar() or 0
+    
+    # 4. Movimientos de Caja y Sesiones
+    cant_mov_caja = db.query(func.count(MovimientoCaja.id)).join(SesionCaja).join(Caja).filter(Caja.empresa_id == empresa_id).scalar() or 0
+    
+    # 5. Clientes y Proveedores
+    cant_clientes = db.query(func.count(Cliente.id_cliente)).filter(Cliente.empresa_id == empresa_id).scalar() or 0
+    cant_proveedores = db.query(func.count(Proveedor.id_proveedor)).filter(Proveedor.empresa_id == empresa_id).scalar() or 0
+
+    # Estimación ponderada por objeto en DB + Firmas y metadatos
+    bytes_est = (
+        cant_facturas * 20480 +
+        cant_items * 512 +
+        cant_compras * 3072 +
+        cant_kardex * 1024 +
+        cant_mov_caja * 1024 +
+        cant_productos * 2048 +
+        (cant_clientes + cant_proveedores) * 2048 +
+        1572864 # Base inicial de esquema, configuraciones e índices (1.5 MB)
+    )
+    
+    mb_usados = round(bytes_est / (1024.0 * 1024.0), 2)
+    if mb_usados < 0.5:
+        mb_usados = 0.5
+
+    limite_mb = 1024.0 # Plan Básico predeterminado 1 GB
+    porcentaje = round((mb_usados / limite_mb) * 100, 1)
+
+    return {
+        "empresa_id": empresa_id,
+        "mb_usados": mb_usados,
+        "limite_mb": limite_mb,
+        "limite_gb": round(limite_mb / 1024.0, 2),
+        "porcentaje_usado": porcentaje,
+        "desglose": {
+            "facturas_y_dtes": cant_facturas,
+            "items_factura": cant_items,
+            "compras_proveedores": cant_compras,
+            "movimientos_kardex": cant_kardex,
+            "movimientos_caja": cant_mov_caja,
+            "productos": cant_productos,
+            "clientes_y_proveedores": cant_clientes + cant_proveedores
+        },
+        "alerta_nivel": "normal" if porcentaje < 75 else "advertencia" if porcentaje < 90 else "critico"
+    }
+

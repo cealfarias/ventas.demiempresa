@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, TrendingUp, Users, AlertTriangle, Truck, CreditCard, ShoppingCart, Calendar, ChevronDown, ChevronUp, Package, Store, Warehouse, Filter } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Users, AlertTriangle, Truck, CreditCard, ShoppingCart, Calendar, ChevronDown, ChevronUp, Package, Store, Warehouse, Filter, HardDrive, Database, Server, FileText } from 'lucide-react';
 import { api } from '../services/api';
 import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 
@@ -17,6 +17,7 @@ export default function Dashboard() {
   const [periodo, setPeriodo] = useState('dia'); // dia, semana, mes, anio
   const [anioSeleccionado, setAnioSeleccionado] = useState(new Date().getFullYear());
   const [error, setError] = useState(null);
+  const [almacenamiento, setAlmacenamiento] = useState(null);
 
   // Filtros de Bodega y Caja
   const [bodegas, setBodegas] = useState([]);
@@ -24,6 +25,7 @@ export default function Dashboard() {
   const [ventasPorBodega, setVentasPorBodega] = useState([]);
   const [bodegaSeleccionada, setBodegaSeleccionada] = useState('');
   const [cajaSeleccionada, setCajaSeleccionada] = useState('');
+
 
   // Cargar lista de bodegas y cajas al montar
   useEffect(() => {
@@ -57,18 +59,21 @@ export default function Dashboard() {
         if (bodegaSeleccionada) chartParams += `&bodega_id=${bodegaSeleccionada}`;
         if (cajaSeleccionada) chartParams += `&caja_id=${cajaSeleccionada}`;
 
-        const [resKpis, resChart, resTop, resVentasBod] = await Promise.all([
+        const [resKpis, resChart, resTop, resVentasBod, resAlm] = await Promise.all([
           api.get(`/api/v1/dashboard/kpis?${params}`),
           api.get(`/api/v1/dashboard/grafico-ventas?${chartParams}`).catch(() => ({ data: [] })),
           api.get(`/api/v1/dashboard/top-productos?${chartParams}`).catch(() => ({ data: [] })),
-          api.get(`/api/v1/dashboard/ventas-por-bodega?empresa_id=${empresaId()}&periodo=${periodo}&tz=${tz}`).catch(() => ({ data: [] }))
+          api.get(`/api/v1/dashboard/ventas-por-bodega?empresa_id=${empresaId()}&periodo=${periodo}&tz=${tz}`).catch(() => ({ data: [] })),
+          api.get(`/api/v1/dashboard/almacenamiento?empresa_id=${empresaId()}`).catch(() => ({ data: null }))
         ]);
 
         setKpis(resKpis.data);
         setChartData((resChart.data || []).map(d => ({ ...d, ventas: d.ventas / 100, compras: d.compras / 100 })));
         setTopProductos(resTop.data || []);
         setVentasPorBodega(resVentasBod.data || []);
+        if (resAlm?.data) setAlmacenamiento(resAlm.data);
         setCurrentPage(1);
+
       } catch (e) {
         console.error("Error al cargar KPIs", e);
         setError('Error al cargar métricas del servidor');
@@ -461,6 +466,82 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* Tarjeta de Almacenamiento en Servidor */}
+      {almacenamiento && (
+        <div className="bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 text-white rounded-2xl p-6 shadow-xl border border-slate-800 mt-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
+                <HardDrive className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  Capacidad y Uso de Almacenamiento
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                    Plan Básico ({almacenamiento.limite_gb} GB)
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Consumo global de Base de Datos, DTEs, ventas borradores, compras, kardex y auditoría.
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="text-2xl font-extrabold text-amber-300">{almacenamiento.mb_usados} MB</span>
+              <span className="text-sm text-slate-400 font-medium"> / {almacenamiento.limite_gb} GB</span>
+              <p className="text-xs text-emerald-400 font-semibold mt-0.5">{almacenamiento.porcentaje_usado}% utilizado</p>
+            </div>
+          </div>
+
+          {/* Barra de progreso */}
+          <div className="mt-5">
+            <div className="w-full bg-slate-800/80 rounded-full h-3 overflow-hidden p-0.5 border border-slate-700/50">
+              <div 
+                className={`h-full rounded-full transition-all duration-700 ${
+                  almacenamiento.porcentaje_usado > 90 ? 'bg-rose-500 shadow-lg shadow-rose-500/50' : 
+                  almacenamiento.porcentaje_usado > 75 ? 'bg-amber-400 shadow-lg shadow-amber-400/50' : 
+                  'bg-gradient-to-r from-emerald-400 to-indigo-400'
+                }`}
+                style={{ width: `${Math.min(almacenamiento.porcentaje_usado, 100)}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Desglose de Registros */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mt-6 pt-5 border-t border-slate-800/60">
+            <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 text-center">
+              <p className="text-[10px] uppercase font-bold text-slate-400">Facturas / DTEs</p>
+              <p className="text-base font-extrabold text-white mt-1">{almacenamiento.desglose?.facturas_y_dtes || 0}</p>
+            </div>
+            <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 text-center">
+              <p className="text-[10px] uppercase font-bold text-slate-400">Items Factura</p>
+              <p className="text-base font-extrabold text-indigo-300 mt-1">{almacenamiento.desglose?.items_factura || 0}</p>
+            </div>
+            <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 text-center">
+              <p className="text-[10px] uppercase font-bold text-slate-400">Compras / OC</p>
+              <p className="text-base font-extrabold text-emerald-300 mt-1">{almacenamiento.desglose?.compras_proveedores || 0}</p>
+            </div>
+            <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 text-center">
+              <p className="text-[10px] uppercase font-bold text-slate-400">Kardex Movs</p>
+              <p className="text-base font-extrabold text-amber-300 mt-1">{almacenamiento.desglose?.movimientos_kardex || 0}</p>
+            </div>
+            <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 text-center">
+              <p className="text-[10px] uppercase font-bold text-slate-400">Caja Movs</p>
+              <p className="text-base font-extrabold text-cyan-300 mt-1">{almacenamiento.desglose?.movimientos_caja || 0}</p>
+            </div>
+            <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 text-center">
+              <p className="text-[10px] uppercase font-bold text-slate-400">Catálogo Prods</p>
+              <p className="text-base font-extrabold text-violet-300 mt-1">{almacenamiento.desglose?.productos || 0}</p>
+            </div>
+            <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 text-center">
+              <p className="text-[10px] uppercase font-bold text-slate-400">Clientes & Provs</p>
+              <p className="text-base font-extrabold text-rose-300 mt-1">{almacenamiento.desglose?.clientes_y_proveedores || 0}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
+
