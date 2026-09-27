@@ -2,14 +2,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from database import get_db
-from models import Kardex, StockBodega, Bodega, Producto, Factura, ItemFactura
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, date
+import pytz
+
+TIMEZONE = pytz.timezone("America/El_Salvador")
 
 router = APIRouter(prefix="/kardex", tags=["Kardex"])
 
-# ── Schemas ──────────────────────────────────────────────────────────────────
+from models import Kardex, StockBodega, Bodega, Producto, Factura, ItemFactura, TransferenciaBodega, DetalleTransferenciaBodega
 
 class ItemTransferencia(BaseModel):
     producto_id: int
@@ -20,8 +22,17 @@ class TransferenciaBodegaRequest(BaseModel):
     bodega_origen_id: int
     bodega_destino_id: int
     usuario_id: Optional[int] = None
+    nombre_envio: Optional[str] = None
+    firma_envio: Optional[str] = None
     notas: Optional[str] = None
     items: List[ItemTransferencia]
+
+class RecepcionTransferenciaRequest(BaseModel):
+    empresa_id: str
+    usuario_id: Optional[int] = None
+    nombre_recepcion: str
+    firma_recepcion: Optional[str] = None
+    notas_recepcion: Optional[str] = None
 
 class AjusteManualRequest(BaseModel):
     empresa_id: str
@@ -270,6 +281,11 @@ def registrar_ajuste(ajuste: AjusteManualRequest, db: Session = Depends(get_db))
     return {"mensaje": "Ajuste registrado", "kardex_id": movimiento.id}
 
 
+def _generar_numero_traspaso(db: Session, empresa_id: str) -> str:
+    anio = datetime.now().year
+    count = db.query(TransferenciaBodega).filter(TransferenciaBodega.empresa_id == empresa_id).count()
+    return f"TRASP-{anio}-{str(count + 1).zfill(5)}"
+
 @router.post("/transferencia", status_code=201)
 def registrar_transferencia_bodegas(req: TransferenciaBodegaRequest, db: Session = Depends(get_db)):
     if req.bodega_origen_id == req.bodega_destino_id:
@@ -304,10 +320,34 @@ def registrar_transferencia_bodegas(req: TransferenciaBodegaRequest, db: Session
                 detail=f"Stock insuficiente para '{p_nom}' en '{bodega_origen.nombre}'. Disponible: {disponible}, Solicitado: {item.cantidad}"
             )
 
-    ref_id = int(datetime.now().timestamp() * 1000)
+    numero = _generar_numero_traspaso(db, req.empresa_id)
+    ahora = datetime.now(TIMEZONE)
+
+    traspaso = TransferenciaBodega(
+        empresa_id=req.empresa_id,
+        numero=numero,
+        bodega_origen_id=req.bodega_origen_id,
+        bodega_destino_id=req.bodega_destino_id,
+        estado="en_transito",
+        usuario_envio_id=req.usuario_id,
+        nombre_envio=req.nombre_envio or "Responsable Bodega Origen",
+        firma_envio=req.firma_envio or "FIRMADO_DESPACHO",
+        fecha_envio=ahora,
+        notas_envio=req.notas
+    )
+    db.add(traspaso)
+    db.flush()
 
     for item in req.items:
-        mov_salida = registrar_movimiento(
+        det = DetalleTransferenciaBodega(
+            transferencia_id=traspaso.id,
+            producto_id=item.producto_id,
+            cantidad_enviada=item.cantidad
+        )
+        db.add(det)
+
+        # Descontar de bodega origen inmediatamente para dejar mercancía en tránsito
+        registrar_movimiento(
             db=db,
             empresa_id=req.empresa_id,
             bodega_id=req.bodega_origen_id,
@@ -316,31 +356,82 @@ def registrar_transferencia_bodegas(req: TransferenciaBodegaRequest, db: Session
             cantidad=item.cantidad,
             costo_unitario=0.0,
             referencia_tipo="transferencia",
-            referencia_id=ref_id,
+            referencia_id=traspaso.id,
             usuario_id=req.usuario_id,
-            notas=f"Traspaso enviado a '{bodega_destino.nombre}'. {req.notas or ''}".strip()
+            notas=f"Traspaso #{traspaso.numero} enviado a '{bodega_destino.nombre}'. Despachado por: {req.nombre_envio or 'Origen'}"
         )
 
-        mov_entrada = registrar_movimiento(
+    db.commit()
+    db.refresh(traspaso)
+
+    return {
+        "mensaje": f"Traspaso #{traspaso.numero} despachado. Queda EN TRÁNSITO hacia '{bodega_destino.nombre}'.",
+        "transferencia_id": traspaso.id,
+        "numero": traspaso.numero,
+        "fecha_envio": traspaso.fecha_envio
+    }
+
+
+@router.post("/transferencias/{transferencia_id}/recibir")
+def confirmar_recepcion_transferencia(
+    transferencia_id: int, 
+    req: RecepcionTransferenciaRequest, 
+    db: Session = Depends(get_db)
+):
+    traspaso = db.query(TransferenciaBodega).filter(
+        TransferenciaBodega.id == transferencia_id,
+        TransferenciaBodega.empresa_id == req.empresa_id
+    ).first()
+
+    if not traspaso:
+        raise HTTPException(status_code=404, detail="Traspaso de bodega no encontrado.")
+
+    if traspaso.estado == "recibido":
+        raise HTTPException(status_code=400, detail=f"Este traspaso ya fue confirmado previamente por {traspaso.nombre_recepcion}.")
+
+    if traspaso.estado == "cancelado":
+        raise HTTPException(status_code=400, detail="Este traspaso se encuentra cancelado.")
+
+    ahora = datetime.now(TIMEZONE)
+    traspaso.estado = "recibido"
+    traspaso.usuario_recepcion_id = req.usuario_id
+    traspaso.nombre_recepcion = req.nombre_recepcion
+    traspaso.firma_recepcion = req.firma_recepcion or "FIRMADO_RECEPCION"
+    traspaso.fecha_recepcion = ahora
+    traspaso.notas_recepcion = req.notas_recepcion
+
+    # Acreditar productos a la bodega de destino al momento exacto de confirmación
+    for det in traspaso.detalles:
+        det.cantidad_recibida = det.cantidad_enviada
+        
+        # Obtener costo unitario registrado en la salida de origen para mantener valuación
+        mov_salida = db.query(Kardex).filter(
+            Kardex.referencia_id == traspaso.id,
+            Kardex.referencia_tipo == "transferencia",
+            Kardex.bodega_id == traspaso.bodega_origen_id,
+            Kardex.producto_id == det.producto_id
+        ).first()
+        costo_u = mov_salida.costo_unitario if mov_salida else 0.0
+
+        registrar_movimiento(
             db=db,
             empresa_id=req.empresa_id,
-            bodega_id=req.bodega_destino_id,
-            producto_id=item.producto_id,
+            bodega_id=traspaso.bodega_destino_id,
+            producto_id=det.producto_id,
             tipo_movimiento="TRANSFERENCIA_ENTRADA",
-            cantidad=item.cantidad,
-            costo_unitario=mov_salida.costo_unitario,
+            cantidad=det.cantidad_enviada,
+            costo_unitario=costo_u,
             referencia_tipo="transferencia",
-            referencia_id=ref_id,
+            referencia_id=traspaso.id,
             usuario_id=req.usuario_id,
-            notas=f"Traspaso recibido de '{bodega_origen.nombre}'. {req.notas or ''}".strip()
+            notas=f"Traspaso #{traspaso.numero} recibido de '{traspaso.bodega_origen.nombre}'. Recibido por: {req.nombre_recepcion}"
         )
 
     db.commit()
 
     return {
-        "mensaje": f"Transferencia registrada correctamente entre '{bodega_origen.nombre}' y '{bodega_destino.nombre}'.",
-        "referencia_id": ref_id,
-        "items_count": len(req.items)
+        "mensaje": f"Recepción del Traspaso #{traspaso.numero} confirmada exitosamente por '{traspaso.nombre_recepcion}'.",
+        "fecha_recepcion": ahora
     }
 
 
@@ -351,38 +442,51 @@ def listar_transferencias(
     limit: int = 100,
     db: Session = Depends(get_db)
 ):
-    query = db.query(Kardex).filter(
-        Kardex.empresa_id == empresa_id,
-        Kardex.referencia_tipo == "transferencia"
-    )
+    query = db.query(TransferenciaBodega).filter(TransferenciaBodega.empresa_id == empresa_id)
     if bodega_id:
-        query = query.filter(Kardex.bodega_id == bodega_id)
+        query = query.filter(
+            (TransferenciaBodega.bodega_origen_id == bodega_id) | 
+            (TransferenciaBodega.bodega_destino_id == bodega_id)
+        )
 
-    movimientos = query.order_by(Kardex.fecha.desc()).limit(limit).all()
+    traspasos = query.order_by(TransferenciaBodega.fecha_envio.desc()).limit(limit).all()
 
-    grupos = {}
-    for m in movimientos:
-        ref = m.referencia_id or m.id
-        if ref not in grupos:
-            grupos[ref] = {
-                "referencia_id": ref,
-                "fecha": m.fecha,
-                "usuario": m.usuario.username if m.usuario else "Sistema",
-                "notas": m.notas,
-                "items": []
-            }
-        grupos[ref]["items"].append({
-            "kardex_id": m.id,
-            "bodega_id": m.bodega_id,
-            "bodega_nombre": m.bodega.nombre if m.bodega else "—",
-            "producto_id": m.producto_id,
-            "producto_nombre": m.producto.nombre if m.producto else "—",
-            "producto_codigo": m.producto.codigo if m.producto else "—",
-            "tipo_movimiento": m.tipo_movimiento,
-            "cantidad": m.cantidad
+    res = []
+    for t in traspasos:
+        res.append({
+            "id": t.id,
+            "numero": t.numero,
+            "estado": t.estado,
+            "bodega_origen_id": t.bodega_origen_id,
+            "bodega_origen_nombre": t.bodega_origen.nombre if t.bodega_origen else "—",
+            "bodega_destino_id": t.bodega_destino_id,
+            "bodega_destino_nombre": t.bodega_destino.nombre if t.bodega_destino else "—",
+            
+            # Datos de Envío (Origen)
+            "nombre_envio": t.nombre_envio,
+            "firma_envio": t.firma_envio,
+            "fecha_envio": t.fecha_envio,
+            "notas_envio": t.notas_envio,
+
+            # Datos de Recepción (Destino)
+            "nombre_recepcion": t.nombre_recepcion,
+            "firma_recepcion": t.firma_recepcion,
+            "fecha_recepcion": t.fecha_recepcion,
+            "notas_recepcion": t.notas_recepcion,
+
+            "items": [
+                {
+                    "id": d.id,
+                    "producto_id": d.producto_id,
+                    "producto_codigo": d.producto.codigo if d.producto else "—",
+                    "producto_nombre": d.producto.nombre if d.producto else "—",
+                    "cantidad_enviada": d.cantidad_enviada,
+                    "cantidad_recibida": d.cantidad_recibida
+                } for d in t.detalles
+            ]
         })
 
-    return list(grupos.values())
+    return res
 
 
 @router.post("/recalcular-saldos")

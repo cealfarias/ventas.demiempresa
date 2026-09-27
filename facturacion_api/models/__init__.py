@@ -266,6 +266,54 @@ class Kardex(Base):
     usuario = relationship("Usuario")
 
 
+class TransferenciaBodega(Base):
+    __tablename__ = "transferencias_bodega"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    empresa_id = Column(String, index=True, nullable=False)
+    numero = Column(String(30), nullable=False) # TRASP-2026-00001
+
+    bodega_origen_id = Column(Integer, ForeignKey("bodegas.id"), nullable=False)
+    bodega_destino_id = Column(Integer, ForeignKey("bodegas.id"), nullable=False)
+
+    # Estado: en_transito | recibido | cancelado
+    estado = Column(String(20), default="en_transito", nullable=False)
+
+    # Responsable y Firma de Envío (Origen)
+    usuario_envio_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    nombre_envio = Column(String(150), nullable=True)
+    firma_envio = Column(Text, nullable=True)
+    fecha_envio = Column(DateTime(timezone=True), default=lambda: datetime.now(TIMEZONE), nullable=False)
+    notas_envio = Column(Text, nullable=True)
+
+    # Responsable y Firma de Recepción (Destino)
+    usuario_recepcion_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    nombre_recepcion = Column(String(150), nullable=True)
+    firma_recepcion = Column(Text, nullable=True)
+    fecha_recepcion = Column(DateTime(timezone=True), nullable=True) # Fecha y Hora exacta de recepción
+    notas_recepcion = Column(Text, nullable=True)
+
+    bodega_origen = relationship("Bodega", foreign_keys=[bodega_origen_id])
+    bodega_destino = relationship("Bodega", foreign_keys=[bodega_destino_id])
+    usuario_envio = relationship("Usuario", foreign_keys=[usuario_envio_id])
+    usuario_recepcion = relationship("Usuario", foreign_keys=[usuario_recepcion_id])
+    detalles = relationship("DetalleTransferenciaBodega", back_populates="transferencia", cascade="all, delete-orphan")
+
+
+class DetalleTransferenciaBodega(Base):
+    __tablename__ = "detalles_transferencia_bodega"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    transferencia_id = Column(Integer, ForeignKey("transferencias_bodega.id"), nullable=False)
+    producto_id = Column(Integer, ForeignKey("productos.id_producto"), nullable=False)
+
+    cantidad_enviada = Column(Float, nullable=False)
+    cantidad_recibida = Column(Float, nullable=True)
+
+    transferencia = relationship("TransferenciaBodega", back_populates="detalles")
+    producto = relationship("Producto")
+
+
 # ==========================================
 # MÓDULO DE PROVEEDORES Y COMPRAS
 # ==========================================
