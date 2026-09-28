@@ -830,7 +830,17 @@ export default function Facturas() {
                     {f.estado_dte !== 'procesado' && (
                       <>
                         <button onClick={() => iniciarEdicion(f)} className="text-xs bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-200 font-medium">Editar</button>
-                        <button onClick={() => transmitirMH(f.id)} className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-medium">Transmitir MH</button>
+                        <button 
+                          onClick={() => transmitirMH(f.id)} 
+                          className="inline-flex items-center px-2 py-1 bg-white hover:bg-indigo-50 border border-indigo-200 hover:border-indigo-400 rounded-lg shadow-sm hover:shadow transition-all group"
+                          title="Transmitir DTE al Ministerio de Hacienda"
+                        >
+                          <img 
+                            src="/assets/logo_dte_mh.png" 
+                            alt="Transmitir DTE MH" 
+                            className="h-5 w-auto object-contain transition-transform group-hover:scale-105" 
+                          />
+                        </button>
                       </>
                     )}
                     {f.estado !== "anulada" && (
