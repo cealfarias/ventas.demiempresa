@@ -32,6 +32,14 @@ try:
         conn.execute(text("ALTER TABLE pagos_arrendamiento ADD COLUMN IF NOT EXISTS anio INTEGER;"))
         conn.execute(text("ALTER TABLE pagos_arrendamiento ADD COLUMN IF NOT EXISTS mes INTEGER;"))
         conn.execute(text("ALTER TABLE pagos_arrendamiento ADD COLUMN IF NOT EXISTS monto_mora INTEGER DEFAULT 0;"))
+
+        # Configuración DTE SMTP
+        conn.execute(text("ALTER TABLE configuracion_dte ADD COLUMN IF NOT EXISTS smtp_host VARCHAR(100);"))
+        conn.execute(text("ALTER TABLE configuracion_dte ADD COLUMN IF NOT EXISTS smtp_port INTEGER DEFAULT 587;"))
+        conn.execute(text("ALTER TABLE configuracion_dte ADD COLUMN IF NOT EXISTS smtp_username VARCHAR(100);"))
+        conn.execute(text("ALTER TABLE configuracion_dte ADD COLUMN IF NOT EXISTS smtp_password_encrypted TEXT;"))
+        conn.execute(text("ALTER TABLE configuracion_dte ADD COLUMN IF NOT EXISTS smtp_use_tls BOOLEAN DEFAULT TRUE;"))
+        conn.execute(text("ALTER TABLE configuracion_dte ADD COLUMN IF NOT EXISTS smtp_from_email VARCHAR(100);"))
 except Exception as e:
     print("Migration check note:", e)
 

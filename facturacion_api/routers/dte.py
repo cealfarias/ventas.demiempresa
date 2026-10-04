@@ -1,4 +1,5 @@
 import json
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -264,9 +265,10 @@ def reenviar_email_dte(
     
     json_bytes = json.dumps(dte_json, ensure_ascii=False, indent=2).encode("utf-8")
 
+    nombre_cliente = factura.cliente.nombre if factura.cliente else 'Cliente'
     asunto = f"Comprobante Electrónico DTE - {factura.numero_control or factura.numero}"
     cuerpo = f"""
-    <h3>Estimado(a) {factura.cliente_nombre or (factura.cliente and factura.cliente.nombre) or 'Cliente'},</h3>
+    <h3>Estimado(a) {nombre_cliente},</h3>
     <p>Le adjuntamos la Representación Gráfica PDF y el archivo JSON oficial correspondiente a su comprobante de pago electrónico.</p>
     <p><b>Tipo Documento:</b> {factura.tipo_doc}<br/>
     <b>Número de Control:</b> {factura.numero_control or factura.numero}<br/>
@@ -307,7 +309,7 @@ def enviar_whatsapp_dte(
         raise HTTPException(status_code=404, detail="Factura no encontrada")
 
     config = db.query(ConfiguracionDTE).filter(ConfiguracionDTE.empresa_id == empresa_id).first()
-    nombre_emisor = config.nombre_comercial if config else "Nuestra Empresa"
+    nombre_emisor = (config.nombre_comercial if config and config.nombre_comercial else "Nuestra Empresa")
 
     telefono_raw = (payload and payload.telefono_destinatario) or (factura.cliente and (factura.cliente.telefono or factura.cliente.movil)) or ""
     telef_digits = "".join(c for c in str(telefono_raw) if c.isdigit())
@@ -316,11 +318,12 @@ def enviar_whatsapp_dte(
 
     monto_usd = f"${(factura.total or 0) / 100.0 :.2f}"
     pdf_link = f"https://ventas-demiempresa.onrender.com/api/v1/facturacion/facturas/{factura.id}/imprimir?empresa_id={empresa_id}"
+    nombre_cliente = factura.cliente.nombre if factura.cliente else 'Cliente'
 
     mensaje_wa = (
         f"📄 *COMPROBANTE ELECTRÓNICO DTE*\n"
         f"🏢 *Emisor:* {nombre_emisor}\n"
-        f"👤 *Cliente:* {factura.cliente_nombre or 'Cliente'}\n"
+        f"👤 *Cliente:* {nombre_cliente}\n"
         f"📑 *Documento:* {factura.tipo_doc} N° {factura.numero_control or factura.numero}\n"
         f"💵 *Monto Total:* {monto_usd}\n"
         f"🔑 *Código Generación:* {factura.codigo_generacion or 'N/A'}\n"
