@@ -532,6 +532,19 @@ def imprimir_factura(factura_id: int, empresa_id: str, db: Session = Depends(get
         raise HTTPException(status_code=404, detail="Factura no encontrada")
     
     from fastapi.responses import HTMLResponse
+
+    fecha_dt = factura.fecha_emision
+    if fecha_dt:
+        if fecha_dt.tzinfo:
+            fecha_dt = fecha_dt.astimezone(TIMEZONE)
+        else:
+            fecha_dt = pytz.utc.localize(fecha_dt).astimezone(TIMEZONE)
+        fecha_str = fecha_dt.strftime('%d/%m/%Y %H:%M')
+    else:
+        fecha_str = "N/A"
+
+    cliente_nit_dui = (factura.cliente.nit or factura.cliente.dui) if (factura.cliente and (factura.cliente.nit or factura.cliente.dui)) else "N/A"
+    cliente_dir = factura.cliente.direccion if (factura.cliente and factura.cliente.direccion) else "N/A"
     
     html_content = f"""
     <!DOCTYPE html>
@@ -564,13 +577,13 @@ def imprimir_factura(factura_id: int, empresa_id: str, db: Session = Depends(get
         
         <div class="info-grid">
             <div>
-                <strong>Cliente:</strong> {factura.cliente.nombre if factura.cliente else "Consumidor Final"}<br>
-                <strong>NIT/DUI:</strong> {factura.cliente.nit or factura.cliente.dui if factura.cliente else "N/A"}<br>
-                <strong>Dirección:</strong> {factura.cliente.direccion if factura.cliente else "N/A"}
+                <strong>Cliente:</strong> {factura.cliente.nombre if (factura.cliente and factura.cliente.nombre) else "Consumidor Final"}<br>
+                <strong>NIT/DUI:</strong> {cliente_nit_dui}<br>
+                <strong>Dirección:</strong> {cliente_dir}
             </div>
             <div class="text-right">
                 <strong>Número:</strong> {factura.numero}<br>
-                <strong>Fecha:</strong> {factura.fecha_emision.strftime('%d/%m/%Y %H:%M')}<br>
+                <strong>Fecha:</strong> {fecha_str}<br>
                 <strong>Tipo Doc:</strong> {factura.tipo_doc}<br>
                 <strong>Condición:</strong> {factura.condicion_operacion}
             </div>

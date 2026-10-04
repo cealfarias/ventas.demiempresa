@@ -1,4 +1,6 @@
 import io
+from datetime import datetime
+import pytz
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.lib.units import inch
@@ -7,6 +9,8 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 from models import Factura, ConfiguracionDTE
 from dte_service.pdf.qr_generator import generar_qr_bytes
+
+TIMEZONE = pytz.timezone("America/El_Salvador")
 
 def generar_pdf_representacion_grafica(factura: Factura, config: ConfiguracionDTE) -> bytes:
     """
@@ -62,7 +66,16 @@ def generar_pdf_representacion_grafica(factura: Factura, config: ConfiguracionDT
     nombre_cliente = cliente.nombre if cliente else "Consumidor Final"
     doc_cliente = cliente.nit or cliente.dui or "00000000000000" if cliente else "N/A"
     
-    fecha_str = factura.fecha_emision.strftime("%Y-%m-%d %H:%M:%S")
+    fecha_dt = factura.fecha_emision
+    if fecha_dt:
+        if fecha_dt.tzinfo:
+            fecha_dt = fecha_dt.astimezone(TIMEZONE)
+        else:
+            fecha_dt = pytz.utc.localize(fecha_dt).astimezone(TIMEZONE)
+    else:
+        fecha_dt = datetime.now(TIMEZONE)
+
+    fecha_str = fecha_dt.strftime("%d/%m/%Y %H:%M:%S")
 
     receptor_data = [
         [
@@ -121,7 +134,7 @@ def generar_pdf_representacion_grafica(factura: Factura, config: ConfiguracionDT
     elements.append(Spacer(1, 10))
 
     # 4. RESUMEN Y CÓDIGO QR
-    fecha_emi_iso = factura.fecha_emision.strftime("%Y-%m-%d")
+    fecha_emi_iso = fecha_dt.strftime("%Y-%m-%d")
     codigo_gen = factura.codigo_generacion or "00000000-0000-0000-0000-000000000000"
     
     qr_bytes = generar_qr_bytes(codigo_gen, fecha_emi_iso)

@@ -7,6 +7,11 @@ from dte_service.builders.base import (
 )
 from dte_service.validator.catalogos import obtener_tipo_documento_receptor
 
+import pytz
+from datetime import datetime
+
+TIMEZONE = pytz.timezone("America/El_Salvador")
+
 def construir_json_dte_03(
     factura: Factura, 
     config: ConfiguracionDTE, 
@@ -20,8 +25,17 @@ def construir_json_dte_03(
     codigo_generacion = generar_codigo_generacion()
     numero_control = generar_numero_control("03", config.establecimiento_cod, punto_venta_cod, config.correlativo_ccf)
 
-    fecha_emi = factura.fecha_emision.strftime("%Y-%m-%d")
-    hora_emi = factura.fecha_emision.strftime("%H:%M:%S")
+    fecha_dt = factura.fecha_emision
+    if fecha_dt:
+        if fecha_dt.tzinfo:
+            fecha_dt = fecha_dt.astimezone(TIMEZONE)
+        else:
+            fecha_dt = pytz.utc.localize(fecha_dt).astimezone(TIMEZONE)
+    else:
+        fecha_dt = datetime.now(TIMEZONE)
+
+    fecha_emi = fecha_dt.strftime("%Y-%m-%d")
+    hora_emi = fecha_dt.strftime("%H:%M:%S")
 
     # 1. Identificación
     identificacion = {
