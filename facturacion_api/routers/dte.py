@@ -311,7 +311,11 @@ def enviar_whatsapp_dte(
     config = db.query(ConfiguracionDTE).filter(ConfiguracionDTE.empresa_id == empresa_id).first()
     nombre_emisor = (config.nombre_comercial if config and config.nombre_comercial else "Nuestra Empresa")
 
-    telefono_raw = (payload and payload.telefono_destinatario) or (factura.cliente and (factura.cliente.telefono or factura.cliente.movil)) or ""
+    telefono_raw = ""
+    if payload and payload.telefono_destinatario:
+        telefono_raw = payload.telefono_destinatario
+    elif factura.cliente:
+        telefono_raw = getattr(factura.cliente, 'telefono', '') or getattr(factura.cliente, 'movil', '') or ""
     telef_digits = "".join(c for c in str(telefono_raw) if c.isdigit())
     if len(telef_digits) == 8:
         telef_digits = "503" + telef_digits
